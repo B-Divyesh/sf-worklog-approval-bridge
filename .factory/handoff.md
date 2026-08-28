@@ -1,4 +1,21 @@
-# Worklog Bridge repair handoff
+# Worklog Bridge verification handoff — FAIL
+
+## Current independent verification status
+
+**FAIL — do not release candidate `a29334e51fdfa70ac4f2b480e025640101bfa6cd`.**
+
+Independent live verification at
+https://worklog-approval-bridge.sociobot.in found that a normal first visit to
+a newly created, not-yet-accepted approval link emits Chromium’s
+`Failed to load resource: the server responded with a status of 404 ()` console
+error. The UI otherwise handles the absence of a receipt, but the error fails
+the required no-console-errors-on-load quality gate. Unknown live routes also
+return HTTP 200 while displaying the in-app not-found page. Full evidence,
+commands, passed claims, and repair steps are in
+`.factory/verification-3.md`.
+
+The following is the prior builder repair handoff, retained as historical
+implementation and release context.
 
 **Repair commit:** `a1157eeaae5bb4775b2e2f520509a8b532b85bee`  
 **Repaired verifier candidate:** `0fc5cc62213ce7ded7010def5b025d7b0a8321ab`  
