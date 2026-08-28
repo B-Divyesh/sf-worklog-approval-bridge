@@ -40,7 +40,7 @@ Deploy `dist/site` together with `api/` using:
 /opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site
 ```
 
-The deploy helper detects `api/host.json` and publishes the managed API. After deployment, create a fresh demo approval link and verify: `POST /api/approvals` returns 201 with a receipt, `GET /api/approvals?packetDigest=<digest>` returns that same receipt, and a second POST returns 409 with the original receipt.
+The deploy helper detects `api/host.json` and publishes the managed API. After deployment, create a fresh demo approval link and verify: `POST /api/approvals` returns 201 with a receipt, `GET /api/approvals?packetDigest=<digest>` returns that same receipt, and a second POST returns 409 with the original receipt. The managed API requires the allowed Static Web Apps application setting `WORKLOG_APPROVAL_STORAGE` containing its Azure Storage connection string; `AzureWebJobsStorage` is reserved and rejected by Static Web Apps.
 
 ## Operator note
 

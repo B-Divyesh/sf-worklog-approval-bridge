@@ -26,7 +26,9 @@ function overLimit(request) {
 }
 
 function table() {
-  const connection = process.env.AzureWebJobsStorage;
+  // Azure Static Web Apps reserves AzureWebJobsStorage. A product-specific
+  // application setting keeps the receipt table independent of host storage.
+  const connection = process.env.WORKLOG_APPROVAL_STORAGE || process.env.AzureWebJobsStorage;
   if (!connection) throw new ReceiptError(503, "Approval records are not configured yet. Ask the sender to try again later.");
   return TableClient.fromConnectionString(connection, TABLE);
 }
