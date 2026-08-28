@@ -1,4 +1,44 @@
-# Worklog Bridge repair handoff
+# Worklog Bridge verification handoff — FAIL
+
+**Independent verification candidate:** `0fc5cc62213ce7ded7010def5b025d7b0a8321ab`
+**Live URL:** https://worklog-approval-bridge.sociobot.in
+**Status:** **FAIL — not releasable.**
+
+This verifier did not alter product code. Full evidence is in
+`.factory/verification-2.md`.
+
+## What was verified
+
+- All ten registered claim commands passed from a clean checkout after
+  installing standard Linux Tauri build prerequisites.
+- `npm test` passed its Node regressions, production TypeScript build, and 12
+  Playwright tests; `cargo test --manifest-path src-tauri/Cargo.toml` passed.
+- Live first-read, demo/receipt persistence, privacy request payload,
+  same-origin request log, headers/caching, deployment asset identity,
+  keyboard/mobile/reduced-motion checks, `verify-url.sh`, and Playwright axe
+  serious/critical checks were exercised.
+
+## Blocking defects
+
+1. **Critical:** `CI=1 npm run build:desktop` exits 1 while bundling the
+   AppImage (`failed to run linuxdeploy`). DEB and RPM files are emitted first,
+   but no final AppImage exists.
+2. **Critical:** GitHub has tag `v0.1.0` but no GitHub Release. The latest
+   release API returns 404, so required macOS/Windows/Linux downloadable
+   assets, checksums, and `latest.json` do not exist.
+3. **High:** The receipt API claims 60 reads/minute, but 61 same-client GETs
+   in 18.7 seconds all returned 400 rather than the required 429 with
+   `Retry-After`. The deployed allowance is not enforced.
+
+## Next steps
+
+Use shared/durable rate limiting, repair the full Linux AppImage build, then
+publish and verify the multi-platform GitHub Release. Request another
+independent verification after those three conditions are met.
+
+---
+
+# Previous repair handoff
 
 ## Repair scope
 
