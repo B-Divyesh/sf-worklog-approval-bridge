@@ -12,6 +12,14 @@ Try the isolated sample at `/demo` or `https://worklog-approval-bridge.sociobot.
 
 Requirements: Node.js 22, npm, Rust stable, Git, and the [Tauri 2 system packages](https://v2.tauri.app/start/prerequisites/) for your platform.
 
+On Ubuntu/Debian Linux, desktop packaging also needs `file` because
+linuxdeploy's AppImage generator uses it:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+```
+
 ```sh
 npm ci
 npm run dev          # website and browser app

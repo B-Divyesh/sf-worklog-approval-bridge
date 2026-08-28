@@ -1,28 +1,15 @@
 import { app } from "@azure/functions";
 import { TableClient } from "@azure/data-tables";
 import { randomBytes } from "node:crypto";
-import { acceptApproval, normaliseApproval, ReceiptError, verifyAttestation } from "../receipt-service.js";
+import { acceptApproval, ReceiptError, verifyAttestation } from "../receipt-service.js";
+import { consumeRateLimit } from "../rate-limit.js";
 
 const TABLE = "worklogapprovals";
 const SECRET_PARTITION = "system";
 const SECRET_ROW = "attestation";
-const limits = new Map();
 
 function json(status, body) {
   return { status, jsonBody: body, headers: { "Cache-Control": "no-store", "Content-Type": "application/json" } };
-}
-
-function overLimit(request) {
-  const forwarded = request.headers.get("x-forwarded-for") || "unknown";
-  const client = forwarded.split(",")[0].trim();
-  const now = Date.now();
-  const windowStart = now - 60_000;
-  const prior = (limits.get(client) || []).filter(time => time > windowStart);
-  // Approval writes are intentionally conservative. A browser can retry after a minute.
-  const limit = request.method === "POST" ? 12 : 60;
-  if (prior.length >= limit) return true;
-  prior.push(now); limits.set(client, prior);
-  return false;
 }
 
 function table() {
@@ -67,6 +54,18 @@ async function storage() {
         try { await client.createEntity({ partitionKey: SECRET_PARTITION, rowKey: SECRET_ROW, value }); return value; }
         catch (conflict) { if (conflict.statusCode === 409) return (await client.getEntity(SECRET_PARTITION, SECRET_ROW)).value; throw conflict; }
       }
+    },
+    async getRateBucket(rowKey) {
+      try {
+        const entity = await client.getEntity("rate-limit", rowKey);
+        return { rowKey, bucket: Number(entity.bucket), count: Number(entity.count), expiresAt: entity.expiresAt, etag: entity.etag };
+      } catch (error) { if (error.statusCode === 404) return null; throw error; }
+    },
+    async createRateBucket(bucket) {
+      return client.createEntity({ partitionKey: "rate-limit", ...bucket });
+    },
+    async replaceRateBucket(bucket) {
+      return client.updateEntity({ partitionKey: "rate-limit", rowKey: bucket.rowKey, bucket: bucket.bucket, count: bucket.count, expiresAt: bucket.expiresAt }, "Replace", { etag: bucket.etag });
     }
   };
 }
@@ -75,8 +74,9 @@ app.http("approvals", {
   methods: ["GET", "POST"], route: "approvals/{receiptId?}", authLevel: "anonymous",
   handler: async (request) => {
     try {
-      if (overLimit(request)) return { ...json(429, { error: "Too many approval requests. Try again in one minute." }), headers: { "Cache-Control": "no-store", "Content-Type": "application/json", "Retry-After": "60" } };
       const store = await storage();
+      const limit = await consumeRateLimit(store, { client: request.headers.get("x-forwarded-for") || "unknown", method: request.method });
+      if (!limit.allowed) return { ...json(429, { error: "Too many approval requests. Try again in one minute." }), headers: { "Cache-Control": "no-store", "Content-Type": "application/json", "Retry-After": String(limit.retryAfter) } };
       if (request.method === "GET") {
         const receiptId = request.params.receiptId;
         const packetDigest = request.query.get("packetDigest")?.toLowerCase();

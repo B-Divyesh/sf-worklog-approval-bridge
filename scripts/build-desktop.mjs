@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
+import { patchGtkPlugin } from "./linuxdeploy-plugin.mjs";
 
 // Tauri's clap parser accepts CI=true/false, while common CI providers expose CI=1.
 if (process.env.CI === "1") process.env.CI = "true";
@@ -13,9 +14,8 @@ if (process.platform === "linux") process.env.APPIMAGE_EXTRACT_AND_RUN ||= "1";
 const gtkPlugin = `${homedir()}/.cache/tauri/linuxdeploy-plugin-gtk.sh`;
 try {
   const source = await readFile(gtkPlugin, "utf8");
-  if (!source.includes("--plugin-type)")) {
-    await writeFile(gtkPlugin, source.replace("--plugin-api-version)\n            echo \"0\"", "--plugin-api-version)\n            echo \"0\"\n            exit 0\n            ;;\n        --plugin-type)\n            echo \"input\""));
-  }
+  const patched = patchGtkPlugin(source);
+  if (patched !== source) await writeFile(gtkPlugin, patched);
 } catch { /* The plugin is downloaded by Tauri during its first Linux bundle. */ }
 
 const command = process.platform === "win32" ? "npx.cmd" : "npx";
