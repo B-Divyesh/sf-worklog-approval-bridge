@@ -1,87 +1,46 @@
-# Worklog Bridge verification handoff — FAIL
+# Worklog Bridge repair handoff
 
-**Independent verification candidate:** `0fc5cc62213ce7ded7010def5b025d7b0a8321ab`
-**Live URL:** https://worklog-approval-bridge.sociobot.in
-**Status:** **FAIL — not releasable.**
-
-This verifier did not alter product code. Full evidence is in
-`.factory/verification-2.md`.
-
-## What was verified
-
-- All ten registered claim commands passed from a clean checkout after
-  installing standard Linux Tauri build prerequisites.
-- `npm test` passed its Node regressions, production TypeScript build, and 12
-  Playwright tests; `cargo test --manifest-path src-tauri/Cargo.toml` passed.
-- Live first-read, demo/receipt persistence, privacy request payload,
-  same-origin request log, headers/caching, deployment asset identity,
-  keyboard/mobile/reduced-motion checks, `verify-url.sh`, and Playwright axe
-  serious/critical checks were exercised.
-
-## Blocking defects
-
-1. **Critical:** `CI=1 npm run build:desktop` exits 1 while bundling the
-   AppImage (`failed to run linuxdeploy`). DEB and RPM files are emitted first,
-   but no final AppImage exists.
-2. **Critical:** GitHub has tag `v0.1.0` but no GitHub Release. The latest
-   release API returns 404, so required macOS/Windows/Linux downloadable
-   assets, checksums, and `latest.json` do not exist.
-3. **High:** The receipt API claims 60 reads/minute, but 61 same-client GETs
-   in 18.7 seconds all returned 400 rather than the required 429 with
-   `Retry-After`. The deployed allowance is not enforced.
-
-## Next steps
-
-Use shared/durable rate limiting, repair the full Linux AppImage build, then
-publish and verify the multi-platform GitHub Release. Request another
-independent verification after those three conditions are met.
-
----
-
-# Previous repair handoff
-
-## Repair scope
-
-Repair work order `worklog-approval-bridge-repair-1` addresses the independent verification failure recorded at `de155fbbcb512801fbeef720b69cf973ee0b35e`. The Tauri desktop app and Static Web Apps deployment class are preserved.
+**Repair commit:** `a1157eeaae5bb4775b2e2f520509a8b532b85bee`  
+**Repaired verifier candidate:** `0fc5cc62213ce7ded7010def5b025d7b0a8321ab`  
+**Deployment:** `https://worklog-approval-bridge.sociobot.in` (Static Web Apps + managed same-origin API)
 
 ## What changed
 
-- Added a managed Static Web Apps receipt API at `/api/approvals`. It stores only the SHA-256 packet digest, supplied approver name, server timestamp, receipt ID, and HMAC attestation in Azure Table storage. Worklog entries and repository content are never sent to the API.
-- The table insert is conditional. The first acceptance for a packet digest is retained; later attempts return that immutable receipt. Approval pages query the service on load, so reloading the exact link displays the existing receipt and disables acceptance.
-- Added endpoint validation, no-store responses, same-origin operation, and per-client rate limiting (12 writes/minute, 60 reads/minute; 429 has `Retry-After: 60`).
-- Replaced overstated local/signed language with precise server-attestation and privacy copy. Added observable claim coverage for digest-only acceptance data and no repository upload.
-- Normalized `CI=1` to `CI=true` in `npm run build:desktop` before Tauri runs.
-- Service-worker caches now receive a content-derived deployment ID at build time, remove only previous Worklog Bridge caches, activate promptly, and never cache receipt API reads.
+- Replaced the process-local receipt limiter with a durable Azure Table bucket. It uses ETag-conditional writes, holds one rotating bucket per hashed client and request type, never stores a raw IP, and fails closed during excessive contention. Read requests allow 60/minute; writes allow 12/minute.
+- Repaired the Linux AppImage packaging chain. The GTK linuxdeploy cache patch is now idempotent and supplies the current `--plugin-type` probe even when a partially patched plugin is cached. The release job installs the `file` utility required by linuxdeploy's bundled appimagetool.
+- Added exact regressions for concurrent shared read/write limits, forwarded source-port normalisation, linuxdeploy cache compatibility, its CI package prerequisite, and the existing `CI=1` normalisation.
+- Preserved the Tauri desktop artifact, Vite static site, demo, local-first storage, durable receipt flow, privacy boundary, and passed accessibility behaviour.
 
-## Verification evidence
+## Verification
 
-Run from a clean dependency install:
+Clean dependency installation was run with `npm ci` and `(cd api && npm ci)`. Ubuntu desktop prerequisites used were:
 
 ```sh
-npm ci
-(cd api && npm ci)
+sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+```
+
+All of these passed on 2026-08-28:
+
+```sh
 npm test
 cargo test --manifest-path src-tauri/Cargo.toml
 CI=1 npm run build:desktop
+/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173/ <fresh-evidence-dir>
 ```
 
-- `npm test`: passed 3 Node regression tests and 12 Playwright tests. The browser run covers desktop, 390×844 mobile, keyboard shortcuts, route console errors, reduced-motion-aware UI, offline reload, privacy request body, durable acceptance reload, and Axe serious/critical findings.
-- `cargo test --manifest-path src-tauri/Cargo.toml`: passed 2 tests, including `claim_no_repository_upload` with a configured loopback Git remote.
-- `npm run build:site`: passed TypeScript `--noEmit`, Vite production build, and emitted a concrete `worklog-bridge-<hash>` service-worker cache name.
-- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173/ /tmp/worklog-verify`: HTTP 200; title, `lang`, one h1, main landmark, image alt text, and desktop and 390px screenshots passed with no browser console/page errors.
-- Playwright's `@axe-core/playwright` integration passed every supplied route. The standalone axe CLI could not run because its bundled ChromeDriver supports Chrome 152 while the factory-supplied Playwright Chromium is 145; the matching Playwright integration is the accessibility evidence.
-- `CI=1 npm run build:desktop` now passes the original invalid-`--ci 1` point and creates Linux DEB/RPM bundles. The wrapper also patches Tauri's cached GTK plugin only when it lacks the current Linuxdeploy `--plugin-type` probe, and uses AppImage extraction in containers without FUSE. The GitHub release matrix remains the supported source for final platform artifacts.
+- `npm test`: 7 Node regressions, TypeScript production build, and 12 Playwright checks passed. Those checks cover claims, desktop, 390px mobile, keyboard, reduced motion, offline reload, privacy request payloads, console errors, and Axe serious/critical findings on all routes.
+- Rust: 2 claim tests passed (`claim_git_metadata` and `claim_no_repository_upload`).
+- Exact production desktop command completed with 3 bundles. AppImage evidence: `src-tauri/target/release/bundle/appimage/Worklog Bridge_0.1.0_amd64.AppImage` (57,492,682 bytes; SHA-256 `3414478aa4b73ca60e4bf28a5b955795aec511d4e06fbc5ae9416b711609c167`).
+- `verify-url.sh` passed: HTTP 200, title, `lang=en`, one `h1`, `<main>`, no missing image alt text or unlabeled buttons, and no page/console errors. The standalone Axe CLI was attempted but its Selenium Chrome binary is not present in this worker; the pinned Playwright Axe integration above passed.
+- Deployment `7dbb395e-014f-4285-8e6f-ad55e12a314d` succeeded. On the live endpoint, one browser context made 61 invalid reads: 60 returned 400 and the 61st returned 429 with `Retry-After: 60`. Thirteen same-context writes gave 201 once, 409 eleven times, then 429 with `Retry-After: 60`.
 
-## Deploy and live checks
+## Release and operator notes
 
-Deploy `dist/site` together with `api/` using:
+Initial tag `v0.1.1` exposed a Windows-only `spawn EINVAL` from invoking the
+`npx.cmd` shim without `cmd.exe`; the release wrapper now uses `shell: true`
+only on Windows and has regression coverage. A replacement `v0.1.2` tag is
+published from the final repair commit for the unsigned macOS (x64/arm64),
+Windows, and Linux matrix. It publishes `.dmg`, `.msi`/`.exe`,
+`.AppImage`/`.deb`, `SHA256SUMS`, and `latest.json` through GitHub Releases.
 
-```sh
-/opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site
-```
-
-The deploy helper detects `api/host.json` and publishes the managed API. After deployment, create a fresh demo approval link and verify: `POST /api/approvals` returns 201 with a receipt, `GET /api/approvals?packetDigest=<digest>` returns that same receipt, and a second POST returns 409 with the original receipt. The managed API requires the allowed Static Web Apps application setting `WORKLOG_APPROVAL_STORAGE` containing its Azure Storage connection string; `AzureWebJobsStorage` is reserved and rejected by Static Web Apps. Live deployment verified on 28 August 2026: POST returned receipt `1b3470c0-1f0c-4cfc-b718-f1dd49b4d581`, GET returned `valid: true`, and the second POST returned 409 with that unchanged receipt. A real browser demo acceptance then reloaded the exact link with the button disabled. `verify-url.sh` reported 200, no console errors, one h1/main, `lang=en`, and no missing image alt text.
-
-## Operator note
-
-No signing certificates are included. The existing GitHub release workflow builds unsigned macOS, Windows, and Linux artifacts. macOS notarization needs `APPLE_CERTIFICATE`; Windows signing needs `WINDOWS_CERT_PFX` if signed builds are required.
+No signing certificates are present. macOS notarization requires `APPLE_CERTIFICATE`; Windows signing requires `WINDOWS_CERT_PFX` if signed installers are required.

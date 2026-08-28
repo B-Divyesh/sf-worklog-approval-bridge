@@ -19,5 +19,10 @@ try {
 } catch { /* The plugin is downloaded by Tauri during its first Linux bundle. */ }
 
 const command = process.platform === "win32" ? "npx.cmd" : "npx";
-const child = spawn(command, ["tauri", "build", ...process.argv.slice(2)], { stdio: "inherit", env: process.env });
+// Windows cannot directly spawn a .cmd shim with Node's default CreateProcess
+// mode. Run the npx shim through cmd.exe while every other platform stays
+// shell-free.
+const child = spawn(command, ["tauri", "build", ...process.argv.slice(2)], {
+  stdio: "inherit", env: process.env, shell: process.platform === "win32"
+});
 child.on("exit", code => process.exit(code ?? 1));

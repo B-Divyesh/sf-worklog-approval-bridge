@@ -8,6 +8,7 @@ test("@regression:ci-one-desktop-build normalises CI=1 before invoking Tauri", a
   assert.match(source, /process\.env\.CI === "1"\) process\.env\.CI = "true"/);
   assert.match(source, /patchGtkPlugin/);
   assert.match(source, /APPIMAGE_EXTRACT_AND_RUN/);
+  assert.match(source, /shell: process\.platform === "win32"/);
 });
 
 test("@regression:appimage-linuxdeploy-plugin adds the required type probe to a partially patched cache", () => {
