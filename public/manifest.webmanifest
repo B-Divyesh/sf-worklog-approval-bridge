@@ -1,0 +1,9 @@
+{
+  "name": "Worklog Bridge",
+  "short_name": "Worklog",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#090b10",
+  "theme_color": "#090b10",
+  "icons": [{ "src": "/assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }]
+}

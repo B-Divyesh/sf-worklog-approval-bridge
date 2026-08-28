@@ -1,0 +1,26 @@
+{
+  "name": "worklog-approval-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:tauri": "tauri dev",
+    "build": "npm run build:site",
+    "build:site": "tsc --noEmit && vite build && node scripts/postbuild.mjs",
+    "build:desktop": "tauri build",
+    "test": "npm run build:site && playwright test",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.8.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.58.2",
+    "@tauri-apps/cli": "2.8.4",
+    "sharp": "0.35.4",
+    "typescript": "5.9.2",
+    "vite": "7.3.6"
+  }
+}

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://worklog-approval-bridge.sociobot.in/sitemap.xml

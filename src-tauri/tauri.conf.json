@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Worklog Bridge",
+  "version": "0.1.0",
+  "identifier": "in.sociobot.worklog-approval-bridge",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420/app",
+    "beforeBuildCommand": "npm run build:site",
+    "frontendDist": "../dist/site"
+  },
+  "app": {
+    "windows": [{ "title": "Worklog Bridge", "width": 1280, "height": 820, "minWidth": 760, "minHeight": 620, "url": "/app" }],
+    "security": { "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost data:; style-src 'self'; script-src 'self'; connect-src 'self' https://api.sociobot.in ipc: http://ipc.localhost" }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Build client-ready worklogs from selected activity",
+    "longDescription": "Local-first Git and calendar evidence review with approval receipts.",
+    "icon": ["icons/icon.png"],
+    "copyright": "Copyright © 2026 Sociobot",
+    "linux": { "appimage": { "bundleMediaFramework": false }, "deb": { "depends": [] } }
+  }
+}
