@@ -42,7 +42,11 @@ only on Windows and has regression coverage. `v0.1.2` proved all four bundle
 jobs, but was incorrectly marked prerelease and therefore invisible to the
 GitHub `releases/latest` endpoint used by the download page. Stable tag
 `v0.1.3` is published from the final repair commit for the unsigned macOS
-(x64/arm64), Windows, and Linux matrix. It publishes `.dmg`, `.msi`/`.exe`,
-`.AppImage`/`.deb`, `SHA256SUMS`, and `latest.json` through GitHub Releases.
+(x64/arm64), Windows, and Linux matrix. GitHub Actions run `33216402640`
+completed successfully. It publishes `.dmg`, `.msi`/`.exe`, `.AppImage`/`.deb`,
+`SHA256SUMS`, and `latest.json` through GitHub Releases. The GitHub latest
+release API now returns stable `v0.1.3`; the live Linux download button resolves
+to the AppImage. A full 79,485,432-byte release AppImage was downloaded and
+matched its published SHA-256: `2f0c59c0131267b9d0f0ef36d381d970d1a88dfcc35aa5f517b358c643de2182`.
 
 No signing certificates are present. macOS notarization requires `APPLE_CERTIFICATE`; Windows signing requires `WINDOWS_CERT_PFX` if signed installers are required.
