@@ -30,7 +30,7 @@ CI=1 npm run build:desktop
 - `npm run build:site`: passed TypeScript `--noEmit`, Vite production build, and emitted a concrete `worklog-bridge-<hash>` service-worker cache name.
 - `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173/ /tmp/worklog-verify`: HTTP 200; title, `lang`, one h1, main landmark, image alt text, and desktop and 390px screenshots passed with no browser console/page errors.
 - Playwright's `@axe-core/playwright` integration passed every supplied route. The standalone axe CLI could not run because its bundled ChromeDriver supports Chrome 152 while the factory-supplied Playwright Chromium is 145; the matching Playwright integration is the accessibility evidence.
-- `CI=1 npm run build:desktop` now passes the original invalid-`--ci 1` point and creates Linux DEB/RPM bundles. In this container, AppImage finalization is blocked by Tauri's cached `linuxdeploy-plugin-gtk.sh` exiting 127 during its unsupported `--plugin-type` probe; this is an upstream worker-tool cache mismatch, not a source failure. The GitHub release matrix remains the supported source for final platform artifacts.
+- `CI=1 npm run build:desktop` now passes the original invalid-`--ci 1` point and creates Linux DEB/RPM bundles. The wrapper also patches Tauri's cached GTK plugin only when it lacks the current Linuxdeploy `--plugin-type` probe, and uses AppImage extraction in containers without FUSE. The GitHub release matrix remains the supported source for final platform artifacts.
 
 ## Deploy and live checks
 
