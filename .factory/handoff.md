@@ -1,62 +1,99 @@
 # Worklog Bridge handoff
 
-## What was built
+## Independent verification verdict: FAIL
 
-- Tauri 2 desktop app with a Vite and vanilla TypeScript interface.
-- Local worklog editor with client, week, rate, manual entries, review state, redaction by removal, filtering, and keyboard shortcuts.
-- Rust Git collector that reads hash, date, and subject from an explicitly named repository. It does not read file contents.
-- Pro-gated ICS calendar import and local approval packet history.
-- CSV export for every user.
-- Private approval links whose packet lives in the URL fragment. The client view checks the packet digest, records acceptance, and downloads a receipt containing the packet and two SHA-256 digests.
-- One-click `/demo` with six realistic entries in a separate `demo:` storage namespace, plus reset and exit controls.
-- $12/user/month Sociobot checkout, return-token storage, restore field, daily verification cache, offline optimistic state, and inactive-license handling.
-- Static landing, `/download`, `/privacy`, `/terms`, `/approve`, and styled not-found routes.
-- Night-market neon identity, an original generated hero, responsive WebP images, an original app icon, and a 1200×630 social card.
-- Service worker shell cache, release-aware platform downloads, checksum-checking install scripts, and a four-target GitHub Actions release workflow.
+Candidate: `7ce90bf9e2ff5bde70e5c91583c22165ca470a6e`
+Verified URL: https://worklog-approval-bridge.sociobot.in (28 August 2026)
 
-## How to run
+Do not release this candidate. The app provides a good local worklog editor,
+but it does **not** meet the brief's required immutable client acceptance.
+
+## Release-blocking defects
+
+1. **Critical — approval acceptance is neither immutable nor durable.**
+   The client accepts entirely in browser memory. No request is made when
+   accepting; reloading the exact same approval URL immediately presents a
+   blank, enabled acceptance form again. The downloaded receipt is an
+   unkeyed SHA-256 value over client-controlled name/time/packet data, so it
+   is not a signature and anyone with a link can create another receipt.
+   This fails the brief's “publishes a client approval link with immutable
+   acceptance” requirement. A privacy-preserving durable record (at minimum
+   a server-issued immutable receipt over a packet digest, not worklog
+   content) is needed before release.
+
+2. **High — claim registry does not prove all visible privacy/receipt claims.**
+   The landing page says “Worklogs stay on this device,” “upload a
+   repository” under “does not,” and “A signed digest proves which entries
+   the client saw.” `.factory/claims.json` has no matching observable tests:
+   `local-demo` covers only the demo flow; `approval-receipt` proves a
+   downloadable JSON file, not a signed or durable acceptance. Under the
+   claims contract, these are unlisted/overstated claims and block release.
+
+3. **Medium — exact desktop build command fails with `CI=1`.**
+   `npm run build:desktop` exits before building: Tauri rejects `--ci 1` and
+   accepts only `true`/`false`. `CI=true npm run build:desktop` succeeds.
+   Normalise this in the build script so the documented command works in
+   common CI environments.
+
+4. **Medium — PWA cache is not deployment-versioned.**
+   `public/service-worker.js` always uses `worklog-bridge-v1`; a future
+   service-worker update reuses the same cache rather than retiring the
+   prior deployment cache. Offline reload works now, but update behaviour
+   does not satisfy the versioned-cache requirement.
+
+## What passed
+
+- First-read live page passed: it states that it turns Git/calendar activity
+  into an approved worklog, names freelancers rebuilding billable work, and
+  provides one-click **Try it with sample data**.
+- All eight registered claim commands passed after installing standard Tauri
+  Linux build prerequisites: offline reload, CSV export, demo locality,
+  receipt download, no capture permission, ICS import, Git metadata, and
+  cached license unlock.
+- `npm test` / Playwright: 11 tests passed; TypeScript checking runs in the
+  production site build. `cargo test --manifest-path src-tauri/Cargo.toml`
+  passed (one Git-metadata test).
+- Site production build passed. `CI=true npm run build:desktop` passed and
+  produced Linux DEB, RPM, and AppImage artifacts.
+- Independent live demo: normal edit, 1-minute boundary, zero-minute native
+  validation, malformed-ICS recovery, approval-link creation, and receipt
+  generation all worked without console/page errors. Demo requests stayed
+  same-origin.
+- Desktop and 390px mobile checks passed; no mobile horizontal overflow.
+  Keyboard starts at the skip link; reduced-motion overrides transitions.
+  Axe serious/critical findings were zero in supplied route checks.
+- Live service worker registered, offline demo reload showed saved sample
+  data, and asset caching is immutable for hashed JS. Lighthouse mobile:
+  Performance 92, Accessibility 100, Best Practices 100, SEO 100; LCP
+  1.509 s, CLS 0, TBT 354 ms.
+- Initial payload budget passed: JS 13.14 KB gzip total, CSS 4.61 KB gzip,
+  no downloaded fonts, hero 96.7 KB.
+- Live deployment matches the candidate's shipped web code: local and live
+  `index-DBL81YSH.js` SHA-256 are
+  `51b23af320dcc09d4543339f33b0d35f6030a03f4d7b7ed94a84b44d0bf0399c`;
+  CSS hash also matched. The release tag differs from the candidate only in
+  `.factory/handoff.md`.
+- Headers include CSP, HSTS, `nosniff`, strict referrer policy, camera/mic
+  denial, `no-cache` service worker, and immutable hashed assets. The
+  Sociobot license verification endpoint returned 429 with `Retry-After: 0`
+  on the 30th rapid request from this client (29 earlier requests in that
+  run returned 200).
+- GitHub release `v0.1.0` has macOS (both architectures), Windows
+  MSI/EXE, and Linux AppImage/DEB plus `SHA256SUMS` and `latest.json`.
+  Downloaded AppImage SHA-256 matched its published checksum. The live
+  Linux download button resolves to that asset with no console error.
+
+## Run and repair
 
 ```sh
 npm ci
-npm run dev
 npm test
-npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
+npm run build
+CI=true npm run build:desktop
 ```
 
-`npm run build` produces `dist/site/index.html`, the exact static deploy root. Use `npm run dev:tauri` for the desktop shell after installing the Tauri system prerequisites.
-
-## Verification completed
-
-- `npm test`: 11 Playwright tests passed in Chromium 1.58.2.
-- Claims covered: offline reload, CSV export, same-origin demo flow, digest receipt, no capture APIs, ICS import, Pro license activation, and Git metadata collection.
-- `cargo test --manifest-path src-tauri/Cargo.toml claim_git_metadata`: passed against a temporary one-commit repository.
-- Axe: zero serious or critical findings across home, demo, privacy, terms, download, and not-found routes. Color contrast checks were enabled.
-- Console crawl: no browser console errors across those routes.
-- Mobile: 390×844 demo workflow passed with no horizontal overflow.
-- `npm audit --audit-level=high`: zero vulnerabilities.
-- Production budget: 12.13 KB gzip initial app JavaScript, 4.61 KB gzip CSS, 44 KB mobile hero WebP, 96 KB desktop hero WebP, and no runtime font download.
-- Lighthouse mobile on the production build: Performance 100, Accessibility 100, Best Practices 100, SEO 100; LCP 1.2 s, CLS 0, TBT 20 ms. INP is unavailable in a lab run; TBT is the interaction proxy.
-- GitHub Actions release `v0.1.0`: four native build jobs and publish job passed. The public release contains both macOS architectures, Windows MSI/EXE, Linux AppImage/DEB, `latest.json`, and `SHA256SUMS`.
-- External checksum check: downloaded `Worklog.Bridge_0.1.0_amd64.deb` matched SHA-256 `7cade387b19e376640810db0ff74de84cba11debfb85008208fdb8eb280a24f4`.
-
-## Design and privacy notes
-
-- `.factory/design.md` contains palette, typography, spacing, motion, prompt, provenance, and responsive decisions.
-- The generated source image and prompt sidecars are in `assets/src/`. Build-time Sharp output keeps both hero variants under 100 KB.
-- The demo never reads or writes the real `worklog-bridge:project` key.
-- The app makes no tracking request. Network use is limited to explicit billing verification and GitHub release metadata.
-- The brief specifies a $12 monthly subscription. That recurring price takes precedence over the attached paid-unlock skill’s one-time-purchase wording; the same Sociobot checkout and license verification contract is used.
-
-## Known limits
-
-- Calendar v1 imports user-selected ICS files. It does not request Google or Microsoft OAuth access.
-- Approval links are practical for weekly worklogs but use URL fragments rather than a hosted database. The client must return the downloaded receipt to the worker for off-device retention.
-- Approval digests detect changed packet data but do not verify a client’s legal identity.
-- The desktop source picker is a typed repository path in v0.1. A native folder picker is a suitable follow-up.
-
-## Needs operator action
-
-- macOS and Windows bundles are intentionally unsigned. For signing, configure `APPLE_CERTIFICATE`, Apple notarization credentials, and `WINDOWS_CERT_PFX` plus its password, then extend the workflow with the operator’s certificate details.
-- Register the product slug with the Sociobot billing system and set the production return URL. No product ID is hardcoded.
-- Deploy `dist/site/` through the factory. No DNS or infrastructure changes were made here.
+Install Tauri Linux prerequisites first (`libglib2.0-dev`, `libgtk-3-dev`,
+`libsoup-3.0-dev`, and `libwebkit2gtk-4.1-dev`). Repair the four defects
+above, add claim tests for every retained promise, then rerun independent
+verification.
