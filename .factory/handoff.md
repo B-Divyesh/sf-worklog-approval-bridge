@@ -40,7 +40,7 @@ Deploy `dist/site` together with `api/` using:
 /opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site
 ```
 
-The deploy helper detects `api/host.json` and publishes the managed API. After deployment, create a fresh demo approval link and verify: `POST /api/approvals` returns 201 with a receipt, `GET /api/approvals?packetDigest=<digest>` returns that same receipt, and a second POST returns 409 with the original receipt. The managed API requires the allowed Static Web Apps application setting `WORKLOG_APPROVAL_STORAGE` containing its Azure Storage connection string; `AzureWebJobsStorage` is reserved and rejected by Static Web Apps.
+The deploy helper detects `api/host.json` and publishes the managed API. After deployment, create a fresh demo approval link and verify: `POST /api/approvals` returns 201 with a receipt, `GET /api/approvals?packetDigest=<digest>` returns that same receipt, and a second POST returns 409 with the original receipt. The managed API requires the allowed Static Web Apps application setting `WORKLOG_APPROVAL_STORAGE` containing its Azure Storage connection string; `AzureWebJobsStorage` is reserved and rejected by Static Web Apps. Live deployment verified on 28 August 2026: POST returned receipt `1b3470c0-1f0c-4cfc-b718-f1dd49b4d581`, GET returned `valid: true`, and the second POST returned 409 with that unchanged receipt. A real browser demo acceptance then reloaded the exact link with the button disabled. `verify-url.sh` reported 200, no console errors, one h1/main, `lang=en`, and no missing image alt text.
 
 ## Operator note
 
