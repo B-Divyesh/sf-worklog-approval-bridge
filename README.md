@@ -4,7 +4,7 @@ Turn selected Git and calendar activity into a client-ready weekly worklog.
 
 Worklog Bridge is for freelance developers and small consultancies that reconstruct billable work at week-end. The Tauri desktop app reads metadata from a repository the user names. A Pro license adds ICS calendar import and saved approval history. Every entry can be rewritten, timed, removed, or marked ready before sharing.
 
-The free editor exports CSV. It also creates a private approval link whose worklog is stored in the URL fragment. A client can accept that packet and download a receipt containing SHA-256 packet and acceptance digests. Saved work remains available offline after the first visit. The demo sends no worklog data to another origin. The product does not request camera, microphone, or screen access.
+The free editor exports CSV. It also creates a private approval link whose worklog is stored in the URL fragment. A client can accept a packet once and download a server-attested receipt. The receipt service receives only the packet digest and supplied name, never worklog entries or repository content. Saved work remains available offline after the first visit. The demo sends no worklog data to another origin. The product does not request camera, microphone, or screen access.
 
 Try the isolated sample at `/demo` or `https://worklog-approval-bridge.sociobot.in/demo`. It uses the `demo:worklog-bridge:project` storage key and never reads the real workspace key.
 
@@ -38,7 +38,7 @@ Playwright 1.58.2 uses the browser path supplied by the factory worker. The clai
 3. Add manual entries or use Pro to import an ICS file.
 4. Rewrite each line, set its minutes, and mark it ready.
 5. Export CSV or copy the approval link.
-6. Ask the client to review, accept, and download the receipt.
+6. Ask the client to review, accept once, and download the server-attested receipt.
 
 The approval link contains visible worklog details. Treat it like a private document. It does not verify the approver's legal identity.
 
@@ -51,7 +51,7 @@ Pro costs $12 per user each month. Checkout uses the Sociobot billing API; no pa
 - Vanilla TypeScript and Vite power the interface.
 - Tauri 2 and a small Rust command read Git metadata on the selected path.
 - Local storage is split between real and demo namespaces.
-- Approval payloads use URL fragments, which browsers do not send in HTTP requests.
+- Approval payloads use URL fragments, which browsers do not send in HTTP requests. The managed same-origin receipt API stores only a packet digest, name, server timestamp, receipt ID, and attestation in Azure Table storage.
 - There are no analytics, third-party scripts, remote fonts, screenshots, timers, or keystroke capture.
 
 See `/privacy` and `/terms` in the site. The night-market design and generated-image provenance are recorded in [.factory/design.md](.factory/design.md).

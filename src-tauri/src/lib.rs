@@ -58,6 +58,7 @@ pub fn run() {
 mod tests {
     use super::*;
     use std::fs;
+    use std::net::TcpListener;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -92,6 +93,28 @@ mod tests {
         assert_eq!(commits[0].title, "Add reviewed work");
         assert_eq!(commits[0].hash.len(), 40);
         assert_eq!(commits[0].date.len(), 10);
+        fs::remove_dir_all(path).unwrap();
+    }
+
+    #[test]
+    fn claim_no_repository_upload() {
+        let suffix = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("worklog-bridge-local-only-{suffix}"));
+        fs::create_dir(&path).unwrap();
+        let git = |args: &[&str]| Command::new("git").args(["-C", path.to_str().unwrap()]).args(args).output().unwrap();
+        assert!(git(&["init", "--quiet"]).status.success());
+        assert!(git(&["config", "user.email", "test@example.invalid"]).status.success());
+        assert!(git(&["config", "user.name", "Test Worker"]).status.success());
+        fs::write(path.join("private-source.txt"), "never upload this content\n").unwrap();
+        assert!(git(&["add", "private-source.txt"]).status.success());
+        assert!(git(&["commit", "--quiet", "-m", "Local commit only"]).status.success());
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        assert!(git(&["remote", "add", "origin", &format!("git://127.0.0.1:{port}/private.git")]).status.success());
+        let commits = collect_git(path.to_string_lossy().into_owned()).unwrap();
+        assert_eq!(commits[0].title, "Local commit only");
+        assert!(listener.accept().is_err(), "reading Git metadata must not contact the configured remote");
         fs::remove_dir_all(path).unwrap();
     }
 }

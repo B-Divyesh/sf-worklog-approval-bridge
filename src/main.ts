@@ -5,6 +5,7 @@ type Entry = { id: string; date: string; title: string; detail: string; source: 
 type Project = { client: string; week: string; rate: number; currency: string; entries: Entry[]; sources: string[] };
 type Packet = { version: 1; client: string; week: string; currency: string; rate: number; entries: Entry[]; createdAt: string; digest: string };
 type LicenseVerdict = { valid: boolean; checkedAt: number; expiresAt?: string };
+type ApprovalReceipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
 
 const PRODUCT = "worklog-approval-bridge";
 const SITE = "https://worklog-approval-bridge.sociobot.in";
@@ -15,6 +16,7 @@ const REAL_KEY = "worklog-bridge:project";
 const LICENSE_KEY = `sb_license:${PRODUCT}`;
 const LICENSE_CACHE = `${LICENSE_KEY}:verdict`;
 const PACKET_HISTORY = "worklog-bridge:packet-history";
+const APPROVALS_API = "/api/approvals";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 const uid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -85,7 +87,7 @@ function landing() {
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
         <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Nothing is saved to your real data.</p></div>
-        <ul class="facts"><li>Worklogs stay on this device</li><li>No screenshots, timers, or keystrokes</li><li>Free core tools · Pro is $12 per month</li></ul>
+        <ul class="facts"><li>Worklog details stay on this device</li><li>No screenshots, timers, or keystrokes</li><li>Free core tools · Pro is $12 per month</li></ul>
       </div>
       <figure class="hero-art">
         <picture><source srcset="/assets/night-market-bridge-768.webp 768w, /assets/night-market-bridge-1280.webp 1280w" type="image/webp"><img src="/assets/night-market-bridge-1280.webp" width="1280" height="853" alt="Paper work tickets move along a rail toward an approval stamp in a night market stall." fetchpriority="high" decoding="async"></picture>
@@ -97,15 +99,15 @@ function landing() {
       <div class="rail" aria-label="Three-screen product walkthrough">
         <article class="rail-stage"><span class="stage-number">SCREEN 01 · SELECT</span><h3>Choose the traces</h3><div class="source-ticket"><strong>northstar-portal</strong><small>12 Git commits selected</small></div><div class="source-ticket"><strong>Delivery calendar</strong><small>3 client events selected</small></div></article>
         <article class="rail-stage"><span class="stage-number">SCREEN 02 · REVIEW</span><h3>Write what the client needs</h3><div class="source-ticket"><strong>Added audit log export</strong><small>Tue · 2h 50m · Ready</small></div><div class="source-ticket"><strong>Reduced dashboard query time</strong><small>Fri · 3h 15m · Ready</small></div></article>
-        <article class="rail-stage"><span class="stage-number">SCREEN 03 · APPROVE</span><h3>Keep the receipt</h3><div class="approval-stamp">Accepted<br>28 Aug</div><p>A signed digest proves which entries the client saw.</p></article>
+        <article class="rail-stage"><span class="stage-number">SCREEN 03 · APPROVE</span><h3>Keep the receipt</h3><div class="approval-stamp">Accepted<br>28 Aug</div><p>A server-attested digest records the packet the client accepted.</p></article>
       </div>
     </div></section>
     <section class="steps-section" aria-labelledby="steps-title"><div class="shell"><p class="eyebrow">How it works</p><h2 id="steps-title">From evidence to answer in three steps</h2><div class="steps">
       <article class="step"><h3>Select sources</h3><p>Point the desktop app at a Git repository. Pro users can also import an ICS calendar file.</p></article>
       <article class="step"><h3>Review each line</h3><p>Set time, rewrite technical notes, and remove anything the client should not see.</p></article>
-      <article class="step"><h3>Send for approval</h3><p>Copy a private link. The client can accept it and download a signed receipt.</p></article>
+      <article class="step"><h3>Send for approval</h3><p>Copy a private link. The client can accept it once and download a server-attested receipt.</p></article>
     </div></div></section>
-    <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">A boundary, not a tracker</p><h2 id="privacy-title">Only chosen evidence enters the worklog</h2><p class="lede">The app reads commit metadata and imported calendar fields. You review every shared word.</p></div><div><h3>Worklog Bridge does not</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
+    <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">A boundary, not a tracker</p><h2 id="privacy-title">Only chosen evidence enters the worklog</h2><p class="lede">The app reads commit metadata and imported calendar fields. You review every shared word.</p><p>Acceptance sends only the packet digest, supplied name, and server time. The worklog stays in the private link.</p></div><div><h3>Worklog Bridge does not</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
     <section class="pricing-section" id="pricing" aria-labelledby="pricing-title"><div class="shell"><p class="eyebrow">Simple monthly plan</p><h2 id="pricing-title">Start free, add recurring workflows</h2><div class="price-board"><div class="price-copy"><h3>Worklog Bridge Pro</h3><p class="price">$12 <span>/ user / month</span></p><p>Keep the free editor and exports. Add calendar imports and saved approval history.</p></div><div class="price-actions"><ul class="check-list"><li>ICS calendar import</li><li>Saved approval packet history</li><li>License use on another device</li></ul><a class="button mint" href="${BILLING}/checkout">Start Pro subscription</a><p><small>Sociobot/Dodo is the merchant of record. Cancel under its checkout terms.</small></p></div></div></div></section>
   </main>${footer()}`;
 }
@@ -156,13 +158,14 @@ function legalPage(kind: "privacy" | "terms") {
     <p class="lede">Worklog Bridge keeps project data in the app or browser storage you control.</p>
     <h2>What stays on your device</h2><p>Client names, work entries, repository paths, rates, and imported events stay in local storage. The installed app reads selected Git commit metadata on your device.</p>
     <h2>What a shared link contains</h2><p>An approval link stores the visible worklog inside the link fragment. Browsers do not send that fragment to our server. Anyone with the link can read its entries, so send it only to the intended client.</p>
+    <h2>What acceptance records</h2><p>When a client accepts, the receipt service stores only the packet digest, their supplied name, a server timestamp, and an attestation. It never receives the worklog entries or repository content.</p>
     <h2>License checks</h2><p>If you add a Pro license, the app sends that token to the Sociobot billing API. It stores the result for one day. Checkout and refunds are handled by Sociobot/Dodo.</p>
     <h2>What we do not collect</h2><p>We do not collect screenshots, keystrokes, repository content, calendar accounts, analytics, or advertising identifiers.</p>
     <h2>Delete your data</h2><p>Remove entries in the app or clear the site data in your browser. Uninstalling the desktop app removes access to its local data.</p>
     <h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p>` : `
     <p class="lede">These terms cover the Worklog Bridge website, app, and Pro subscription.</p>
     <h2>Use of the app</h2><p>You may use the app to prepare and share your own work records. You are responsible for checking entries before sharing them.</p>
-    <h2>Approval receipts</h2><p>A receipt proves that a named person accepted one packet digest at a stated time. It does not verify identity or replace legal advice.</p>
+    <h2>Approval receipts</h2><p>A receipt service records the first acceptance for one packet digest. It returns a receipt ID, server timestamp, and attestation that anyone with the packet can verify. It does not verify legal identity or replace legal advice.</p>
     <h2>Pro subscription</h2><p>Pro costs $12 per user each month. Sociobot/Dodo is the merchant of record. Billing, cancellation, and refunds follow the terms shown during checkout. A refund or cancellation may make the license inactive.</p>
     <h2>No warranty</h2><p>The software is provided as available, without warranties. Keep your own copies of records needed for billing or tax purposes.</p>
     <h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> with a terms question.</p>`}</article></main>${footer()}`;
@@ -185,7 +188,7 @@ function approvalPage() {
   const packet = decodePacket();
   if (!packet) return `${header()}<main id="main" class="not-found"><div class="narrow"><p class="eyebrow">Approval link error</p><h1 tabindex="-1">This worklog link is incomplete</h1><p class="lede">The private part of the link is missing or damaged. Ask the sender to create a new approval link.</p>${routeLink("/", "Return home", "button secondary")}</div></main>${footer()}`;
   const total = packet.entries.reduce((sum, item) => sum + item.duration, 0);
-  return `${header()}<main id="main" class="approval-page"><div class="narrow"><p class="eyebrow">Client review · packet ${esc(packet.digest.slice(0, 10))}</p><h1 tabindex="-1">Review this weekly worklog</h1><p class="lede">Check each entry before you accept the record.</p><article class="approval-sheet"><header><h2>${esc(packet.client || "Client worklog")}</h2><p>Week of ${esc(packet.week)} · ${hours(total)} · ${money(total / 60 * packet.rate, packet.currency)}</p></header><ul class="entry-list">${packet.entries.map(entry => `<li class="entry-row"><span class="entry-date">${esc(entry.date)}</span><span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span><span class="entry-duration">${hours(entry.duration)}</span></li>`).join("")}</ul><form class="approval-form" id="approval-form"><h2>Accept this worklog</h2><p>Your name and acceptance time become part of the receipt.</p><div class="field"><label for="approver">Your name</label><input id="approver" name="approver" autocomplete="name" required></div><label><input type="checkbox" name="confirmed" required> I reviewed these entries and accept this worklog.</label><div class="modal-actions"><button class="mint" type="submit">Accept and create receipt</button></div><div id="receipt-area" aria-live="polite"></div></form></article></div></main>${footer()}`;
+  return `${header()}<main id="main" class="approval-page"><div class="narrow"><p class="eyebrow">Client review · packet ${esc(packet.digest.slice(0, 10))}</p><h1 tabindex="-1">Review this weekly worklog</h1><p class="lede">Check each entry before you accept the record.</p><article class="approval-sheet"><header><h2>${esc(packet.client || "Client worklog")}</h2><p>Week of ${esc(packet.week)} · ${hours(total)} · ${money(total / 60 * packet.rate, packet.currency)}</p></header><ul class="entry-list">${packet.entries.map(entry => `<li class="entry-row"><span class="entry-date">${esc(entry.date)}</span><span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span><span class="entry-duration">${hours(entry.duration)}</span></li>`).join("")}</ul><form class="approval-form" id="approval-form"><h2>Accept this worklog</h2><p>The receipt service records your name, this packet digest, and its server time. It never receives these entries.</p><div class="field"><label for="approver">Your name</label><input id="approver" name="approver" autocomplete="name" required></div><label><input type="checkbox" name="confirmed" required> I reviewed these entries and accept this worklog.</label><div class="modal-actions"><button class="mint" type="submit">Accept and record receipt</button></div><div id="receipt-area" aria-live="polite"></div></form></article></div></main>${footer()}`;
 }
 
 function notFound() {
@@ -421,6 +424,8 @@ function showLicenseModal() {
 async function bindApproval() {
   const initialPacket = decodePacket();
   const formNode = document.querySelector<HTMLFormElement>("#approval-form");
+  const area = document.querySelector<HTMLElement>("#receipt-area");
+  const submit = formNode?.querySelector<HTMLButtonElement>("button[type=submit]");
   if (initialPacket && formNode) {
     const { digest: claimedDigest, ...base } = initialPacket;
     const actualDigest = await sha256(JSON.stringify(base));
@@ -428,18 +433,46 @@ async function bindApproval() {
       formNode.innerHTML = `<h2>This worklog was changed</h2><p class="error">The packet digest does not match its entries. Ask the sender for a new approval link.</p>`;
       return;
     }
+    try {
+      const response = await fetch(`${APPROVALS_API}?packetDigest=${encodeURIComponent(initialPacket.digest)}`, { cache: "no-store" });
+      if (response.status === 200) {
+        const result = await response.json() as { receipt: ApprovalReceipt; valid: boolean };
+        if (!result.valid) throw new Error("The receipt attestation could not be verified.");
+        showReceipt(result.receipt, area!);
+        if (submit) submit.disabled = true;
+        [...formNode.querySelectorAll<HTMLInputElement>("input")].forEach(input => input.disabled = true);
+        return;
+      }
+      if (response.status !== 404) throw new Error((await response.json() as { error?: string }).error || "The acceptance record could not be checked.");
+    } catch (error) {
+      if (submit) submit.disabled = true;
+      if (area) area.innerHTML = `<p class="error">${esc(error instanceof Error ? error.message : "The acceptance record could not be checked.")} Reconnect and reload before accepting.</p>`;
+      return;
+    }
   }
   formNode?.addEventListener("submit", async event => {
     event.preventDefault(); const packet = decodePacket(); if (!packet) return;
     const form = event.currentTarget as HTMLFormElement;
     const approver = String(new FormData(form).get("approver") || "").trim();
-    const acceptedAt = new Date().toISOString(); const receiptDigest = await sha256(`${packet.digest}|${approver}|${acceptedAt}`);
-    const receipt = { version: 1, packet, packetDigest: packet.digest, approver, acceptedAt, receiptDigest };
-    const area = document.querySelector<HTMLElement>("#receipt-area")!;
-    area.innerHTML = `<div class="receipt"><strong>Worklog accepted</strong><p>${esc(approver)} accepted this packet at ${esc(new Date(acceptedAt).toLocaleString())}.</p><code>${receiptDigest}</code><p><button type="button" id="download-receipt" class="secondary">Download receipt</button></p></div>`;
-    document.querySelector("#download-receipt")?.addEventListener("click", () => downloadBlob(`worklog-receipt-${packet.week}.json`, JSON.stringify(receipt, null, 2), "application/json"));
-    (form.querySelector("button[type=submit]") as HTMLButtonElement).disabled = true;
+    const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    button.disabled = true; button.textContent = "Recording acceptance…";
+    try {
+      const response = await fetch(APPROVALS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packetDigest: packet.digest, approver }) });
+      const result = await response.json() as { receipt?: ApprovalReceipt; error?: string };
+      if (!response.ok && response.status !== 409) throw new Error(result.error || "The approval record could not be saved.");
+      if (!result.receipt) throw new Error("The approval service returned an incomplete receipt.");
+      showReceipt(result.receipt, area!);
+      [...form.querySelectorAll<HTMLInputElement>("input")].forEach(input => input.disabled = true);
+    } catch (error) {
+      button.disabled = false; button.textContent = "Accept and record receipt";
+      if (area) area.innerHTML = `<p class="error">${esc(error instanceof Error ? error.message : "The approval record could not be saved.")} Check your connection and try again.</p>`;
+    }
   });
+}
+
+function showReceipt(receipt: ApprovalReceipt, area: HTMLElement) {
+  area.innerHTML = `<div class="receipt"><strong>Acceptance recorded</strong><p>${esc(receipt.approver)} accepted this packet at ${esc(new Date(receipt.acceptedAt).toLocaleString())}.</p><p>This packet can be accepted only once. Receipt ID: <code>${esc(receipt.receiptId)}</code></p><p>Server attestation: <code>${esc(receipt.attestation)}</code></p><p><button type="button" id="download-receipt" class="secondary">Download receipt</button></p></div>`;
+  document.querySelector("#download-receipt")?.addEventListener("click", () => downloadBlob(`worklog-receipt-${receipt.packetDigest.slice(0, 10)}.json`, JSON.stringify(receipt, null, 2), "application/json"));
 }
 
 async function bindDownloads() {

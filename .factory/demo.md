@@ -6,5 +6,5 @@
 - Reset: use “Reset demo” in the persistent amber banner.
 - Leave: use “Start for real”. Demo records are discarded from the active view and never copied into real storage.
 - Storage: the demo uses only `localStorage` key `demo:worklog-bridge:project`. Real mode uses `worklog-bridge:project`; demo code does not read or write that key.
-- Network: the bundled sample needs no network. Approval packet data stays in the URL fragment.
+- Network: the bundled sample needs no network. Approval packet details stay in the URL fragment. Client acceptance sends only the packet digest and supplied name to the same-origin receipt API; no worklog entries are sent.
 - Test entry point: Playwright opens `/demo` in a fresh browser context.

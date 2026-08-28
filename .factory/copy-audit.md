@@ -10,7 +10,7 @@ Audited 28 August 2026. Counts treat dotted separators and numbers as words. No 
 | Try it with sample data | 5 | Pass |
 | A filled weekly worklog opens next. | 6 | Pass |
 | Nothing is saved to your real data. | 7 | Pass |
-| Worklogs stay on this device | 5 | Pass |
+| Worklog details stay on this device | 6 | Pass |
 | No screenshots, timers, or keystrokes | 5 | Pass |
 | Free core tools · Pro is $12 per month | 9 | Pass |
 | Your selected traces move through one review rail. | 8 | Pass |
@@ -20,7 +20,7 @@ Audited 28 August 2026. Counts treat dotted separators and numbers as words. No 
 | Choose the traces | 3 | Pass |
 | Write what the client needs | 5 | Pass |
 | Keep the receipt | 3 | Pass |
-| A signed digest proves which entries the client saw. | 9 | Pass |
+| A server-attested digest records the packet the client accepted. | 9 | Pass |
 | From evidence to answer in three steps | 7 | Pass |
 | Select sources | 2 | Pass |
 | Point the desktop app at a Git repository. | 8 | Pass |
@@ -29,11 +29,13 @@ Audited 28 August 2026. Counts treat dotted separators and numbers as words. No 
 | Set time, rewrite technical notes, and remove anything the client should not see. | 13 | Pass |
 | Send for approval | 3 | Pass |
 | Copy a private link. | 4 | Pass |
-| The client can accept it and download a signed receipt. | 10 | Pass |
+| The client can accept it once and download a server-attested receipt. | 12 | Pass |
 | A boundary, not a tracker | 5 | Pass |
 | Only chosen evidence enters the worklog | 6 | Pass |
 | The app reads commit metadata and imported calendar fields. | 9 | Pass |
 | You review every shared word. | 5 | Pass |
+| Acceptance sends only the packet digest, supplied name, and server time. | 11 | Pass |
+| The worklog stays in the private link. | 7 | Pass |
 | Worklog Bridge does not | 4 | Pass |
 | capture screens | 2 | Pass |
 | record keystrokes | 2 | Pass |

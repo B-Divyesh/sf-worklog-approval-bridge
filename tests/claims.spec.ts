@@ -1,6 +1,24 @@
 import { test, expect } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
 
+type Receipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
+
+function mockApprovalService(page: import("@playwright/test").Page, observed?: { bodies: unknown[] }) {
+  let receipt: Receipt | undefined;
+  return page.route("**/api/approvals**", async route => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      if (!receipt) return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: "No acceptance has been recorded for this packet." }) });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ receipt, valid: true }) });
+    }
+    const body = JSON.parse(request.postData() || "{}");
+    observed?.bodies.push(body);
+    if (receipt) return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ receipt, created: false }) });
+    receipt = { version: 2, receiptId: "receipt-regression-001", packetDigest: body.packetDigest, approver: body.approver, acceptedAt: "2026-08-28T12:00:00.000Z", attestation: "test-server-attestation" };
+    return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ receipt, created: true }) });
+  });
+}
+
 test("@claim:offline-reload saved work remains available offline", async ({ page, context }) => {
   await page.goto("/demo");
   await expect(page.getByRole("heading", { name: "Review the weekly worklog" })).toBeVisible();
@@ -39,8 +57,24 @@ test("@claim:local-demo sends no worklog data to another origin", async ({ page,
   expect([...origins]).toEqual(["http://127.0.0.1:4173"]);
 });
 
-test("@claim:approval-receipt creates a downloadable digest receipt", async ({ page, context }) => {
+test("@claim:worklog-details-local submits only digest and acceptance metadata", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  const observed = { bodies: [] as unknown[] };
+  await mockApprovalService(page, observed);
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  await page.goto(await page.evaluate(() => navigator.clipboard.readText()));
+  await page.getByLabel("Your name").fill("Mira Chen");
+  await page.getByLabel("I reviewed these entries and accept this worklog.").check();
+  await page.getByRole("button", { name: "Accept and record receipt" }).click();
+  expect(observed.bodies).toHaveLength(1);
+  expect(observed.bodies[0]).toEqual({ packetDigest: expect.stringMatching(/^[a-f0-9]{64}$/), approver: "Mira Chen" });
+  expect(JSON.stringify(observed.bodies[0])).not.toContain("Fixed patient search filters");
+});
+
+test("@claim:approval-receipt records one durable, verifiable acceptance", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  await mockApprovalService(page);
   await page.goto("/demo");
   await page.getByRole("button", { name: "Copy approval link" }).click();
   const link = await page.evaluate(() => navigator.clipboard.readText());
@@ -48,7 +82,12 @@ test("@claim:approval-receipt creates a downloadable digest receipt", async ({ p
   await expect(page.getByRole("heading", { name: "Review this weekly worklog" })).toBeVisible();
   await page.getByLabel("Your name").fill("Mira Chen");
   await page.getByLabel("I reviewed these entries and accept this worklog.").check();
-  await page.getByRole("button", { name: "Accept and create receipt" }).click();
+  await page.getByRole("button", { name: "Accept and record receipt" }).click();
+  await expect(page.getByText("Acceptance recorded")).toBeVisible();
+  await expect(page.getByText("receipt-regression-001")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Acceptance recorded")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Accept and record receipt" })).toBeDisabled();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download receipt" }).click();
   const download = await downloadPromise;
@@ -58,7 +97,8 @@ test("@claim:approval-receipt creates a downloadable digest receipt", async ({ p
   const receipt = JSON.parse(body);
   expect(receipt.approver).toBe("Mira Chen");
   expect(receipt.packetDigest).toMatch(/^[a-f0-9]{64}$/);
-  expect(receipt.receiptDigest).toMatch(/^[a-f0-9]{64}$/);
+  expect(receipt.receiptId).toBe("receipt-regression-001");
+  expect(receipt.attestation).toBe("test-server-attestation");
   const tampered = await page.evaluate(original => {
     const url = new URL(original);
     const bytes = Uint8Array.from(atob(url.hash.slice(1)), c => c.charCodeAt(0));

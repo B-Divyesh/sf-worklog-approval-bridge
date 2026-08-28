@@ -1,5 +1,6 @@
 import sharp from "sharp";
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 
 await mkdir("public/assets", { recursive: true });
 await mkdir("src-tauri/icons", { recursive: true });
@@ -15,5 +16,11 @@ const iconSvg = Buffer.from(`<svg width="512" height="512" xmlns="http://www.w3.
 await sharp(iconSvg).png().toFile("src-tauri/icons/icon.png");
 await sharp(iconSvg).resize(180, 180).png().toFile("dist/site/assets/apple-touch-icon.png");
 await copyFile("dist/site/index.html", "dist/site/404.html");
+
+// The source service worker stays readable, while every deployed shell gets a
+// content-derived cache namespace and therefore retires the previous release.
+const buildId = createHash("sha256").update(await readFile("dist/site/index.html")).digest("hex").slice(0, 12);
+const worker = await readFile("dist/site/service-worker.js", "utf8");
+await writeFile("dist/site/service-worker.js", worker.replace("__BUILD_ID__", buildId));
 
 for (const file of ["install.sh", "install.ps1"]) await copyFile(`public/${file}`, `dist/site/${file}`);

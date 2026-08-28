@@ -22,10 +22,17 @@
   },
   {
     "id": "approval-receipt",
-    "claim": "A client can accept a shared packet and download a digest receipt",
+    "claim": "A client can accept a shared packet once and download a server-attested receipt",
     "where": "landing how-it-works, README",
     "test": "npm test -- --grep @claim:approval-receipt",
-    "sandbox": "demo data; create link, open it, accept, and inspect downloaded JSON digest"
+    "sandbox": "demo data; create link, open it, accept, reload the exact URL, and inspect the returned receipt ID and attestation"
+  },
+  {
+    "id": "worklog-details-local",
+    "claim": "Worklog details stay on the device; acceptance submits only the packet digest and supplied name",
+    "where": "landing facts, privacy section, privacy policy",
+    "test": "npm test -- --grep @claim:worklog-details-local",
+    "sandbox": "demo data; intercept the same-origin acceptance request and assert its exact two-field body contains no worklog text"
   },
   {
     "id": "no-surveillance",
@@ -47,6 +54,13 @@
     "where": "landing privacy section, README",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_git_metadata",
     "sandbox": "temporary Git repository with one local commit; no network"
+  },
+  {
+    "id": "no-repository-upload",
+    "claim": "Reading a selected repository does not upload it",
+    "where": "landing privacy section, privacy policy",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_no_repository_upload",
+    "sandbox": "temporary repository with a configured loopback Git remote; collect metadata and assert no remote connection is opened"
   },
   {
     "id": "license-unlock",
