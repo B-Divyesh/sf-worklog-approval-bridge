@@ -1,0 +1,58 @@
+[
+  {
+    "id": "offline-reload",
+    "claim": "Saved work remains available offline after the first visit",
+    "where": "app offline state, README",
+    "test": "npm test -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; demo data; load once, set context offline, reload"
+  },
+  {
+    "id": "csv-export",
+    "claim": "Exports the reviewed worklog as CSV",
+    "where": "app export button, README",
+    "test": "npm test -- --grep @claim:csv-export",
+    "sandbox": "demo data; assert CSV header and six data records"
+  },
+  {
+    "id": "local-demo",
+    "claim": "The demo sends no worklog data to another origin",
+    "where": "landing privacy fact, README",
+    "test": "npm test -- --grep @claim:local-demo",
+    "sandbox": "fresh browser context; capture all requests through review and approval-link creation"
+  },
+  {
+    "id": "approval-receipt",
+    "claim": "A client can accept a shared packet and download a digest receipt",
+    "where": "landing how-it-works, README",
+    "test": "npm test -- --grep @claim:approval-receipt",
+    "sandbox": "demo data; create link, open it, accept, and inspect downloaded JSON digest"
+  },
+  {
+    "id": "no-surveillance",
+    "claim": "The product does not request camera, microphone, or screen access",
+    "where": "landing facts and privacy section",
+    "test": "npm test -- --grep @claim:no-surveillance",
+    "sandbox": "fresh demo; deny and record browser permission requests while completing the main flow"
+  },
+  {
+    "id": "calendar-import",
+    "claim": "Imports events from an ICS calendar file",
+    "where": "landing how-it-works, README",
+    "test": "npm test -- --grep @claim:calendar-import",
+    "sandbox": "fresh demo; import an in-memory ICS event and assert its summary and duration"
+  },
+  {
+    "id": "git-metadata",
+    "claim": "Reads hash, date, and subject metadata from a selected local Git repository",
+    "where": "landing privacy section, README",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_git_metadata",
+    "sandbox": "temporary Git repository with one local commit; no network"
+  },
+  {
+    "id": "license-unlock",
+    "claim": "A valid Sociobot license enables Pro features and is cached for one day",
+    "where": "pricing, README",
+    "test": "npm test -- --grep @claim:license-unlock",
+    "sandbox": "fresh app storage; mocked Sociobot verification response; no live checkout or billing"
+  }
+]

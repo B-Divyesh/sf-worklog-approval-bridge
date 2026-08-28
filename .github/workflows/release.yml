@@ -1,0 +1,95 @@
+name: Release desktop apps
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            label: linux-x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows-x64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            label: macos-x64
+          - os: macos-14
+            target: aarch64-apple-darwin
+            label: macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install Linux packages
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+      - name: Build Tauri bundles
+        run: npm run build:desktop -- --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/**/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Flatten release files
+        run: |
+          mkdir upload
+          find release-assets -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -exec cp {} upload/ \;
+          cd upload
+          sha256sum * > SHA256SUMS
+          version="${RELEASE_TAG#v}"
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
+          jq -n --arg version "$version" '{version:$version, files:[]}' > latest.json
+          for file in *; do
+            [ "$file" = "SHA256SUMS" ] && continue
+            case "$file" in
+              *aarch64*.dmg|*arm64*.dmg) platform="macos-arm64" ;;
+              *.dmg) platform="macos-x64" ;;
+              *.msi|*.exe) platform="windows-x64" ;;
+              *.AppImage|*.deb) platform="linux-x64" ;;
+              *) continue ;;
+            esac
+            sha="$(sha256sum "$file" | cut -d ' ' -f 1)"
+            jq --arg platform "$platform" --arg name "$file" --arg url "$base/$file" --arg sha256 "$sha" \
+              '.files += [{platform:$platform, name:$name, url:$url, sha256:$sha256}]' latest.json > latest.tmp
+            mv latest.tmp latest.json
+          done
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          prerelease: true
+          files: upload/*
