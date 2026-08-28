@@ -59,6 +59,19 @@ test("@claim:approval-receipt creates a downloadable digest receipt", async ({ p
   expect(receipt.approver).toBe("Mira Chen");
   expect(receipt.packetDigest).toMatch(/^[a-f0-9]{64}$/);
   expect(receipt.receiptDigest).toMatch(/^[a-f0-9]{64}$/);
+  const tampered = await page.evaluate(original => {
+    const url = new URL(original);
+    const bytes = Uint8Array.from(atob(url.hash.slice(1)), c => c.charCodeAt(0));
+    const packet = JSON.parse(new TextDecoder().decode(bytes));
+    packet.client = "Changed client";
+    const encoded = new TextEncoder().encode(JSON.stringify(packet));
+    let binary = "";
+    encoded.forEach(byte => binary += String.fromCharCode(byte));
+    url.hash = btoa(binary);
+    return url.toString();
+  }, link);
+  await page.goto(tampered);
+  await expect(page.getByRole("heading", { name: "This worklog was changed" })).toBeVisible();
 });
 
 test("@claim:no-surveillance requests no capture permissions", async ({ page }) => {
@@ -102,6 +115,8 @@ test("@claim:license-unlock enables Pro after verification", async ({ page }) =>
   expect(verifyCalls).toBe(1);
   await page.reload();
   expect(verifyCalls).toBe(1);
+  await page.goto("/#pricing");
+  await expect(page.locator(".price")).toContainText("$12 / user / month");
 });
 
 test("landing and routes meet the semantic and serious accessibility baseline", async ({ page }) => {

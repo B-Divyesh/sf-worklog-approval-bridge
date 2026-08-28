@@ -238,6 +238,7 @@ function bindGlobal() {
   document.querySelectorAll<HTMLAnchorElement>("a[data-route]").forEach(link => link.addEventListener("click", event => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || link.target) return;
     event.preventDefault();
+    if (isDemo() && new URL(link.href).pathname === "/app") localStorage.removeItem(DEMO_KEY);
     navigate(new URL(link.href).pathname + new URL(link.href).search);
   }));
   const menu = document.querySelector<HTMLButtonElement>(".menu-button");
