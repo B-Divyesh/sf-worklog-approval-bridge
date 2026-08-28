@@ -37,6 +37,8 @@ cargo test --manifest-path src-tauri/Cargo.toml
 - `npm audit --audit-level=high`: zero vulnerabilities.
 - Production budget: 12.13 KB gzip initial app JavaScript, 4.61 KB gzip CSS, 44 KB mobile hero WebP, 96 KB desktop hero WebP, and no runtime font download.
 - Lighthouse mobile on the production build: Performance 100, Accessibility 100, Best Practices 100, SEO 100; LCP 1.2 s, CLS 0, TBT 20 ms. INP is unavailable in a lab run; TBT is the interaction proxy.
+- GitHub Actions release `v0.1.0`: four native build jobs and publish job passed. The public release contains both macOS architectures, Windows MSI/EXE, Linux AppImage/DEB, `latest.json`, and `SHA256SUMS`.
+- External checksum check: downloaded `Worklog.Bridge_0.1.0_amd64.deb` matched SHA-256 `7cade387b19e376640810db0ff74de84cba11debfb85008208fdb8eb280a24f4`.
 
 ## Design and privacy notes
 
@@ -55,7 +57,6 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## Needs operator action
 
-- Run or approve the `v0.1.0` GitHub Actions release and confirm all `.dmg`, `.msi`/`.exe`, `.AppImage`, `.deb`, `SHA256SUMS`, and `latest.json` assets.
 - macOS and Windows bundles are intentionally unsigned. For signing, configure `APPLE_CERTIFICATE`, Apple notarization credentials, and `WINDOWS_CERT_PFX` plus its password, then extend the workflow with the operator’s certificate details.
 - Register the product slug with the Sociobot billing system and set the production return URL. No product ID is hardcoded.
 - Deploy `dist/site/` through the factory. No DNS or infrastructure changes were made here.
