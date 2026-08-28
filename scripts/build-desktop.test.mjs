@@ -5,6 +5,8 @@ import { readFile } from "node:fs/promises";
 test("@regression:ci-one-desktop-build normalises CI=1 before invoking Tauri", async () => {
   const source = await readFile(new URL("./build-desktop.mjs", import.meta.url), "utf8");
   assert.match(source, /process\.env\.CI === "1"\) process\.env\.CI = "true"/);
+  assert.match(source, /--plugin-type\)/);
+  assert.match(source, /APPIMAGE_EXTRACT_AND_RUN/);
 });
 
 test("@regression:versioned-service-worker derives a release-specific cache name", async () => {
