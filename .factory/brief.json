@@ -1,0 +1,16 @@
+{
+  "slug": "worklog-approval-bridge",
+  "title": "Worklog Bridge",
+  "summary": "Turn Git and calendar activity into a client-ready worklog.",
+  "artifact_class": "desktop-app",
+  "user": "Freelance developers and small software consultancies",
+  "smallest_useful_product": "A local desktop collector for selected Git metadata and calendar events, with review, redaction, export, and immutable approval receipts.",
+  "monetization": "$12/user/month subscription",
+  "constraints": [
+    "Local-first processing",
+    "Explicit source selection",
+    "Redaction before sharing",
+    "No content capture by default",
+    "No screenshots or keystroke monitoring"
+  ]
+}
