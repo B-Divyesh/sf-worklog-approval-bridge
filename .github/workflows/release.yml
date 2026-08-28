@@ -94,5 +94,4 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true
-          prerelease: true
           files: upload/*

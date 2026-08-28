@@ -29,6 +29,7 @@ test("@regression:appimage-linuxdeploy-plugin adds the required type probe to a 
 test("@regression:appimage-linuxdeploy-ci-installs-file-command", async () => {
   const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
   assert.match(workflow, /apt-get install -y file\s+libwebkit2gtk-4\.1-dev/);
+  assert.doesNotMatch(workflow, /prerelease:\s*true/);
 });
 
 test("@regression:versioned-service-worker derives a release-specific cache name", async () => {

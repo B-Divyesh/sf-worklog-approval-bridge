@@ -38,9 +38,11 @@ CI=1 npm run build:desktop
 
 Initial tag `v0.1.1` exposed a Windows-only `spawn EINVAL` from invoking the
 `npx.cmd` shim without `cmd.exe`; the release wrapper now uses `shell: true`
-only on Windows and has regression coverage. A replacement `v0.1.2` tag is
-published from the final repair commit for the unsigned macOS (x64/arm64),
-Windows, and Linux matrix. It publishes `.dmg`, `.msi`/`.exe`,
+only on Windows and has regression coverage. `v0.1.2` proved all four bundle
+jobs, but was incorrectly marked prerelease and therefore invisible to the
+GitHub `releases/latest` endpoint used by the download page. Stable tag
+`v0.1.3` is published from the final repair commit for the unsigned macOS
+(x64/arm64), Windows, and Linux matrix. It publishes `.dmg`, `.msi`/`.exe`,
 `.AppImage`/`.deb`, `SHA256SUMS`, and `latest.json` through GitHub Releases.
 
 No signing certificates are present. macOS notarization requires `APPLE_CERTIFICATE`; Windows signing requires `WINDOWS_CERT_PFX` if signed installers are required.
