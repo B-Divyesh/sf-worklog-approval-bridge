@@ -17,9 +17,20 @@ The optional macOS set is `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `AP
 - Production site: `npm run build` passed. Main JavaScript is 13.76 KB gzip, core JavaScript is 1.01 KB gzip, and CSS is 4.79 KB gzip.
 - Desktop packaging: `CI=1 npm run build:desktop` produced the `0.1.16` Linux DEB, RPM, and AppImage.
 - Browser and accessibility: the factory URL verifier passed `/` and `/demo` with no console errors. Playwright covered desktop, 390 px mobile, keyboard, dialogs, reduced motion, offline/update behavior, and zero serious or critical Axe findings.
-- Mobile Lighthouse: performance 100, accessibility 100, best practices 100, and SEO 100. LCP was 1,359 ms and CLS was 0.
+- Live mobile Lighthouse: performance 100, accessibility 100, best practices 100, and SEO 100. FCP was 1,032 ms, LCP was 1,332 ms, TBT was 20 ms, and CLS was 0. The navigation-only lab run does not report INP.
 
-The first tag attempt exposed unusable ambient Apple credentials. The next showed that Tauri treats empty `APPLE_*` variables as a signing request. Neither published a release. Separate signed and unsigned build steps are the root-cause repair. Release `v0.1.16`, deployment, response-policy checks, and immutable live identity are recorded in a post-release note after their external jobs finish.
+The first tag attempt exposed unusable ambient Apple credentials. The next showed that Tauri treats empty `APPLE_*` variables as a signing request. Neither published a release. Separate signed and unsigned build steps are the root-cause repair.
+
+- Candidate: `f00442c1f996be82a19a067bbba42f987f77eca1`; immutable tag and GitHub Release: `v0.1.16`.
+- GitHub Actions run `33261747968` passed all four platform builds and the publish job.
+- `npm run verify:release -- --tag v0.1.16 --expected-commit f00442c1f996be82a19a067bbba42f987f77eca1` passed. It downloaded and verified `Worklog.Bridge_0.1.16_amd64.deb` at SHA-256 `66bf50fe33b6cc3ec560e1a2bfb00a0350bc910db972651bfd2297d3ee5a4a75`.
+- The public installer selected `Worklog.Bridge_0.1.16_amd64.AppImage`, installed it into an isolated directory, and matched SHA-256 `245d046803aeded1381828f63a746b68336d6b93e71998a40898f5d84cc9ef34`.
+- `/opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site` deployed the same candidate. `npm run verify:live -- --expected-commit f00442c1f996be82a19a067bbba42f987f77eca1` passed.
+- Production `/api/health` reports service `worklog-approval-bridge-receipts`, version `0.1.16`, and commit `f00442c1f996be82a19a067bbba42f987f77eca1`.
+- The live Download page selects the `v0.1.16` Linux AppImage, displays source `f00442c`, and logs no error.
+- Fresh live checks returned 200 for `/`, `/demo`, `/app`, `/privacy`, `/terms`, and `/download`; the designed unknown route returned 404. Each public route had one h1, one main landmark, no console/page errors, and zero serious or critical Axe findings.
+- Production policy headers include CSP with `frame-ancestors 'none'`, HSTS, `nosniff`, strict-origin referrer policy, and disabled camera, microphone, and geolocation. Hashed assets use one-year immutable caching.
+- A fresh 61-request approval read burst returned 60 × 204 and 1 × 429. The limited response included `Retry-After: 60`.
 
 ## Needs operator action
 
