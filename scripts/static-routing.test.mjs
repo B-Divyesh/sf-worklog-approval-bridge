@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const config = JSON.parse(await readFile(new URL("../public/staticwebapp.config.json", import.meta.url), "utf8"));
+const packageVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
 test("@regression:static-routing serves only real SPA routes and preserves a genuine 404", () => {
   assert.equal("navigationFallback" in config, false, "an SPA catch-all turns unknown live URLs into 200 responses");
@@ -19,4 +20,17 @@ test("@regression:verification-11-sitemap-lists-every-public-route-but-not-priva
     .map(([, path]) => path);
   assert.deepEqual(listedPaths, ["/", "/demo", "/app", "/privacy", "/terms", "/download"]);
   assert.equal(listedPaths.includes("/approve"), false, "approval packets are private fragment URLs and must not be indexed");
+});
+
+test("@regression:release-footer-version-is-derived-from-the-versioned-package-build", async () => {
+  const [viteConfig, appSource, tauriConfig, apiIdentity] = await Promise.all([
+    readFile(new URL("../vite.config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/main.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
+    readFile(new URL("../api/src/build-identity.js", import.meta.url), "utf8")
+  ]);
+  assert.match(viteConfig, /__WORKLOG_VERSION__: JSON\.stringify\(version\)/);
+  assert.match(appSource, /v\$\{__WORKLOG_VERSION__\}/);
+  assert.equal(JSON.parse(tauriConfig).version, packageVersion);
+  assert.match(apiIdentity, new RegExp(`version: "${packageVersion}"`));
 });

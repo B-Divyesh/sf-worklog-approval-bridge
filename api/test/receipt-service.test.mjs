@@ -95,7 +95,7 @@ test("@regression:public-api-health-identity exposes only a safe version and dep
   const identity = buildIdentity({ WORKLOG_BUILD_COMMIT: "ABCDEF0123456789", DATABASE_URL: "must-not-leak" });
   assert.deepEqual(identity, {
     service: "worklog-approval-bridge-receipts",
-    version: "0.1.12",
+    version: "0.1.13",
     commit: "abcdef0123456789"
   });
   assert.equal(buildIdentity({ WORKLOG_BUILD_COMMIT: "not-a-commit" }).commit, "unavailable");

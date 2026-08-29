@@ -7,6 +7,8 @@ type Packet = { version: 1; client: string; week: string; currency: string; rate
 type LicenseVerdict = { valid: boolean; checkedAt: number; expiresAt?: string; reason?: string };
 type ApprovalReceipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
 
+declare const __WORKLOG_VERSION__: string;
+
 const PRODUCT = "worklog-approval-bridge";
 const SITE = "https://worklog-approval-bridge.sociobot.in";
 const BILLING = `https://api.sociobot.in/api/v1/products/${PRODUCT}`;
@@ -80,7 +82,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.11 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v${__WORKLOG_VERSION__} · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
