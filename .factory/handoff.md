@@ -2,6 +2,8 @@
 
 **Repair version:** `0.1.7`
 
+**Published repair commit:** `5fb3fbf55f08b881129f62cf3451371df3953138` (`v0.1.7`)
+
 ## Fixed verifier findings
 
 - Reproduced the former checkout failure first: the advertised Sociobot checkout now returns `303 See Other` to `checkout.dodopayments.com`. `scripts/verify-live.mjs` asserts this exact response, preventing a return to the former 404.
@@ -22,12 +24,11 @@
 
 ## Publish and live verification
 
-Push this repair commit and tag it `v0.1.7`. The release workflow will build macOS Intel/Apple Silicon, Windows, and Linux assets from that exact commit, publish `SHA256SUMS` and `latest.json`, and verify provenance. Static deployment must provide `WORKLOG_BUILD_COMMIT` when it does not already provide `BUILD_SOURCEVERSION`.
+The exact repair commit was pushed and tagged `v0.1.7`. The managed static deployment now serves the matching production assets, and its API health response is `{"status":"ok","build":{"service":"worklog-approval-bridge-receipts","version":"0.1.7","commit":"5fb3fbf55f08b881129f62cf3451371df3953138"}}`.
 
-Run after deployment:
-
-`EXPECTED_COMMIT=<repair-commit> npm run verify:live`
-
-`npm run verify:release -- --tag v0.1.7 --expected-commit <repair-commit>`
+- Production checkout returned HTTP 303 to a Dodo checkout session.
+- `EXPECTED_COMMIT=5fb3fbf55f08b881129f62cf3451371df3953138 npm run verify:live`: passed (checkout response, API identity, demo/approval route, empty receipt response, genuine 404, and console policy).
+- `npm run verify:release -- --tag v0.1.7 --expected-commit 5fb3fbf55f08b881129f62cf3451371df3953138`: passed. The release verifier confirmed every required desktop platform and the downloaded Linux DEB SHA-256 `699dcfd0fe33e723dbc7ad793ac6cabc21fdb9d927ffb2f3f5f7280e1a95dca9`.
+- Live `verify-url.sh` passed with zero console errors and complete title/lang/landmark/alt/button checks. Live HTML references `index-B-5zfKyM.js` and `index-BYFW7hXL.css`, the repaired build output.
 
 Packages remain intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.
