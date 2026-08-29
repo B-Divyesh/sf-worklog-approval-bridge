@@ -34,6 +34,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -59,39 +61,34 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
           merge-multiple: true
       - name: Flatten release files
         run: |
+          test "$(node -p "require('./src-tauri/tauri.conf.json').version")" = "${RELEASE_TAG#v}"
           mkdir upload
           find release-assets -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -exec cp {} upload/ \;
-          cd upload
-          find . -maxdepth 1 -type f -name '* *' -print0 | while IFS= read -r -d '' file; do
+          find upload -maxdepth 1 -type f -name '* *' -print0 | while IFS= read -r -d '' file; do
             mv "$file" "${file// /.}"
           done
-          sha256sum * > SHA256SUMS
-          version="${RELEASE_TAG#v}"
-          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
-          jq -n --arg version "$version" '{version:$version, files:[]}' > latest.json
-          for file in *; do
-            [ "$file" = "SHA256SUMS" ] && continue
-            case "$file" in
-              *aarch64*.dmg|*arm64*.dmg) platform="macos-arm64" ;;
-              *.dmg) platform="macos-x64" ;;
-              *.msi|*.exe) platform="windows-x64" ;;
-              *.AppImage|*.deb) platform="linux-x64" ;;
-              *) continue ;;
-            esac
-            sha="$(sha256sum "$file" | cut -d ' ' -f 1)"
-            jq --arg platform "$platform" --arg name "$file" --arg url "$base/$file" --arg sha256 "$sha" \
-              '.files += [{platform:$platform, name:$name, url:$url, sha256:$sha256}]' latest.json > latest.tmp
-            mv latest.tmp latest.json
-          done
+          node scripts/release-manifest.mjs upload "$RELEASE_TAG" "$(git rev-parse HEAD)" "$GITHUB_REPOSITORY"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true
           files: upload/*
+      - name: Verify published release provenance and checksum
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            node scripts/verify-release.mjs --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --expected-commit "$(git rev-parse HEAD)" && exit 0
+            sleep 10
+          done
+          exit 1

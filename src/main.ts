@@ -73,7 +73,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.0 · build 2026.08.28 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.4 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -173,7 +173,7 @@ function legalPage(kind: "privacy" | "terms") {
 
 function downloadPage() {
   document.title = "Download — Worklog Bridge";
-  return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop app · v0.1.0</p><h1 tabindex="-1">Install Worklog Bridge</h1><p class="lede">Choose the app for your computer. Your worklogs remain local after installation.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> The first release is unsigned. Your operating system may ask you to confirm that you trust it.</div></div></main>${footer()}`;
+  return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop app</p><h1 tabindex="-1">Install Worklog Bridge</h1><p class="lede">Choose the app for your computer. Your worklogs remain local after installation.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> The first release is unsigned. Your operating system may ask you to confirm that you trust it.</div></div></main>${footer()}`;
 }
 
 function decodePacket(): Packet | null {
@@ -479,20 +479,29 @@ async function bindDownloads() {
   const box = document.querySelector<HTMLElement>("#download-box"); if (!box) return;
   const os = /Windows/i.test(navigator.userAgent) ? "Windows" : /Mac/i.test(navigator.userAgent) ? "macOS" : "Linux";
   try {
-    const cacheRaw = localStorage.getItem("worklog-bridge:release"); const cache = cacheRaw ? JSON.parse(cacheRaw) : null;
+    const cacheRaw = localStorage.getItem("worklog-bridge:release-v2"); const cache = cacheRaw ? JSON.parse(cacheRaw) : null;
     let release = cache && Date.now() - cache.time < 3_600_000 ? cache.data : null;
     if (!release) {
-      const response = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=1`);
+      const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
       if (!response.ok) throw new Error();
-      const releases = await response.json();
-      release = releases[0];
-      if (!release) throw new Error();
-      localStorage.setItem("worklog-bridge:release", JSON.stringify({ time: Date.now(), data: release }));
+      release = await response.json();
+      const refResponse = await fetch(`https://api.github.com/repos/${REPO}/git/ref/tags/${encodeURIComponent(release.tag_name)}`);
+      if (!refResponse.ok) throw new Error();
+      let object = (await refResponse.json()).object;
+      while (object?.type === "tag") {
+        const tagResponse = await fetch(`https://api.github.com/repos/${REPO}/git/tags/${object.sha}`);
+        if (!tagResponse.ok) throw new Error();
+        object = (await tagResponse.json()).object;
+      }
+      if (object?.type !== "commit" || !/^[a-f0-9]{40}$/i.test(object.sha)) throw new Error();
+      release.commit = object.sha;
+      localStorage.setItem("worklog-bridge:release-v2", JSON.stringify({ time: Date.now(), data: release }));
     }
     const matcher = os === "Windows" ? /\.(msi|exe)$/i : os === "macOS" ? /\.(dmg|app\.tar\.gz)$/i : /\.(AppImage|deb)$/i;
     const asset = release.assets.find((item: { name: string }) => matcher.test(item.name));
-    if (!asset) throw new Error();
-    box.innerHTML = `<p class="platform-label">Detected platform: ${os} · ${esc(release.tag_name)}</p><a class="button cyan" href="${esc(asset.browser_download_url)}">Download for ${os}</a><p><a href="${esc(release.html_url)}">See every release file <span class="sr-only">(external site)</span></a></p>`;
+    const releasePath = `/releases/download/${release.tag_name}/`;
+    if (!asset || !asset.browser_download_url.includes(releasePath) || !/^[a-f0-9]{40}$/i.test(release.commit)) throw new Error();
+    box.innerHTML = `<p class="platform-label">Detected platform: ${os} · ${esc(release.tag_name)}</p><a class="button cyan" href="${esc(asset.browser_download_url)}">Download for ${os}</a><p class="release-source">Built from source <code>${esc(release.commit.slice(0, 7))}</code>.</p><p><a href="${esc(release.html_url)}">See every release file <span class="sr-only">(external site)</span></a></p>`;
   } catch {
     box.innerHTML = `<p class="platform-label">Detected platform: ${os}</p><h2>Downloads are being published</h2><p>The release files are not available yet. Check the Releases page again soon.</p><a class="button secondary" href="https://github.com/${REPO}/releases">Open Releases <span class="sr-only">(external site)</span></a>`;
   }

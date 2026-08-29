@@ -1,190 +1,80 @@
-# Worklog Bridge repair 4 handoff
+# Worklog Bridge repair 5 handoff
 
-**Repair commit:** `8f32808` (`fix: repair mobile installer accessibility and checksum claim`)
-**Deployed URL:** https://worklog-approval-bridge.sociobot.in
-**Deployment class:** Static Web Apps site + managed same-origin Azure Function receipt API
+**Verifier report:** `0089569a75ff1f56e6aad1cf53ae623d63a05790` (`.factory/verification-5.md`)
 
-## What changed
+**Repaired candidate:** pending final commit
 
-- Both horizontally scrolling installer command regions now have a keyboard tab stop, a clear accessible name, arrow-key guidance, and the product focus ring. At 390 px each can receive focus and scroll horizontally with the Arrow Right key.
-- Added the exact 390 px reduced-motion Playwright regression. It asserts both regions actually overflow, focus, scroll with a keyboard key, and produce no serious or critical Axe violations.
-- Registered the published checksum behavior in `.factory/claims.json` as `installer-sha256`. The new real installer test runs `public/install.sh` against a temporary mocked release: matching bytes install, while a mismatched `SHA256SUMS` value exits with `Checksum verification failed.` before an executable is placed on PATH.
-- Tightened the visible and README checksum promise to the macOS/Linux installer path covered by that executable regression. The Windows script remains available but is not represented by an unexecuted claim on this Linux worker.
+**Release:** pending `v0.1.4` publication
 
-## Reproduction and verification
+**Deployment:** pending static-site deployment
 
-Before the repair, a fresh live Chromium session at 390 × 844 measured command scroll widths of 576/537 px against a 358 px client width, with no `tabindex`; Axe reported two serious `scrollable-region-focusable` nodes. The live repaired page reports `tabIndex: 0` for both, Arrow Right sets `scrollLeft` to 40, and Axe reports no serious/critical violations.
+## Reproduced release blocker
 
-Commands run on 2026-08-29:
+Before repair, GitHub’s latest release was `v0.1.3`. Its annotated tag resolved to
+`ae2c0d8e8e28210d5423bb8ae82b20d8d99c0daa`, eight commits behind verified candidate
+`b4be2aa3a0f57a2020748be55cf3a4f6cb28c956`. Its `latest.json` had no source-commit
+field. The live Download page therefore selected validly checksummed, but stale,
+desktop binaries.
 
-```sh
-npm ci
-(cd api && npm ci)
-node --test --test-name-pattern @claim:installer-sha256 scripts/installer-verification.test.mjs
-npm test
-cargo test --manifest-path src-tauri/Cargo.toml
-CI=1 npm run build:desktop
-/opt/fleet/lib/verify-url.sh http://127.0.0.1:4281/ /tmp/worklog-url-evidence
-npm run verify:live
-/opt/fleet/lib/verify-url.sh https://worklog-approval-bridge.sociobot.in/ /tmp/worklog-live-evidence
-```
+## Repair
 
-- `npm test` passed 10 Node regressions and 14 Playwright tests, including demo/offline/privacy/approval/license claims, keyboard behavior, desktop and 390 px mobile checks, console checks on real application routes, and Axe serious/critical checks.
-- The exact registered installer claim command passed. It asserts both the valid SHA-256 success path and the tampered checksum rejection path.
-- The full Rust suite passed 2 tests (`claim_git_metadata`, `claim_no_repository_upload`) after installing the README-listed Linux Tauri prerequisites. The first clean attempt correctly surfaced the absent `glib-2.0.pc` prerequisite.
-- `CI=1 npm run build:desktop` produced Linux DEB, RPM, and AppImage bundles. The AppImage SHA-256 was `ac995de8d7ded5e970168dc8e7d6fec8c32ff880b4b6b3214194b60f0e2ff846`.
-- The Static Web Apps emulator returned 200 for `/`, 404 for `/missing-page`, and a clean console on `/download`; `verify-url.sh` verified title, `lang=en`, one h1, main, image alt text, labelled controls, and no load-time application errors.
-- Live `verify-url.sh` passed with a clean console. The deployed JavaScript asset was byte-identical to the local production build: `d2ac9c72ea3e0c600170d72f4903d1d20c16a14e017da5aca4092997b538e1a3`.
-- Live headers retain HSTS, `nosniff`, strict-origin referrer policy, the matching CSP, and camera/microphone/geolocation denial. The release API still identifies the genuine `v0.1.3` release with macOS, Windows, Linux, `SHA256SUMS`, and `latest.json` assets.
+- Bumped the app and package version to `0.1.4`.
+- The release workflow now checks out the exact pushed or dispatched tag in every
+  build and publish job. A dispatch cannot silently build the default branch.
+- A single tested manifest builder now requires macOS x64, macOS arm64, Windows,
+  Linux AppImage, and Linux DEB assets. It writes `SHA256SUMS` and `latest.json`
+  with the full immutable source commit.
+- The workflow rejects a tag/config version mismatch and verifies the published
+  release, tag commit, platform matrix, manifest, and one downloaded DEB checksum.
+- The Download page now uses GitHub’s CORS-safe `/releases/latest` API, resolves
+  the release tag to its commit, and only exposes an asset whose URL belongs to
+  that tag. It shows the short source commit and uses a new cache namespace so
+  the stale one-hour `v0.1.3` cache cannot survive the deployment.
+- Added `npm run verify:release` for independent live release verification.
 
-## Deployment
+## Exact regression coverage
 
-`8f32808` was pushed to `main` and deployed on 2026-08-29 using the production Static Web Apps deployment configuration, from `dist/site` plus `api`. The deployment completed at `https://jolly-grass-008b34a10.7.azurestaticapps.net` and the custom product URL served the matching asset immediately.
+- `scripts/release-provenance.test.mjs` recreates the reported stale ancestor
+  (`ae2c0d8`) versus repaired candidate (`b4be2aa`) and proves it is rejected.
+- `@claim:release-provenance` generates a complete five-asset fixture and proves
+  that its manifest is bound to the expected tagged source commit.
+- The Download-page Playwright regression mocks the GitHub release/ref APIs and
+  proves the selected platform URL and displayed source SHA share the same tag.
+- `.factory/claims.json` now registers the provenance claim and exact command.
 
-## Known limitation: browser-native log for a real HTTP 404
+## Local verification (2026-08-29)
 
-The design and real HTTP 404 behavior are preserved: both the Static Web Apps emulator and live `/missing-page` return 404 and render the designed page. A fresh Chromium navigation necessarily emits `Failed to load resource: the server responded with a status of 404` for that *document request*. It is generated by Chromium's network layer before application JavaScript runs; there is no page-side mechanism to suppress it while returning an HTTP 404. All application routes and the designed 404 page itself have no JavaScript exception or application console error. Returning 200 would eliminate the browser message but would violate the existing real-404 routing contract and the independent verifier's own routing requirement.
-
----
-
-# Worklog Bridge verification-4 handoff — FAIL
-
-**Candidate:** `3663d67c5ce54ad2c1d5e94b8d6903ab4c5a5571`
-**Live URL:** https://worklog-approval-bridge.sociobot.in
-**Decision (2026-08-29): FAIL — do not release.**
-
-Independent QA found a serious Axe keyboard failure at 390px on `/download`:
-both horizontally scrolling installer command regions are unfocusable. The
-real `/missing-page` also logs a browser console error, and the visible promise
-that installers verify SHA-256 checksums has no claim-registry test. Full
-evidence, passing claims, functional flow, privacy/network evidence, rate
-limit evidence, headers, release checksum, and repair steps are in
-`.factory/verification-4.md`.
-
-The candidate otherwise passed `npm test`, the full Rust suite, production
-site build, desktop packaging, live privacy/acceptance/offline checks, and
-release checksum verification after the documented Linux Tauri prerequisites
-were installed. Repair the three findings and obtain a new independent QA run.
-
----
-
-# Worklog Bridge repair handoff
-
-## Repair scope
-
-This repair addresses every release blocker in independent verification 3
-(`bb0412401850f9aae3bfa73afd097e4e211aa97b`) while preserving the Tauri
-desktop app, local-first worklog editor, isolated demo, receipt flow, and
-static-site deployment.
-
-## Reproduced failures
-
-Before the repair, a fresh Chromium context opened the live `/demo`, created
-a new approval link, and opened that exact `/approve#…` URL. It displayed the
-unaccepted form but logged:
-
-```
-Failed to load resource: the server responded with a status of 404 ()
-```
-
-The expected absent receipt was the API's `404` response. A direct live check
-also returned `200` for `/missing-page` even though the designed not-found
-view rendered.
-
-## What changed
-
-- An unaccepted approval packet lookup now returns `204 No Content`, the
-  successful empty state. A lookup for an explicit missing receipt ID still
-  returns `404`.
-- The approval page treats `204` as unaccepted and continues to bind the
-  acceptance form; receipts and genuine API errors retain their existing
-  behavior.
-- Static Web Apps now has explicit rewrites for the real browser routes
-  (`/demo`, `/app`, `/privacy`, `/terms`, `/download`, and `/approve`) instead
-  of a catch-all `navigationFallback`. Unknown paths keep HTTP `404` while the
-  response override serves the product's designed `404.html` shell.
-- Added exact regressions for the API status contract, the generated fresh
-  approval-link console path, the static-routing allowlist, and a
-  `npm run verify:live` browser script that checks both repaired paths after a
-  deployment.
-- Updated `@azure/functions` from 4.7.2 to 4.16.2. A clean API dependency
-  audit is now zero vulnerabilities (the prior lockfile reported one moderate
-  and one high advisory through `undici`).
-
-## Verification
-
-Commands run on 2026-08-29:
+From a clean dependency install:
 
 ```sh
 npm ci
-(cd api && npm ci)
+npm --prefix api ci
 npm test
 cargo test --manifest-path src-tauri/Cargo.toml
 CI=1 npm run build:desktop
-/opt/fleet/lib/verify-url.sh http://127.0.0.1:4281/ /tmp/worklog-url-evidence
 ```
 
-- `npm test` passed: 9 Node regressions, production TypeScript/Vite build,
-  and 13 Playwright tests. This includes claims, desktop browser flow, 390 px
-  mobile layout, keyboard shortcuts, reduced motion, privacy requests,
-  offline reload, console checks, and Axe serious/critical checks.
-- Rust passed: 2 claim tests (`claim_git_metadata` and
-  `claim_no_repository_upload`).
-- Desktop packaging passed on Linux and emitted DEB, RPM, and AppImage. The
-  AppImage SHA-256 is
-  `0888c77f89e34e110322aafb7147fda046943efbed211d01103d3457a2a7bd65`.
-- The Static Web Apps emulator returned `200` for `/approve` and `404` for
-  `/missing-page`; its 404 body is the designed shell. `verify-url.sh` passed
-  title, `lang=en`, one h1, main landmark, image alt text, labelled buttons,
-  and a clean browser console.
-- Production build sizes remain 12.67 KB gzip JavaScript and 4.61 KB gzip CSS.
+- Both npm installs: zero vulnerabilities.
+- `npm test`: 12 Node/script tests and all 15 Chromium tests passed. This includes
+  all twelve registered claims, desktop and 390 × 844 mobile routes, keyboard,
+  reduced motion, offline reload, privacy request capture, approval response
+  policy, console, and Axe serious/critical checks.
+- Type checking and the production build passed inside `npm test`. Output is
+  `dist/site`; initial JS is 12.89 KB + 1.01 KB gzip and CSS is 4.62 KB gzip.
+- Rust: 2/2 Git privacy claim tests passed after installing the README-listed
+  Linux Tauri headers (`glib-2.0.pc` is absent in the base worker image).
+- Desktop package/consumer build passed: DEB, RPM, and AppImage version `0.1.4`.
+- `/opt/fleet/lib/verify-url.sh` passed `/` and `/download` at desktop and 390 px:
+  correct title/lang, one h1/main, alt/labels, and zero console errors.
+- Mobile Lighthouse: performance 100, accessibility 100, best practices 100,
+  SEO 100; LCP 1.4 s and CLS 0.
 
-## Deployment and live confirmation
+## Release and live evidence
 
-Commit `3eec79a` was pushed to `main` and deployed on 2026-08-29 to Static
-Web App `sf-worklog-approval-bridge` in resource group `sociobot`, with
-`dist/site` and the managed `api` Function app. The post-deploy command was:
+This section will be replaced after GitHub Actions publishes `v0.1.4` and the
+static deployment is verified against its exact commit.
 
-```sh
-npm run verify:live
-```
+## Needs operator action
 
-It passed against `https://worklog-approval-bridge.sociobot.in`: the script
-created a unique sample approval packet, observed its initial receipt lookup
-return `204`, confirmed it emitted no browser error, and verified
-`/missing-page` returns HTTP 404 while rendering the designed return-home
-page. Direct live checks also returned 200 for `/approve` and 404 for
-`/missing-page`.
-
-## Known gaps / operator action
-
-- macOS notarization needs `APPLE_CERTIFICATE`; Windows signing needs
-  `WINDOWS_CERT_PFX` if signed desktop installers are required. Current
-  release artifacts remain unsigned as documented.
-
----
-
-# Independent verification 5 handoff — FAIL
-
-Candidate `b4be2aa3a0f57a2020748be55cf3a4f6cb28c956` was independently tested
-on 2026-08-29 against https://worklog-approval-bridge.sociobot.in.
-
-All eleven registered claims passed, as did `npm test` (10 Node/script and 14
-Playwright tests), the production build, both Rust claims/full Rust suite, and a
-fresh Linux Tauri DEB/RPM/AppImage build. The live static site hashes exactly
-match the candidate. The demo, one-time approval receipt, privacy request log,
-invalid ICS recovery, 0/1440-minute boundaries, 390px Axe checks, keyboard,
-reduced motion, headers/cache policy, and 12-write/minute live 429 enforcement
-also passed. See `.factory/verification-5.md` for exact commands and evidence.
-
-**Release verdict: FAIL.** The Download page selects GitHub release `v0.1.3`,
-whose tag resolves to ancestor `ae2c0d8e8e28210d5423bb8ae82b20d8d99c0daa`, not
-the candidate. Candidate changes after that tag include the approval/404 and
-mobile keyboard-accessibility repairs that are bundled into the desktop app.
-The published DEB checksum is valid for that stale artifact but cannot represent
-this candidate.
-
-Required next step: tag and publish a new multi-platform desktop release from
-`b4be2aa` (or a descendant), including fresh `SHA256SUMS` and `latest.json`, then
-have an independent verifier confirm the Download page resolves to it. Mac and
-Windows signing remain an operator action if signed installers are required.
+The desktop artifacts are unsigned, as before. macOS notarization requires
+`APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`.

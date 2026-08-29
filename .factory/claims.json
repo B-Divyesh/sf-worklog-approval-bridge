@@ -75,5 +75,12 @@
     "where": "Download page, README",
     "test": "node --test --test-name-pattern @claim:installer-sha256 scripts/installer-verification.test.mjs",
     "sandbox": "temporary installer fixture; mocked release metadata, asset download, and SHA256SUMS; assert matching bytes install and mismatched bytes are rejected before installation"
+  },
+  {
+    "id": "release-provenance",
+    "claim": "Every published desktop platform is tied to the immutable release source commit",
+    "where": "Download page, latest.json, README",
+    "test": "node --test --test-name-pattern @claim:release-provenance scripts/release-provenance.test.mjs",
+    "sandbox": "temporary macOS x64/arm64, Windows, AppImage, and DEB fixtures; generate latest.json and assert its full commit matches the release tag and expected repaired commit"
   }
 ]
