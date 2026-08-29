@@ -29,7 +29,9 @@ reproduction and required recovery UI/test.
   their tagged Playwright tests; details are in the review.
 - After this required handoff supplied the missing signing disclosure, the
   repository's full local `npm test` passed (27 Node/script tests and 36
-  Chromium tests), and `npm run build` passed.
+  Chromium tests), and `npm run build` passed. A second clean clone of the
+  committed review state then passed all 22 exact registry commands
+  individually.
 
 ## Run and verify
 

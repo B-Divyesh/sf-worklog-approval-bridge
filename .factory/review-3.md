@@ -249,7 +249,8 @@ The shared error was “handoff must disclose that installing secrets does not
 force signing.” It was not hidden or treated as a tagged-claim success.
 After the required review handoff supplied that missing disclosure, a full
 local `npm test` passed: 27 Node/script tests and 36 Chromium tests. This does
-not change F-3-1.
+not change F-3-1. A second fresh clone of committed `836e369` then ran all 22
+exact registry commands individually; all 22 passed.
 
 ## Earlier findings and structure
 
