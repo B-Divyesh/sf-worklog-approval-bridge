@@ -2,6 +2,22 @@ import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 
 const target = (process.env.LIVE_URL || "https://worklog-approval-bridge.sociobot.in").replace(/\/$/, "");
+const billingCheckout = "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout";
+const expectedCommit = process.env.EXPECTED_COMMIT?.toLowerCase();
+
+const checkout = await fetch(billingCheckout, { redirect: "manual" });
+assert.equal(checkout.status, 303, "the advertised Pro checkout must redirect to hosted checkout, not return 404");
+assert.match(checkout.headers.get("location") || "", /^https:\/\/checkout\.dodopayments\.com\//, "checkout redirect must use the hosted Dodo checkout");
+
+const health = await fetch(`${target}/api/health`, { headers: { Accept: "application/json" } });
+assert.equal(health.status, 200, "the receipt API must expose a public health/build identity");
+const healthBody = await health.json();
+assert.equal(healthBody.status, "ok");
+assert.equal(healthBody.build?.service, "worklog-approval-bridge-receipts");
+assert.match(healthBody.build?.version || "", /^\d+\.\d+\.\d+$/);
+assert.match(healthBody.build?.commit || "", /^[a-f0-9]{7,64}$/);
+if (expectedCommit) assert.equal(healthBody.build.commit, expectedCommit, "deployed API commit differs from the nominated repair commit");
+
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
 const page = await context.newPage();
@@ -30,7 +46,7 @@ try {
   const missing = await page.goto(`${target}/missing-page`, { waitUntil: "domcontentloaded" });
   assert.equal(missing?.status(), 404, "unknown live routes must retain HTTP 404");
   await assert.doesNotReject(() => page.getByRole("heading", { name: "This page is not on the worklog" }).waitFor());
-  console.log(`Live routing and approval regressions passed for ${target}`);
+  console.log(`Live checkout, API identity, routing, and approval regressions passed for ${target}`);
 } finally {
   await browser.close();
 }

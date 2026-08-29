@@ -80,7 +80,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.6 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.7 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -94,7 +94,7 @@ function landing() {
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
         <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Nothing is saved to your real data.</p></div>
-        <ul class="facts"><li>Worklog details stay on this device</li><li>No screenshots, timers, or keystrokes</li><li>Free core tools · Pro is $12 per user each month</li></ul>
+        <ul class="facts"><li>Worklog details stay on this device</li><li>Saved work stays available offline after the first visit</li><li>Free core tools · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
         <picture><source srcset="/assets/night-market-bridge-768.webp 768w, /assets/night-market-bridge-1280.webp 1280w" type="image/webp"><img src="/assets/night-market-bridge-1280.webp" width="1280" height="853" alt="Paper work tickets move along a rail toward an approval stamp in a night market stall." fetchpriority="high" decoding="async"></picture>
@@ -600,7 +600,7 @@ async function bindDownloads() {
     const asset = release.assets.find((item: { name: string }) => matcher.test(item.name));
     const releasePath = `/releases/download/${release.tag_name}/`;
     if (!asset || !asset.browser_download_url.includes(releasePath) || !/^[a-f0-9]{40}$/i.test(release.commit)) throw new Error();
-    box.innerHTML = `<p class="platform-label">Detected platform: ${os} · ${esc(release.tag_name)}</p><a class="button cyan" href="${esc(asset.browser_download_url)}">Download for ${os}</a><p class="release-source">Built from source <code>${esc(release.commit.slice(0, 7))}</code>.</p><p><a href="${esc(release.html_url)}">See every release file <span class="sr-only">(external site)</span></a></p>`;
+    box.innerHTML = `<p class="platform-label">Detected platform: ${os} · ${esc(release.tag_name)}</p><a class="button cyan" href="${esc(asset.browser_download_url)}">Download for ${os}</a><p class="release-source">Built from source <code>${esc(release.commit.slice(0, 7))}</code>.</p><p><a class="target-link" href="${esc(release.html_url)}">See every release file <span class="sr-only">(external site)</span></a></p>`;
   } catch {
     box.innerHTML = `<p class="platform-label">Detected platform: ${os}</p><h2>Downloads are being published</h2><p>The release files are not available yet. Check the Releases page again soon.</p><a class="button secondary" href="https://github.com/${REPO}/releases">Open Releases <span class="sr-only">(external site)</span></a>`;
   }

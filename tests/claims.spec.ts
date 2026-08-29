@@ -317,6 +317,20 @@ test("mobile demo keeps its primary workflow visible", async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
+test("@regression:landing-keeps-privacy-offline-and-price-facts-in-the-first-desktop-viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  for (const fact of [
+    "Worklog details stay on this device",
+    "Saved work stays available offline after the first visit",
+    "Free core tools · Pro is $12 per user each month"
+  ]) {
+    const box = await page.getByText(fact, { exact: true }).boundingBox();
+    expect(box, fact).not.toBeNull();
+    expect((box?.y || 0) + (box?.height || 0), fact).toBeLessThanOrEqual(900);
+  }
+});
+
 test("@regression:negative hourly rate stays invalid and never reaches an approval packet", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   await page.goto("/demo");
@@ -358,6 +372,22 @@ test("@regression:mobile-controls-meet-the-44px-touch-target-baseline", async ({
     for (let index = 0; index < await controls.count(); index++) {
       const box = await controls.nth(index).boundingBox();
       if (box) expect(box.height, `${route} control ${index}`).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
+test("@regression:all-remaining-link-and-button-targets-are-at-least-44px-on-desktop-and-mobile", async ({ page }) => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    for (const route of ["/", "/demo", "/privacy", "/terms"]) {
+      await page.goto(route);
+      const controls = page.locator("button, a");
+      for (let index = 0; index < await controls.count(); index++) {
+        const box = await controls.nth(index).boundingBox();
+        if (!box) continue;
+        expect(box.width, `${route} ${viewport.width}px control ${index} width`).toBeGreaterThanOrEqual(44);
+        expect(box.height, `${route} ${viewport.width}px control ${index} height`).toBeGreaterThanOrEqual(44);
+      }
     }
   }
 });
@@ -409,6 +439,10 @@ test("download selects an asset from an immutable release commit", async ({ page
   const download = page.locator("#download-box a.button");
   await expect(download).toHaveAttribute("href", /\/releases\/download\/v0\.1\.5\/Worklog\.Bridge_0\.1\.5_(amd64\.AppImage|x64\.(dmg|msi))$/);
   await expect(page.locator(".release-source")).toContainText("1234567");
+  const allReleaseFiles = page.getByRole("link", { name: /See every release file/ });
+  const box = await allReleaseFiles.boundingBox();
+  expect(box?.width || 0).toBeGreaterThanOrEqual(44);
+  expect(box?.height || 0).toBeGreaterThanOrEqual(44);
 });
 
 test("app supports keyboard shortcuts", async ({ page }) => {

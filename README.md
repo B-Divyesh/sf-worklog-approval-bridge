@@ -70,10 +70,15 @@ See `/privacy` and `/terms` in the site. The night-market design and generated-i
 
 The site reads release metadata from the GitHub API and falls back to a calm publishing message. It never fetches a GitHub redirect URL. The macOS and Linux `/install.sh` installer rejects a release file when its SHA-256 does not match the published checksum.
 
+The anonymous receipt health endpoint is `/api/health`. It returns only service
+name, version, and a validated deployed source commit; it never returns
+configuration or storage settings. The static deployment supplies that commit
+as `WORKLOG_BUILD_COMMIT` (or its standard `BUILD_SOURCEVERSION` value).
+
 After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
 
 ```sh
-npm run verify:release -- --tag v0.1.6 --expected-commit "$(git rev-parse v0.1.6^{})"
+npm run verify:release -- --tag v0.1.7 --expected-commit "$(git rev-parse v0.1.7^{})"
 ```
 
 ## License

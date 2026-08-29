@@ -3,6 +3,7 @@ import test from "node:test";
 import { acceptApproval, normaliseApproval, verifyAttestation } from "../src/receipt-service.js";
 import { clientRateKey, consumeRateLimit, READ_LIMIT, WRITE_LIMIT } from "../src/rate-limit.js";
 import { missingReceiptStatus } from "../src/approval-protocol.js";
+import { buildIdentity } from "../src/build-identity.js";
 
 function memoryStore() {
   const records = new Map();
@@ -66,4 +67,15 @@ test("@regression:durable-rate-limit does not treat a forwarded source port as a
 test("@regression:unaccepted-approval-lookup is a successful empty response", () => {
   assert.equal(missingReceiptStatus(undefined), 204);
   assert.equal(missingReceiptStatus("receipt-that-does-not-exist"), 404);
+});
+
+test("@regression:public-api-health-identity exposes only a safe version and deployed commit", () => {
+  const identity = buildIdentity({ WORKLOG_BUILD_COMMIT: "ABCDEF0123456789", DATABASE_URL: "must-not-leak" });
+  assert.deepEqual(identity, {
+    service: "worklog-approval-bridge-receipts",
+    version: "0.1.7",
+    commit: "abcdef0123456789"
+  });
+  assert.equal(buildIdentity({ WORKLOG_BUILD_COMMIT: "not-a-commit" }).commit, "unavailable");
+  assert.equal(JSON.stringify(identity).includes("must-not-leak"), false);
 });

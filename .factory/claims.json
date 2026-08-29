@@ -2,7 +2,7 @@
   {
     "id": "offline-reload",
     "claim": "Saved work remains available offline after the first visit",
-    "where": "app offline state, README",
+    "where": "landing fact, app offline state, README",
     "test": "npm test -- --grep @claim:offline-reload",
     "sandbox": "fresh browser context; demo data; load once, set context offline, reload"
   },

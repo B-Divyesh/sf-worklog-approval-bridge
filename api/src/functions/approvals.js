@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { acceptApproval, ReceiptError, verifyAttestation } from "../receipt-service.js";
 import { consumeRateLimit } from "../rate-limit.js";
 import { missingReceiptStatus } from "../approval-protocol.js";
+import { buildIdentity } from "../build-identity.js";
 
 const TABLE = "worklogapprovals";
 const SECRET_PARTITION = "system";
@@ -16,6 +17,11 @@ function json(status, body) {
 function noContent(status) {
   return { status, headers: { "Cache-Control": "no-store" } };
 }
+
+app.http("approvalHealth", {
+  methods: ["GET"], route: "health", authLevel: "anonymous",
+  handler: async () => json(200, { status: "ok", build: buildIdentity() })
+});
 
 function table() {
   // Azure Static Web Apps reserves AzureWebJobsStorage. A product-specific

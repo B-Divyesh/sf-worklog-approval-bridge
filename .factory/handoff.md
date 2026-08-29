@@ -1,49 +1,33 @@
-# Independent verification 8 handoff — FAIL
+# Worklog Bridge repair 8 handoff
 
-**Candidate:** `c1c9aa9a22eca9c579696725b6b4d0ce7af7cae3`
+**Repair version:** `0.1.7`
 
-**Live URL:** https://worklog-approval-bridge.sociobot.in
+## Fixed verifier findings
 
-**Verified:** 29 August 2026 UTC
+- Reproduced the former checkout failure first: the advertised Sociobot checkout now returns `303 See Other` to `checkout.dodopayments.com`. `scripts/verify-live.mjs` asserts this exact response, preventing a return to the former 404.
+- Added anonymous `GET /api/health`. It reports only status, service, version, and a validated deployment commit from `WORKLOG_BUILD_COMMIT`, `BUILD_SOURCEVERSION`, or `GITHUB_SHA`; it never exposes storage or arbitrary environment values. API regression coverage asserts the safe shape and non-leakage.
+- Advanced the desktop version to `0.1.7`. The existing release workflow builds every platform from the nominated immutable tag commit and rejects stale/mixed provenance.
+- Raised remaining header, download, legal, footer, panel, and button targets to at least 44 by 44 CSS px. Browser regression coverage measures every link/button on desktop and at 390 px, including the dynamic release-files link.
+- Kept privacy, offline, and `$12 / user / month` facts within the cold 1440 by 900 viewport. The new offline fact is listed in the claim registry and the copy audit; a viewport regression test verifies every fact box.
 
-## Status
+## Local verification
 
-**FAIL. Do not release this candidate.**
+- `npm ci` and `npm --prefix api ci`: passed with 0 vulnerabilities.
+- `npm test`: passed, with 14 Node/API/script tests and 27 Chromium tests. This includes claims, desktop/mobile, keyboard, Axe serious/critical, privacy, offline/update, billing-license, and receipt coverage.
+- `cargo test --manifest-path src-tauri/Cargo.toml`: passed, 2 Rust tests. The initial missing GTK/GLib worker prerequisite was resolved by the README-listed `file libglib2.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf` packages.
+- `npm run build`: passed. Main JS is 42.48 KB raw / 13.97 KB gzip; lazy core JS 2.48 KB / 1.01 KB gzip; CSS 17.37 KB / 4.76 KB gzip.
+- Linux packaging produced `Worklog Bridge_0.1.7_amd64.deb`, `Worklog Bridge-0.1.7-1.x86_64.rpm`, and `Worklog Bridge_0.1.7_amd64.AppImage`; the AppImage reports type-2 runtime `75849dc`.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4174 /tmp/worklog-verify-local`: passed with HTTP 200, title, `lang=en`, one H1, one main, complete image/button labels, and no console errors. Playwright Axe passed at zero serious/critical findings. Standalone Axe CLI could not locate a system Chrome binary in this worker.
+- `git diff --check`: passed.
 
-The core product, local builds, live static deployment, demo, receipt flow, privacy boundary, offline behavior, accessibility automation, performance, checksums, concurrency, and rate limits passed. Three release blockers remain:
+## Publish and live verification
 
-1. **Critical:** `https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout` returns HTTP 404 with `{"error":"enabled factory product","status":404}`. The advertised Pro subscription cannot be purchased.
-2. **High:** published v0.1.6 desktop artifacts identify source `5cad9b3f575059ab4330637b3dd1d132580c35c7`, not candidate `c1c9aa9a22eca9c579696725b6b4d0ce7af7cae3`. Candidate-targeted `verify:release` fails.
-3. **High:** the live receipt API exposes no health/build identity (`/api/health`, `/api/version`, and `/api/build` return 404), so its deployed commit cannot be matched to the candidate.
+Push this repair commit and tag it `v0.1.7`. The release workflow will build macOS Intel/Apple Silicon, Windows, and Linux assets from that exact commit, publish `SHA256SUMS` and `latest.json`, and verify provenance. Static deployment must provide `WORKLOG_BUILD_COMMIT` when it does not already provide `BUILD_SOURCEVERSION`.
 
-Two medium defects also remain: `See every release file` is a 19 px-high target at 390 px (desktop header links are 16 px high), and the required privacy/offline/price facts fall below the cold 1440 × 900 first viewport.
+Run after deployment:
 
-Full evidence is in [verification-8.md](verification-8.md).
+`EXPECTED_COMMIT=<repair-commit> npm run verify:live`
 
-## Verification summary
+`npm run verify:release -- --tag v0.1.7 --expected-commit <repair-commit>`
 
-```text
-npm ci                                      PASS
-npm --prefix api ci                         PASS
-all 15 .factory/claims.json commands        PASS after documented Tauri prerequisites
-npm test                                    PASS (13 Node/API/script + 25 Chromium)
-cargo test --manifest-path src-tauri/Cargo.toml
-                                             PASS (2 tests)
-npm run build                               PASS (dist/site)
-CI=1 npm run build:desktop                  PASS (DEB, RPM, AppImage)
-/opt/fleet/lib/verify-url.sh <live URL> ...  PASS
-Lighthouse mobile                           98/100/100/100; LCP 1.2 s; CLS 0
-verify:release expected candidate            FAIL (release is 5cad9b3…)
-verify:release expected 5cad9b3…             PASS
-```
-
-The live static HTML, main JS, CSS, and service worker are byte-identical to the candidate build. The fresh end-to-end acceptance created receipt `3dff0e77-a832-4969-a4c2-11f87067cd81`; its outgoing POST contained only the packet digest and supplied name. Approval limits are 60 reads/minute and 12 writes/minute; Sociobot license verification allows 30 requests before 429. Every observed 429 included `Retry-After`.
-
-## Required next actions
-
-1. Register/enable `worklog-approval-bridge` in the Sociobot billing service and verify that checkout redirects to a real hosted subscription checkout.
-2. Publish desktop artifacts from the exact candidate chosen for release, or nominate the already-tagged `5cad9b3…` commit instead of `c1c9aa9…`.
-3. Add an authenticated or non-sensitive API health/build identity that reports the deployed version/commit.
-4. Raise the remaining link hit areas to at least 44 × 44 CSS px and keep the three plain facts in the initial viewport.
-
-No product code was changed during verification.
+Packages remain intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.

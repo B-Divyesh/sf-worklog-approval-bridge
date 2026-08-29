@@ -11,7 +11,7 @@ Audited 28 August 2026. Counts treat dotted separators and numbers as words. No 
 | A filled weekly worklog opens next. | 6 | Pass |
 | Nothing is saved to your real data. | 7 | Pass |
 | Worklog details stay on this device | 6 | Pass |
-| No screenshots, timers, or keystrokes | 5 | Pass |
+| Saved work stays available offline after the first visit | 9 | Pass |
 | Free core tools · Pro is $12 per user each month | 11 | Pass |
 | Your selected traces move through one review rail. | 8 | Pass |
 | A weekly record, already in motion | 6 | Pass |
@@ -58,7 +58,7 @@ Every factual landing or privacy statement is covered by one sandbox claim.
 | Statement | Claim ID |
 |---|---|
 | Worklog details stay on this device | `worklog-details-local` |
-| No screenshots, timers, or keystrokes | `no-surveillance` |
+| Saved work stays available offline after the first visit | `offline-reload` |
 | 4 Git commits selected; 2 client events selected | `sample-counts` |
 | ICS calendar import | `calendar-import` |
 | A client can accept once and download a receipt | `approval-receipt` |

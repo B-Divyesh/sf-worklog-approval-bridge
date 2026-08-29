@@ -1,6 +1,6 @@
 [package]
 name = "worklog-approval-bridge"
-version = "0.1.6"
+version = "0.1.7"
 description = "Local-first Git and calendar worklog approval app"
 authors = ["Param Factory"]
 license = "MIT"

@@ -8,7 +8,7 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.6
+        default: v0.1.7
       source_commit:
         description: Full source commit to package (defaults to the dispatched commit)
         required: false
