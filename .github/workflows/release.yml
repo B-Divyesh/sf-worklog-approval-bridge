@@ -8,7 +8,10 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.0
+        default: v0.1.5
+      source_commit:
+        description: Full source commit to package (defaults to the dispatched commit)
+        required: false
 
 permissions:
   contents: write
@@ -35,7 +38,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.source_commit || github.sha) || github.ref }}
+      - name: Record immutable source commit
+        id: source
+        shell: bash
+        env:
+          NOMINATED_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          commit="$(git rev-parse HEAD)"
+          if [ -n "$NOMINATED_COMMIT" ]; then
+            [[ "$NOMINATED_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+            test "$commit" = "$NOMINATED_COMMIT"
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,10 +64,14 @@ jobs:
       - run: npm ci
       - name: Build Tauri bundles
         run: npm run build:desktop -- --target ${{ matrix.target }}
+      - name: Record bundle provenance
+        run: node scripts/build-provenance.mjs "src-tauri/target/${{ matrix.target }}/release/bundle" "${{ matrix.label }}" "${{ steps.source.outputs.commit }}" "provenance-${{ matrix.label }}.json"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.label }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/**/*
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*
+            provenance-${{ matrix.label }}.json
           if-no-files-found: error
 
   publish:
@@ -63,24 +82,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.source_commit || github.sha) || github.ref }}
+      - name: Record and validate release source
+        id: source
+        shell: bash
+        env:
+          NOMINATED_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          commit="$(git rev-parse HEAD)"
+          if [ -n "$NOMINATED_COMMIT" ]; then
+            [[ "$NOMINATED_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+            test "$commit" = "$NOMINATED_COMMIT"
+          fi
+          configured_version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          test "$configured_version" = "${RELEASE_TAG#v}"
+          git fetch --force --tags origin
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$commit"
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
           merge-multiple: true
       - name: Flatten release files
         run: |
-          test "$(node -p "require('./src-tauri/tauri.conf.json').version")" = "${RELEASE_TAG#v}"
           mkdir upload
           find release-assets -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -exec cp {} upload/ \;
+          find release-assets -type f -name 'provenance-*.json' -exec cp {} upload/ \;
           find upload -maxdepth 1 -type f -name '* *' -print0 | while IFS= read -r -d '' file; do
             mv "$file" "${file// /.}"
           done
-          node scripts/release-manifest.mjs upload "$RELEASE_TAG" "$(git rev-parse HEAD)" "$GITHUB_REPOSITORY"
+          node scripts/release-manifest.mjs upload "$RELEASE_TAG" "${{ steps.source.outputs.commit }}" "$GITHUB_REPOSITORY"
+          rm upload/provenance-*.json
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ steps.source.outputs.commit }}
           generate_release_notes: true
           files: upload/*
       - name: Verify published release provenance and checksum
@@ -88,7 +127,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for attempt in 1 2 3 4 5 6; do
-            node scripts/verify-release.mjs --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --expected-commit "$(git rev-parse HEAD)" && exit 0
+            node scripts/verify-release.mjs --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --expected-commit "${{ steps.source.outputs.commit }}" && exit 0
             sleep 10
           done
           exit 1

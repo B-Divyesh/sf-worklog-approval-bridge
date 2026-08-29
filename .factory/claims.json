@@ -81,6 +81,6 @@
     "claim": "Every published desktop platform is tied to the immutable release source commit",
     "where": "Download page, latest.json, README",
     "test": "node --test --test-name-pattern @claim:release-provenance scripts/release-provenance.test.mjs",
-    "sandbox": "temporary macOS x64/arm64, Windows, AppImage, and DEB fixtures; generate latest.json and assert its full commit matches the release tag and expected repaired commit"
+    "sandbox": "temporary macOS x64/arm64, Windows, AppImage, and DEB fixtures; record each matrix build checksum and commit; reject one stale platform; assert latest.json covers every downloadable artifact at the nominated commit"
   }
 ]

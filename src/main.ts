@@ -73,7 +73,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.4 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.5 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -479,7 +479,7 @@ async function bindDownloads() {
   const box = document.querySelector<HTMLElement>("#download-box"); if (!box) return;
   const os = /Windows/i.test(navigator.userAgent) ? "Windows" : /Mac/i.test(navigator.userAgent) ? "macOS" : "Linux";
   try {
-    const cacheRaw = localStorage.getItem("worklog-bridge:release-v2"); const cache = cacheRaw ? JSON.parse(cacheRaw) : null;
+    const cacheRaw = localStorage.getItem("worklog-bridge:release-v3"); const cache = cacheRaw ? JSON.parse(cacheRaw) : null;
     let release = cache && Date.now() - cache.time < 3_600_000 ? cache.data : null;
     if (!release) {
       const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
@@ -495,7 +495,7 @@ async function bindDownloads() {
       }
       if (object?.type !== "commit" || !/^[a-f0-9]{40}$/i.test(object.sha)) throw new Error();
       release.commit = object.sha;
-      localStorage.setItem("worklog-bridge:release-v2", JSON.stringify({ time: Date.now(), data: release }));
+      localStorage.setItem("worklog-bridge:release-v3", JSON.stringify({ time: Date.now(), data: release }));
     }
     const matcher = os === "Windows" ? /\.(msi|exe)$/i : os === "macOS" ? /\.(dmg|app\.tar\.gz)$/i : /\.(AppImage|deb)$/i;
     const asset = release.assets.find((item: { name: string }) => matcher.test(item.name));

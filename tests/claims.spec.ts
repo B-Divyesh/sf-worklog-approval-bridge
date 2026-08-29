@@ -224,22 +224,22 @@ test("@regression:mobile-installer-commands are keyboard-focusable scroll region
 test("download selects an asset from an immutable release commit", async ({ page }) => {
   const commit = "1234567890abcdef1234567890abcdef12345678";
   const githubRequests: string[] = [];
-  await page.route("https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/**", async route => {
+  await page.route(/^https:\/\/api\.github\.com\/repos\/B-Divyesh\/sf-worklog-approval-bridge\//, async route => {
     const url = route.request().url();
     githubRequests.push(url);
     if (url.endsWith("/releases/latest")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
-        tag_name: "v0.1.4",
-        html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.4",
+        tag_name: "v0.1.5",
+        html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.5",
         assets: [
-          { name: "Worklog.Bridge_0.1.4_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.4/Worklog.Bridge_0.1.4_amd64.AppImage" },
-          { name: "Worklog.Bridge_0.1.4_x64.dmg", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.4/Worklog.Bridge_0.1.4_x64.dmg" },
-          { name: "Worklog.Bridge_0.1.4_x64.msi", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.4/Worklog.Bridge_0.1.4_x64.msi" }
+          { name: "Worklog.Bridge_0.1.5_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.5/Worklog.Bridge_0.1.5_amd64.AppImage" },
+          { name: "Worklog.Bridge_0.1.5_x64.dmg", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.5/Worklog.Bridge_0.1.5_x64.dmg" },
+          { name: "Worklog.Bridge_0.1.5_x64.msi", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.5/Worklog.Bridge_0.1.5_x64.msi" }
         ]
       }) });
       return;
     }
-    if (url.endsWith("/git/ref/tags/v0.1.4")) {
+    if (url.endsWith("/git/ref/tags/v0.1.5")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ object: { type: "commit", sha: commit } }) });
       return;
     }
@@ -248,7 +248,7 @@ test("download selects an asset from an immutable release commit", async ({ page
   await page.goto("/download");
   await expect.poll(() => githubRequests).toHaveLength(2);
   const download = page.locator("#download-box a.button");
-  await expect(download).toHaveAttribute("href", /\/releases\/download\/v0\.1\.4\/Worklog\.Bridge_0\.1\.4_(amd64\.AppImage|x64\.(dmg|msi))$/);
+  await expect(download).toHaveAttribute("href", /\/releases\/download\/v0\.1\.5\/Worklog\.Bridge_0\.1\.5_(amd64\.AppImage|x64\.(dmg|msi))$/);
   await expect(page.locator(".release-source")).toContainText("1234567");
 });
 

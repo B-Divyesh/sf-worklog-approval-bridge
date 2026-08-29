@@ -14,15 +14,34 @@ export function platformFor(name) {
 export async function createReleaseManifest(directory, tag, commit, repository) {
   if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error(`Invalid release tag: ${tag}`);
   if (!/^[a-f0-9]{40}$/i.test(commit)) throw new Error("Release commit must be a full Git SHA.");
-  const names = (await readdir(directory)).filter(name => platformFor(name)).sort();
+  const directoryNames = await readdir(directory);
+  const names = directoryNames.filter(name => platformFor(name)).sort();
+  const provenanceFiles = directoryNames.filter(name => /^provenance-.+\.json$/.test(name));
+  const attestations = new Map();
+  for (const provenanceName of provenanceFiles) {
+    const provenance = JSON.parse(await readFile(join(directory, provenanceName), "utf8"));
+    if (!/^[a-f0-9]{40}$/i.test(provenance.commit) || provenance.commit.toLowerCase() !== commit.toLowerCase()) {
+      throw new Error(`${provenanceName} was built from ${provenance.commit || "an invalid commit"}, expected ${commit}.`);
+    }
+    for (const file of provenance.files || []) {
+      if (attestations.has(file.name)) throw new Error(`Duplicate build provenance for ${file.name}.`);
+      attestations.set(file.name, { ...file, commit: provenance.commit.toLowerCase(), platform: provenance.label });
+    }
+  }
   const files = [];
   for (const name of names) {
     const bytes = await readFile(join(directory, name));
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const attestation = attestations.get(name);
+    if (!attestation) throw new Error(`Missing build provenance for ${name}.`);
+    if (attestation.platform !== platformFor(name)) throw new Error(`${name} provenance has the wrong platform.`);
+    if (attestation.sha256 !== sha256) throw new Error(`${name} changed after its build provenance was recorded.`);
     files.push({
       platform: platformFor(name),
       name,
       url: `https://github.com/${repository}/releases/download/${tag}/${encodeURIComponent(name)}`,
-      sha256: createHash("sha256").update(bytes).digest("hex")
+      sha256,
+      commit: attestation.commit
     });
   }
   for (const platform of ["macos-arm64", "macos-x64", "windows-x64", "linux-x64"]) {

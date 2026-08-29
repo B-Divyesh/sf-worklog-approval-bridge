@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { platformFor } from "./release-manifest.mjs";
 
 const requiredPlatforms = ["macos-arm64", "macos-x64", "windows-x64", "linux-x64"];
 
@@ -10,12 +11,15 @@ export function validateRelease(release, manifest, sumsText, tagCommit, expected
   assert.match(manifest.commit, /^[a-f0-9]{40}$/i, "latest.json must record the full source commit");
   assert.equal(manifest.commit.toLowerCase(), tagCommit.toLowerCase(), "release tag and latest.json must identify the same source commit");
   if (expectedCommit) assert.equal(tagCommit.toLowerCase(), expectedCommit.toLowerCase(), "latest release is not built from the expected repaired commit");
+  const sourceCommit = (expectedCommit || tagCommit).toLowerCase();
   for (const platform of requiredPlatforms) {
     assert.ok(manifest.files.some(file => file.platform === platform), `missing ${platform} manifest entry`);
   }
   assert.ok(manifest.files.some(file => /\.AppImage$/i.test(file.name)), "missing Linux AppImage");
   assert.ok(manifest.files.some(file => /\.deb$/i.test(file.name)), "missing Linux DEB");
   const assets = new Map(release.assets.map(asset => [asset.name, asset]));
+  const downloadableArtifacts = release.assets.filter(asset => platformFor(asset.name)).map(asset => asset.name).sort();
+  assert.deepEqual(manifest.files.map(file => file.name).sort(), downloadableArtifacts, "latest.json must cover every downloadable desktop artifact");
   const sums = new Map(sumsText.trim().split(/\r?\n/).map(line => {
     const match = line.match(/^([a-f0-9]{64})\s+\*?(.+)$/i);
     assert.ok(match, `invalid SHA256SUMS line: ${line}`);
@@ -23,6 +27,8 @@ export function validateRelease(release, manifest, sumsText, tagCommit, expected
   }));
   for (const file of manifest.files) {
     assert.ok(assets.has(file.name), `${file.name} is absent from the GitHub release`);
+    assert.match(file.commit, /^[a-f0-9]{40}$/i, `${file.name} must record its full source commit`);
+    assert.equal(file.commit.toLowerCase(), sourceCommit, `${file.name} was not built from the nominated candidate`);
     assert.equal(sums.get(file.name), file.sha256, `${file.name} checksum differs between manifest and SHA256SUMS`);
     assert.ok(file.url.includes(`/releases/download/${manifest.tag}/`), `${file.name} URL does not use the release tag`);
   }

@@ -30,6 +30,10 @@ test("@regression:appimage-linuxdeploy-ci-installs-file-command", async () => {
   const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
   assert.match(workflow, /apt-get install -y file\s+libwebkit2gtk-4\.1-dev/);
   assert.doesNotMatch(workflow, /prerelease:\s*true/);
+  assert.match(workflow, /source_commit:/);
+  assert.match(workflow, /inputs\.source_commit \|\| github\.sha/);
+  assert.match(workflow, /build-provenance\.mjs/);
+  assert.match(workflow, /target_commitish:/);
 });
 
 test("@regression:versioned-service-worker derives a release-specific cache name", async () => {
