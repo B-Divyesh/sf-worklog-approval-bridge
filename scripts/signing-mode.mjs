@@ -25,14 +25,22 @@ export function signingMode(platform, environment = process.env, requested = fal
   return { enabled: true, missing: [] };
 }
 
+export function signingModeMessage(platform, mode, requested) {
+  const label = platform === "macos" ? "macOS" : "Windows";
+  if (mode.enabled) {
+    return `${label} signing was requested and every required credential is present; signed release checks are enabled.`;
+  }
+  if (!requested) {
+    return `${label} signing is optional and was not requested; building an unsigned preview.`;
+  }
+  return `${label} signing is disabled; building an unsigned preview.`;
+}
+
 async function main() {
   const platform = process.argv[2];
   const requested = process.env.SIGN_RELEASE === "true";
   const result = signingMode(platform, process.env, requested);
-  const label = platform === "macos" ? "macOS" : "Windows";
-  process.stdout.write(result.enabled
-    ? `${label} signing credentials are complete; signed release checks are enabled.\n`
-    : `${label} signing credentials are absent; building an unsigned preview.\n`);
+  process.stdout.write(`${signingModeMessage(platform, result, requested)}\n`);
   if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `enabled=${result.enabled}\n`);
 }
 
