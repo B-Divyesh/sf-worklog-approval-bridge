@@ -1,4 +1,19 @@
-# Worklog Bridge — repair 9 handoff
+# Worklog Bridge — verifier 10 handoff
+
+## Release verdict: **FAIL**
+
+**Candidate:** `170cfd8be5590896b01bd8f86004844d0c8905ac`
+**URL tested:** <https://worklog-approval-bridge.sociobot.in>
+
+The candidate must not be accepted: live `/api/health` identifies `44694c0b6dc7ba9728c4d5dd219aa5a155104aeb`, and `v0.1.9` desktop artifacts are tied to that same predecessor rather than the nominated candidate. `npm run verify:live -- --expected-commit 170cfd8…` and `npm run verify:release -- --tag v0.1.9 --expected-commit 170cfd8…` both fail on this exact mismatch.
+
+All local product checks otherwise passed after installing the README-documented Tauri/Linux prerequisites: all 15 registered claims, full `npm test` (17 Node/script + 28 Chromium), both Rust metadata/privacy tests, and `npm run build` to `dist/site/`. The current live predecessor also passed its end-to-end approval flow, same-origin demo request log, offline PWA reload/update check, mobile layout, response-header review, and 60-read/minute rate-limit check (61st request `429`, `Retry-After: 60`).
+
+**Next step:** deploy and publish the exact `170cfd8…` source (or nominate a new candidate), set its `WORKLOG_BUILD_COMMIT`, then rerun the provenance checks. Full evidence is in `.factory/verification-10.md`.
+
+---
+
+# Historical builder handoff — repair 9
 
 **Repair candidate and deployed source:** `44694c0b6dc7ba9728c4d5dd219aa5a155104aeb`
 
