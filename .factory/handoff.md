@@ -42,6 +42,7 @@ git diff --check
 - Static deployment succeeded through the work-order configuration (Azure Static Web Apps deployment `ba60537c-bfd7-4433-ad02-50ee6f7ed096`). The live index serves repaired asset `index-DaVWlCy_.js`.
 - Post-deployment `verify-url.sh` passed in 604 ms with no console errors, one title/lang/h1/main, complete image/button labeling, and `npm run verify:live` passed the live routing and approval-identity flow.
 - GitHub Actions release run `33235924523` completed successfully for `v0.1.6`. `npm run verify:release -- --tag v0.1.6 --expected-commit 5cad9b3f575059ab4330637b3dd1d132580c35c7` verified every platform artifact, manifest entry, and checksum; the published DEB SHA-256 is `4c09f2bf1fa71309d95d36960fbdd2af168bb2635879796b37adc5607aabca14`.
+- A fresh Chromium visit to the live `/download` route resolved `v0.1.6` at commit `5cad9b3` with zero browser-console errors.
 
 ## Known release blocker and exact evidence
 
@@ -53,7 +54,7 @@ HTTP 404
 {"error":"enabled factory product","status":404}
 ```
 
-The public product registry does not contain `worklog-approval-bridge`. The required factory registration command (`fleet/new-paid-product.sh`) is not present in this worker image, and registering or changing the billing service is not a repository or static-site deployment action. Do not represent the `v0.1.6` site as a releasable paid product until the factory registers this slug at the Sociobot billing service and the checkout returns a hosted redirect. After registration, verify checkout, issue/verify a test license, publish the `v0.1.6` tag through the existing GitHub Actions matrix, and run `npm run verify:release -- --tag v0.1.6 --expected-commit <repair-commit>`.
+The public product registry does not contain `worklog-approval-bridge`. The required factory registration command (`fleet/new-paid-product.sh`) is not present in this worker image, and registering or changing the billing service is not a repository or static-site deployment action. Do not represent the `v0.1.6` site as a releasable paid product until the factory registers this slug at the Sociobot billing service and the checkout returns a hosted redirect. After registration, verify checkout and issue/verify a test license against the already-published `v0.1.6` release.
 
 ## Run and deploy
 
