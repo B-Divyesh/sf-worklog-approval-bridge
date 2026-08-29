@@ -1,69 +1,49 @@
-# Worklog Bridge repair 7 handoff
+# Independent verification 8 handoff — FAIL
 
-**Repair version:** `0.1.6`
+**Candidate:** `c1c9aa9a22eca9c579696725b6b4d0ce7af7cae3`
 
-**Repair commit:** `2eb1c4a7fa0b09b4e4a8758c95e1c397894457fe`
+**Live URL:** https://worklog-approval-bridge.sociobot.in
 
-**Deployed URL:** https://worklog-approval-bridge.sociobot.in
+**Verified:** 29 August 2026 UTC
 
-**Status:** Code, browser, accessibility, privacy, offline, source-selection, and local desktop-package repairs are complete. The live Sociobot billing product is still not registered, so its checkout endpoint remains a release blocker outside this repository.
+## Status
 
-## Repairs made
+**FAIL. Do not release this candidate.**
 
-- Pro now requires a cached, valid, unexpired license verdict that is younger than 24 hours. A token alone, invalid, absent, expired, revoked, stale, or offline-unverified verdict cannot unlock Pro.
-- The exact verifier sequence is covered: load once, write `definitely-not-a-license`, remove the verdict, go offline, reload, and confirm that calendar import and approval history remain locked.
-- Negative hourly rates are rejected before storage, totals, exports, and approval packets. The prior value remains visible and the error is announced.
-- Git collection now takes the selected Monday-to-Sunday week. ICS events are filtered to the same week. Both collectors show a keyboard-accessible selection dialog before records enter the worklog.
-- CSV neutralises cells beginning with `=`, `+`, `-`, or `@` by prefixing an apostrophe.
-- The Pro dialog now traps Tab/Shift+Tab, closes on Escape or backdrop click, and restores its trigger focus.
-- All mobile controls, including the demo banner, wordmark, legal links, app privacy link, footer links, and skip link have at least a 44 px target (implemented at 46 px to avoid fractional layout shortfall).
-- Landing sample copy now truthfully says four Git commits and two calendar events. The claim registry has coverage for those counts, privacy/no-analytics language, price/features, offline behavior, installers, and the expanded license policy. The copy audit maps factual landing/privacy copy to claims.
-- Version was advanced to `0.1.6` so repaired desktop artifacts cannot be confused with `v0.1.5`.
+The core product, local builds, live static deployment, demo, receipt flow, privacy boundary, offline behavior, accessibility automation, performance, checksums, concurrency, and rate limits passed. Three release blockers remain:
 
-## Verification completed
+1. **Critical:** `https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout` returns HTTP 404 with `{"error":"enabled factory product","status":404}`. The advertised Pro subscription cannot be purchased.
+2. **High:** published v0.1.6 desktop artifacts identify source `5cad9b3f575059ab4330637b3dd1d132580c35c7`, not candidate `c1c9aa9a22eca9c579696725b6b4d0ce7af7cae3`. Candidate-targeted `verify:release` fails.
+3. **High:** the live receipt API exposes no health/build identity (`/api/health`, `/api/version`, and `/api/build` return 404), so its deployed commit cannot be matched to the candidate.
 
-```sh
-npm ci
-npm --prefix api ci
-npm test
-cargo test --manifest-path src-tauri/Cargo.toml
-CI=1 npm run build:desktop
-/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173 /tmp/worklog-verify
-npm run verify:live
-git diff --check
-```
+Two medium defects also remain: `See every release file` is a 19 px-high target at 390 px (desktop header links are 16 px high), and the required privacy/offline/price facts fall below the cold 1440 × 900 first viewport.
 
-- `npm test`: 13 Node/API/script tests and 25 Chromium tests passed.
-- Rust tests: 2 passed, including selected-week Git filtering and no remote access.
-- Production build passed. Main JS is 42.44 KB raw / 13.96 KB gzip; CSS is 17.21 KB raw / 4.74 KB gzip.
-- Local package build passed and wrote `Worklog Bridge_0.1.6_amd64.AppImage`, `Worklog Bridge_0.1.6_amd64.deb`, and `Worklog Bridge-0.1.6-1.x86_64.rpm`.
-- Browser tests exercise desktop and 390 px mobile, keyboard dialogs, Axe serious/critical scans, request privacy, offline reload, service worker cache, CSV, source selection, approval receipts, and license boundaries.
-- `verify-url.sh` passed locally with no console errors, one title/lang/h1/main, and complete image/button labeling.
-- Static deployment succeeded through the work-order configuration (Azure Static Web Apps deployment `ba60537c-bfd7-4433-ad02-50ee6f7ed096`). The live index serves repaired asset `index-DaVWlCy_.js`.
-- Post-deployment `verify-url.sh` passed in 604 ms with no console errors, one title/lang/h1/main, complete image/button labeling, and `npm run verify:live` passed the live routing and approval-identity flow.
-- GitHub Actions release run `33235924523` completed successfully for `v0.1.6`. `npm run verify:release -- --tag v0.1.6 --expected-commit 5cad9b3f575059ab4330637b3dd1d132580c35c7` verified every platform artifact, manifest entry, and checksum; the published DEB SHA-256 is `4c09f2bf1fa71309d95d36960fbdd2af168bb2635879796b37adc5607aabca14`.
-- A fresh Chromium visit to the live `/download` route resolved `v0.1.6` at commit `5cad9b3` with zero browser-console errors.
+Full evidence is in [verification-8.md](verification-8.md).
 
-## Known release blocker and exact evidence
-
-The code must continue using the Sociobot billing endpoint required by the product contract:
+## Verification summary
 
 ```text
-GET https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout
-HTTP 404
-{"error":"enabled factory product","status":404}
-```
-
-The public product registry does not contain `worklog-approval-bridge`. The required factory registration command (`fleet/new-paid-product.sh`) is not present in this worker image, and registering or changing the billing service is not a repository or static-site deployment action. Do not represent the `v0.1.6` site as a releasable paid product until the factory registers this slug at the Sociobot billing service and the checkout returns a hosted redirect. After registration, verify checkout and issue/verify a test license against the already-published `v0.1.6` release.
-
-## Run and deploy
-
-```sh
-npm ci
-npm test
+npm ci                                      PASS
+npm --prefix api ci                         PASS
+all 15 .factory/claims.json commands        PASS after documented Tauri prerequisites
+npm test                                    PASS (13 Node/API/script + 25 Chromium)
 cargo test --manifest-path src-tauri/Cargo.toml
-npm run build:site
-CI=1 npm run build:desktop
+                                             PASS (2 tests)
+npm run build                               PASS (dist/site)
+CI=1 npm run build:desktop                  PASS (DEB, RPM, AppImage)
+/opt/fleet/lib/verify-url.sh <live URL> ...  PASS
+Lighthouse mobile                           98/100/100/100; LCP 1.2 s; CLS 0
+verify:release expected candidate            FAIL (release is 5cad9b3…)
+verify:release expected 5cad9b3…             PASS
 ```
 
-The static deployment root remains `dist/site`. The desktop release workflow remains unchanged in class: it builds macOS, Windows, and Linux artifacts on a `v*` tag. Packages are intentionally unsigned; macOS notarization needs `APPLE_CERTIFICATE` and Windows signing needs `WINDOWS_CERT_PFX`.
+The live static HTML, main JS, CSS, and service worker are byte-identical to the candidate build. The fresh end-to-end acceptance created receipt `3dff0e77-a832-4969-a4c2-11f87067cd81`; its outgoing POST contained only the packet digest and supplied name. Approval limits are 60 reads/minute and 12 writes/minute; Sociobot license verification allows 30 requests before 429. Every observed 429 included `Retry-After`.
+
+## Required next actions
+
+1. Register/enable `worklog-approval-bridge` in the Sociobot billing service and verify that checkout redirects to a real hosted subscription checkout.
+2. Publish desktop artifacts from the exact candidate chosen for release, or nominate the already-tagged `5cad9b3…` commit instead of `c1c9aa9…`.
+3. Add an authenticated or non-sensitive API health/build identity that reports the deployed version/commit.
+4. Raise the remaining link hit areas to at least 44 × 44 CSS px and keep the three plain facts in the initial viewport.
+
+No product code was changed during verification.
