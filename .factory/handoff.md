@@ -1,3 +1,15 @@
+# Review 1 handoff — FAIL
+
+Adversarial first-read review 1 was completed on 29 August 2026 against repository base `4aafb0e1a9f0a8694e6523391490eedeb07d7735` and the live v0.1.13 deployment. The full report is `.factory/review-1.md`.
+
+The public first screen passes clarity at 390 px and desktop, and the browser demo is one click, populated, isolated, resettable, offline-capable, and same-origin. All 15 registered claim commands passed from a separate clean clone after installing the README-listed Tauri packages. The complete suite passed 21 Node and 29 Chromium tests; `npm run build`, live/release provenance checks, live route/link checks, `verify-url.sh`, and Axe scans also passed.
+
+The verdict remains **FAIL**. The blocking issue is the desktop first-run `/app` screen: it has no in-context **Load sample project** action and exposes the sample only through a generic header “Demo” link. High findings cover incomplete claim assertions, unlisted claims, and unsigned installers. Minor findings cover metaphor, jargon, vague headings, terminology drift, and two README sentences above 22 words.
+
+No product source was modified. Only `.factory/review-1.md` and this handoff were changed. Temporary screenshots, the clean clone, and browser evidence remain under `/tmp` and are not part of the commit.
+
+---
+
 # Worklog Bridge — verification 12 handoff — PASS
 
 ## Independent QA decision
