@@ -41,6 +41,7 @@ git diff --check
 - `verify-url.sh` passed locally with no console errors, one title/lang/h1/main, and complete image/button labeling.
 - Static deployment succeeded through the work-order configuration (Azure Static Web Apps deployment `ba60537c-bfd7-4433-ad02-50ee6f7ed096`). The live index serves repaired asset `index-DaVWlCy_.js`.
 - Post-deployment `verify-url.sh` passed in 604 ms with no console errors, one title/lang/h1/main, complete image/button labeling, and `npm run verify:live` passed the live routing and approval-identity flow.
+- GitHub Actions release run `33235924523` completed successfully for `v0.1.6`. `npm run verify:release -- --tag v0.1.6 --expected-commit 5cad9b3f575059ab4330637b3dd1d132580c35c7` verified every platform artifact, manifest entry, and checksum; the published DEB SHA-256 is `4c09f2bf1fa71309d95d36960fbdd2af168bb2635879796b37adc5607aabca14`.
 
 ## Known release blocker and exact evidence
 
