@@ -42,6 +42,8 @@ git diff --check                    PASS
 
 Browser and accessibility coverage includes desktop, 390 px mobile overflow and touch targets, keyboard shortcuts, dialog focus/Escape restoration, skip link, reduced motion, offline reload/service worker, privacy request capture, approval receipt, billing verdict behavior, and Axe serious/critical scans. `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4174/ <tempdir>` passed: HTTP 200, title, `lang=en`, one H1, main landmark, image alt text, labeled buttons, no console errors. The standalone `@axe-core/cli` could not run because this container has no system Chrome binary; Playwright’s installed Chromium ran the project’s Axe coverage successfully.
 
+Fresh live Playwright verification at 390 × 844 passed: `/demo` had no horizontal overflow, retained the visible Copy approval link, and logged no browser errors.
+
 Production checks:
 
 ```text
