@@ -46,3 +46,4 @@ Candidate repaired from `4aafb0e1a9f0a8694e6523391490eedeb07d7735`; adversarial 
 - Build: `npm run build` passed; initial JavaScript is 14.78 KB gzip across two chunks.
 - Local browser verification: `/opt/fleet/lib/verify-url.sh` passed for `/` and `/demo`; evidence is in `/tmp/worklog-evidence/local-root/` and `/tmp/worklog-evidence/local-demo/`.
 - Playwright Axe scans cover `/`, `/demo`, `/privacy`, `/terms`, `/download`, `/missing-page`, and approval routes with no serious or critical violations.
+- Live cold check after deployment: `https://worklog-approval-bridge.sociobot.in/`, `/?demo=1`, `/demo`, `/privacy`, `/terms`, and `/download` each returned 200 with the expected title, one h1, and main landmark. `/missing-page` returned 404 with the designed recovery page. Live screenshots and verifier JSON are at `/tmp/worklog-evidence/live-root/`, `/tmp/worklog-evidence/live-demo/`, and `/tmp/worklog-evidence/live-legal/`.

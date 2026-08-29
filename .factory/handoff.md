@@ -12,6 +12,7 @@ This repair addresses every item in `.factory/review-1.md`: desktop first-run sa
 - `cargo test --manifest-path src-tauri/Cargo.toml`: passed (2 tests).
 - `/opt/fleet/lib/verify-url.sh` passed locally for `/` and `/demo`; screenshots and JSON evidence are at `/tmp/worklog-evidence/local-root/` and `/tmp/worklog-evidence/local-demo/`.
 - Playwright Axe scans found no serious or critical violations on all public routes and an approval route. The standalone Axe CLI could not launch because it expects a full Chrome binary; the Playwright Axe integration is the recorded accessibility evidence.
+- Deployment completed through `/opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site`. A cold live check passed for `/`, `/?demo=1`, `/demo`, `/privacy`, `/terms`, and `/download`; `/missing-page` returned the intended 404. Live evidence is at `/tmp/worklog-evidence/live-root/`, `/tmp/worklog-evidence/live-demo/`, and `/tmp/worklog-evidence/live-legal/`.
 
 ## Release signing and deployment
 
