@@ -8,7 +8,7 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.15
+        default: v0.1.16
       source_commit:
         description: Full immutable source commit to package and release
         required: true
@@ -95,14 +95,18 @@ jobs:
         run: |
           $bytes = [Convert]::FromBase64String($env:WINDOWS_CERT_PFX)
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\\worklog-bridge-signing.pfx", $bytes)
-      - name: Build Tauri bundles
+      - name: Build unsigned Tauri bundles
+        if: ${{ !startsWith(matrix.os, 'macos') || steps.macos-signing.outputs.enabled != 'true' }}
+        run: npm run build:desktop -- --target ${{ matrix.target }}
+      - name: Build signed macOS bundles
+        if: startsWith(matrix.os, 'macos') && steps.macos-signing.outputs.enabled == 'true'
         env:
-          APPLE_CERTIFICATE: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_CERTIFICATE || '' }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-          APPLE_SIGNING_IDENTITY: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
-          APPLE_ID: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run build:desktop -- --target ${{ matrix.target }}
       - name: Authenticode-sign Windows bundles
         if: startsWith(matrix.os, 'windows') && steps.windows-signing.outputs.enabled == 'true'

@@ -19,6 +19,9 @@ test("@regression:verification-13 release signing has an explicit unsigned fallb
   assert.match(workflow, /if: startsWith\(matrix\.os, 'macos'\) && steps\.macos-signing\.outputs\.enabled == 'true'/);
   assert.match(workflow, /id: windows-signing[\s\S]*node scripts\/signing-mode\.mjs windows/);
   assert.match(workflow, /if: startsWith\(matrix\.os, 'windows'\) && steps\.windows-signing\.outputs\.enabled == 'true'/);
+  const unsignedBuild = workflow.match(/- name: Build unsigned Tauri bundles([\s\S]*?)- name: Build signed macOS bundles/)?.[1] || "";
+  assert.match(unsignedBuild, /macos-signing\.outputs\.enabled != 'true'/);
+  assert.doesNotMatch(unsignedBuild, /APPLE_/, "empty APPLE_* variables still make Tauri attempt certificate import");
 });
 
 test("@regression:verification-13 documents every optional signing secret and unsigned release behavior", async () => {
