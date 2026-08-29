@@ -474,7 +474,7 @@ test("landing and routes meet the semantic and serious accessibility baseline", 
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page).toHaveTitle(/.+ — .+|Worklog Bridge — .+/);
     const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations.filter(item => ["serious", "critical"].includes(item.impact || ""))).toEqual([]);
+    expect(results.violations).toEqual([]);
   }
 });
 

@@ -51,10 +51,11 @@ Every finding from review rounds 1 and 2 was rechecked. Evidence paths below are
 
 ## Acceptance evidence
 
-- Every one of the 22 commands in `.factory/claims.json` passed separately from `/tmp/worklog-polish2-final-sof9pa/repo`. Logs: `/tmp/worklog-polish-2/final-claim-logs/`.
-- The same clean clone passed 27 Node/service/workflow tests, 36 Chromium tests, 2 Rust tests, and `npm run build`. Logs: `/tmp/worklog-polish-2/final-clean-*.log`.
-- `npm run build:desktop` produced the 0.1.19 AppImage, Debian, and RPM bundles under `src-tauri/target/release/bundle/`.
+- Every one of the 22 commands in `.factory/claims.json` passed separately from a clean clone. Logs: `/tmp/worklog-polish-2/release-claim-logs/`.
+- The same clean clone passed 27 Node/service/workflow tests, 36 Chromium tests, 2 Rust tests, and `npm run build`. Logs: `/tmp/worklog-polish-2/release-*.log`.
+- `npm run build:desktop` produced the 0.1.20 AppImage, Debian, and RPM bundles under `src-tauri/target/release/bundle/`.
 - Local mobile Lighthouse scored 100 performance, 100 accessibility, 100 best practices, and 100 SEO. FCP was 1.1 s, LCP 1.4 s, TBT 0 ms, and CLS 0. Evidence: `/tmp/worklog-polish-2/lighthouse.json`.
 - Cold live checks covered `/`, `/?demo=1`, `/privacy`, `/terms`, the isolated approval flow, a real approval lookup, hosted checkout, API identity, console errors, and a genuine HTTP 404. Evidence: `/tmp/worklog-polish-2/live-*` and `/tmp/worklog-polish-2/live-e2e-final.log`.
+- Playwright Axe reported zero violations on the final live landing, demo, Privacy, Terms, and Download routes. Evidence: `/tmp/worklog-polish-2/axe-live/playwright-results.json`.
 
 No review finding remains open.

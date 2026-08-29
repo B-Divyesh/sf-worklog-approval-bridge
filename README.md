@@ -81,7 +81,7 @@ The anonymous receipt health endpoint is `/api/health`. It returns only service 
 After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
 
 ```sh
-npm run verify:release -- --tag v0.1.19 --expected-commit "$(git rev-parse v0.1.19^{})"
+npm run verify:release -- --tag v0.1.20 --expected-commit "$(git rev-parse v0.1.20^{})"
 ```
 
 ## License

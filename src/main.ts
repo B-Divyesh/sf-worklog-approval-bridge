@@ -67,7 +67,7 @@ function routeLink(path: string, label: string, className = "") {
 }
 
 function header(active = "") {
-  return `<div class="preview-banner" role="note">Unsigned desktop preview · macOS and Windows may show a trust warning.</div><header class="site-header">
+  return `<aside class="preview-banner" aria-label="Release status">Unsigned desktop preview · macOS and Windows may show a trust warning.</aside><header class="site-header">
     <div class="header-inner">
       ${routeLink("/", `<span class="wordmark-mark" aria-hidden="true"></span><span>Worklog Bridge</span>`, "wordmark")}
       <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav"><span aria-hidden="true">☰</span><span class="sr-only">Open menu</span></button>
