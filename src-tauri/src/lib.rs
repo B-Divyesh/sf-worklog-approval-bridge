@@ -54,7 +54,10 @@ fn is_iso_day(value: &str) -> bool {
     value.len() == 10
         && value.as_bytes().get(4) == Some(&b'-')
         && value.as_bytes().get(7) == Some(&b'-')
-        && value.bytes().enumerate().all(|(index, byte)| index == 4 || index == 7 || byte.is_ascii_digit())
+        && value
+            .bytes()
+            .enumerate()
+            .all(|(index, byte)| index == 4 || index == 7 || byte.is_ascii_digit())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -97,18 +100,39 @@ mod tests {
         fs::write(path.join("work.txt"), "reviewed work\n").unwrap();
         assert!(git(&["add", "work.txt"]).status.success());
         let mut commit = Command::new("git");
-        commit.args(["-C", path.to_str().unwrap(), "commit", "--quiet", "-m", "Add reviewed work"])
+        commit
+            .args([
+                "-C",
+                path.to_str().unwrap(),
+                "commit",
+                "--quiet",
+                "-m",
+                "Add reviewed work",
+            ])
             .env("GIT_AUTHOR_DATE", "2026-08-26T12:00:00Z")
             .env("GIT_COMMITTER_DATE", "2026-08-26T12:00:00Z");
         assert!(commit.output().unwrap().status.success());
         fs::write(path.join("work.txt"), "outside the selected week\n").unwrap();
         assert!(git(&["add", "work.txt"]).status.success());
         let mut outside_week = Command::new("git");
-        outside_week.args(["-C", path.to_str().unwrap(), "commit", "--quiet", "-m", "Outside selected week"])
+        outside_week
+            .args([
+                "-C",
+                path.to_str().unwrap(),
+                "commit",
+                "--quiet",
+                "-m",
+                "Outside selected week",
+            ])
             .env("GIT_AUTHOR_DATE", "2026-09-02T12:00:00Z")
             .env("GIT_COMMITTER_DATE", "2026-09-02T12:00:00Z");
         assert!(outside_week.output().unwrap().status.success());
-        let commits = collect_git(path.to_string_lossy().into_owned(), "2026-08-24".into(), "2026-08-31".into()).unwrap();
+        let commits = collect_git(
+            path.to_string_lossy().into_owned(),
+            "2026-08-24".into(),
+            "2026-08-31".into(),
+        )
+        .unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0].title, "Add reviewed work");
         assert_eq!(commits[0].hash.len(), 40);
@@ -118,27 +142,67 @@ mod tests {
 
     #[test]
     fn claim_no_repository_upload() {
-        let suffix = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let path = std::env::temp_dir().join(format!("worklog-bridge-local-only-{suffix}"));
         fs::create_dir(&path).unwrap();
-        let git = |args: &[&str]| Command::new("git").args(["-C", path.to_str().unwrap()]).args(args).output().unwrap();
+        let git = |args: &[&str]| {
+            Command::new("git")
+                .args(["-C", path.to_str().unwrap()])
+                .args(args)
+                .output()
+                .unwrap()
+        };
         assert!(git(&["init", "--quiet"]).status.success());
-        assert!(git(&["config", "user.email", "test@example.invalid"]).status.success());
-        assert!(git(&["config", "user.name", "Test Worker"]).status.success());
-        fs::write(path.join("private-source.txt"), "never upload this content\n").unwrap();
+        assert!(git(&["config", "user.email", "test@example.invalid"])
+            .status
+            .success());
+        assert!(git(&["config", "user.name", "Test Worker"])
+            .status
+            .success());
+        fs::write(
+            path.join("private-source.txt"),
+            "never upload this content\n",
+        )
+        .unwrap();
         assert!(git(&["add", "private-source.txt"]).status.success());
         let mut commit = Command::new("git");
-        commit.args(["-C", path.to_str().unwrap(), "commit", "--quiet", "-m", "Local commit only"])
+        commit
+            .args([
+                "-C",
+                path.to_str().unwrap(),
+                "commit",
+                "--quiet",
+                "-m",
+                "Local commit only",
+            ])
             .env("GIT_AUTHOR_DATE", "2026-08-26T12:00:00Z")
             .env("GIT_COMMITTER_DATE", "2026-08-26T12:00:00Z");
         assert!(commit.output().unwrap().status.success());
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         listener.set_nonblocking(true).unwrap();
         let port = listener.local_addr().unwrap().port();
-        assert!(git(&["remote", "add", "origin", &format!("git://127.0.0.1:{port}/private.git")]).status.success());
-        let commits = collect_git(path.to_string_lossy().into_owned(), "2026-08-24".into(), "2026-08-31".into()).unwrap();
+        assert!(git(&[
+            "remote",
+            "add",
+            "origin",
+            &format!("git://127.0.0.1:{port}/private.git")
+        ])
+        .status
+        .success());
+        let commits = collect_git(
+            path.to_string_lossy().into_owned(),
+            "2026-08-24".into(),
+            "2026-08-31".into(),
+        )
+        .unwrap();
         assert_eq!(commits[0].title, "Local commit only");
-        assert!(listener.accept().is_err(), "reading Git metadata must not contact the configured remote");
+        assert!(
+            listener.accept().is_err(),
+            "reading Git metadata must not contact the configured remote"
+        );
         fs::remove_dir_all(path).unwrap();
     }
 }

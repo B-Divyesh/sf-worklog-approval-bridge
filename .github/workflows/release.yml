@@ -8,7 +8,7 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.13
+        default: v0.1.14
       source_commit:
         description: Full immutable source commit to package and release
         required: true
@@ -62,7 +62,8 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: sudo apt-get update && sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: npm ci
-      - name: Configure macOS signing and notarization
+      - name: Detect macOS signing and notarization
+        id: macos-signing
         if: startsWith(matrix.os, 'macos')
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -71,21 +72,20 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          test -n "$APPLE_CERTIFICATE"
-          test -n "$APPLE_CERTIFICATE_PASSWORD"
-          test -n "$APPLE_SIGNING_IDENTITY"
-          test -n "$APPLE_ID"
-          test -n "$APPLE_PASSWORD"
-          test -n "$APPLE_TEAM_ID"
-      - name: Configure Windows signing certificate
+        run: node scripts/signing-mode.mjs macos
+      - name: Detect Windows signing credentials
+        id: windows-signing
         if: startsWith(matrix.os, 'windows')
-        shell: pwsh
         env:
           WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: node scripts/signing-mode.mjs windows
+      - name: Configure Windows signing certificate
+        if: startsWith(matrix.os, 'windows') && steps.windows-signing.outputs.enabled == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERT_PFX) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERT_PASSWORD)) { throw "Windows signing secrets are required" }
           $bytes = [Convert]::FromBase64String($env:WINDOWS_CERT_PFX)
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\\worklog-bridge-signing.pfx", $bytes)
       - name: Build Tauri bundles
@@ -98,7 +98,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run build:desktop -- --target ${{ matrix.target }}
       - name: Authenticode-sign Windows bundles
-        if: startsWith(matrix.os, 'windows')
+        if: startsWith(matrix.os, 'windows') && steps.windows-signing.outputs.enabled == 'true'
         shell: pwsh
         env:
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
@@ -111,7 +111,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Signature verification failed for $($_.FullName)" }
           }
       - name: Verify macOS signatures and notarization tickets
-        if: startsWith(matrix.os, 'macos')
+        if: startsWith(matrix.os, 'macos') && steps.macos-signing.outputs.enabled == 'true'
         run: |
           find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" -name '*.app' -print0 | while IFS= read -r -d '' app; do
             codesign --verify --deep --strict --verbose=2 "$app"

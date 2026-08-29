@@ -1,3 +1,32 @@
+# Worklog Bridge — repair 13 handoff
+
+## Findings repaired
+
+- **Release and deployment provenance:** version `0.1.14` is reserved for this repair. The release gate still requires its tag, GitHub Release, manifest, every platform artifact, downloaded checksum, and deployed API to identify one full commit.
+- **Exact provenance regression:** `@regression:verification-13 rejects the exact deployed and released predecessor for its nominated candidate` covers the verifier’s `1c21a77…` versus `183842c…` mismatch.
+- **Signing contract:** a complete secret set produces and verifies signed packages. No secrets produces an explicitly unsigned preview. A partly configured secret set fails before packaging and names the missing values.
+
+The optional macOS set is `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. The optional Windows set is `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. An unsigned preview remains available when every secret for that platform is absent.
+
+## Verification and release evidence
+
+- Clean install: `npm ci` and `npm --prefix api ci` passed with 0 vulnerabilities.
+- Claims: all 20 commands in `.factory/claims.json` passed independently from the clean install. The worker first needed the documented Tauri Linux packages.
+- Application suite: `npm test` passed 24 Node/script tests and 32 Chromium tests.
+- Rust: `cargo fmt --check`, Clippy with warnings denied, and both unit/claim tests passed.
+- Production site: `npm run build` passed. Main JavaScript is 13.76 KB gzip, core JavaScript is 1.01 KB gzip, and CSS is 4.79 KB gzip.
+- Desktop packaging: `CI=1 npm run build:desktop` produced the `0.1.14` DEB, RPM, and AppImage.
+- Browser and accessibility: the factory URL verifier passed `/` and `/demo` with no console errors. Playwright covered desktop, 390 px mobile, keyboard, dialogs, reduced motion, offline/update behavior, and zero serious or critical Axe findings.
+- Mobile Lighthouse: performance 100, accessibility 100, best practices 100, and SEO 100. LCP was 1,359 ms and CLS was 0.
+
+Release `v0.1.14`, deployment, response-policy checks, and immutable live identity are recorded in a post-release note after their external jobs finish.
+
+## Needs operator action
+
+Add all six Apple secrets to publish signed and notarized macOS packages. Add both Windows secrets to publish Authenticode-signed Windows packages. When none are present, the release remains an unsigned preview as the Download page states.
+
+---
+
 # Polish round 1 handoff — 29 August 2026
 
 Repair commit: `183842c6d6ca3ad9cabdc1df1a4d275db09ccaec`.
