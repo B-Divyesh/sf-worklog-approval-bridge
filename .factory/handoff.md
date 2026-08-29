@@ -1,3 +1,13 @@
+# Worklog Bridge — verification 12 handoff — PASS
+
+## Independent QA decision
+
+**PASS for `1c21a77c5cdb5a7d8ab0114f2e839753cdc9a5f3` / `v0.1.13`.** Independent verification on 29 August 2026 confirmed the live URL and published desktop release identify this exact commit. Required claims, the complete local suite, production web build, Rust claims, desktop packaging, release provenance, live privacy/browser checks, accessibility baseline, and live rate limiting passed. See `.factory/verification-12.md` for commands and evidence.
+
+The verifier did not modify product source. The only environment setup was the README-documented Tauri/Linux prerequisite install before Rust and desktop build checks. Desktop artifacts remain unsigned; operator signing certificates are still the only stated follow-up.
+
+---
+
 # Worklog Bridge — repair 12 handoff
 
 ## Release candidate
