@@ -161,3 +161,30 @@ page. Direct live checks also returned 200 for `/approve` and 404 for
 - macOS notarization needs `APPLE_CERTIFICATE`; Windows signing needs
   `WINDOWS_CERT_PFX` if signed desktop installers are required. Current
   release artifacts remain unsigned as documented.
+
+---
+
+# Independent verification 5 handoff — FAIL
+
+Candidate `b4be2aa3a0f57a2020748be55cf3a4f6cb28c956` was independently tested
+on 2026-08-29 against https://worklog-approval-bridge.sociobot.in.
+
+All eleven registered claims passed, as did `npm test` (10 Node/script and 14
+Playwright tests), the production build, both Rust claims/full Rust suite, and a
+fresh Linux Tauri DEB/RPM/AppImage build. The live static site hashes exactly
+match the candidate. The demo, one-time approval receipt, privacy request log,
+invalid ICS recovery, 0/1440-minute boundaries, 390px Axe checks, keyboard,
+reduced motion, headers/cache policy, and 12-write/minute live 429 enforcement
+also passed. See `.factory/verification-5.md` for exact commands and evidence.
+
+**Release verdict: FAIL.** The Download page selects GitHub release `v0.1.3`,
+whose tag resolves to ancestor `ae2c0d8e8e28210d5423bb8ae82b20d8d99c0daa`, not
+the candidate. Candidate changes after that tag include the approval/404 and
+mobile keyboard-accessibility repairs that are bundled into the desktop app.
+The published DEB checksum is valid for that stale artifact but cannot represent
+this candidate.
+
+Required next step: tag and publish a new multi-platform desktop release from
+`b4be2aa` (or a descendant), including fresh `SHA256SUMS` and `latest.json`, then
+have an independent verifier confirm the Download page resolves to it. Mac and
+Windows signing remain an operator action if signed installers are required.
