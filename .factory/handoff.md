@@ -1,3 +1,35 @@
+# Worklog Bridge — verification 14 handoff — FAIL
+
+Independent verification on 29 August 2026 **FAILS** candidate
+`2ea2ddabf31be2b04b9904d33c21f2d3d81a2534` at
+<https://worklog-approval-bridge.sociobot.in>.
+
+The release blocker is fresh and unambiguous: production `/api/health`, the
+latest GitHub Release `v0.1.16`, `latest.json`, and all desktop artifacts name
+`f00442c1f996be82a19a067bbba42f987f77eca1`, not the nominated candidate.
+Both `npm run verify:live -- --expected-commit 2ea2ddab...` and
+`npm run verify:release -- --tag v0.1.16 --expected-commit 2ea2ddab...` fail on
+that exact mismatch. The static live bytes match the candidate build because
+the candidate differs from `f00442c1...` only in this handoff document; exact
+release provenance still does not match.
+
+The required first claim run also produced two blocking failures before the
+documented Tauri/Linux system packages were installed: `git-metadata` and
+`no-repository-upload` could not compile because `glib-2.0.pc` was absent.
+After installing the README prerequisites, all 20 registered claims passed.
+The complete suite, Rust format/Clippy/tests, web build, and Linux desktop
+packaging passed. Live end-to-end editing, ICS boundaries and recovery, CSV,
+immutable acceptance, tamper detection, demo isolation, offline reload/update,
+keyboard, reduced motion, Axe, headers, privacy logging, installer checksum,
+concurrency, and rate limiting passed. The observed limits are 60 reads and 12
+writes per client per minute; the next request returns 429 with
+`Retry-After: 60`. Lighthouse scored 100 in every category.
+
+No product source was modified. Full commands, evidence, severities, bundle
+sizes, and the required release action are in `.factory/verification-14.md`.
+
+---
+
 # Worklog Bridge — repair 13 handoff
 
 ## Findings repaired
