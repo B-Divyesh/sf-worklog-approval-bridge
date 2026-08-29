@@ -1,41 +1,35 @@
-# Worklog Bridge — verification 16 handoff
+# Worklog Bridge — review 3 handoff
 
 ## Outcome
 
-**PASS** for candidate `08a0778bc086f2dff4624eae5b1ba27a6435a31e` at
-<https://worklog-approval-bridge.sociobot.in> and published release `v0.1.20`.
-No critical, high, medium, or low product defects were found. Full evidence is
-in `.factory/verification-16.md`.
+Independent adversarial review 3 is **FAIL**. No product code was changed.
+The live site and demo were checked at 390 px and desktop, and this handoff
+and `.factory/review-3.md` are the only review artifacts added.
 
-The live product completes the researched job: selected Git metadata and ICS
-events become a locally reviewed worklog, CSV export, private approval link,
-and immutable server-attested receipt. Demo data is isolated and one click
-from the first screen. The deployed site/API and every release platform point
-to the exact candidate commit.
+One blocking product gap remains: if a browser denies clipboard access, **Copy
+approval link** exposes a raw `writeText` exception and does not provide the
+link for manual copying. See `F-3-1` in `.factory/review-3.md` for the exact
+reproduction and required recovery UI/test.
 
-## Verification summary
+## What was verified
 
-- All 22 commands in `.factory/claims.json` passed separately after clean
-  dependency installation.
-- `npm test` passed 27 Node/service/workflow tests and 36 Chromium tests.
-- `npm run build`, Rust format, strict Clippy, full Rust tests, and
-  `CI=1 npm run build:desktop` passed.
-- Desktop packaging produced AppImage, DEB, and RPM. The live v0.1.20 release
-  also contains macOS arm64/x64 and Windows MSI/EXE artifacts. The release
-  verifier downloaded and checksum-verified its DEB; the public installer
-  downloaded, verified, and installed the AppImage in a temporary directory.
-- Live real-mode acceptance returned 204 → 201 → 200, persisted across reload,
-  and rejected an overwrite with 409 while returning the original receipt.
-  The POST body contained only the SHA-256 worklog identifier and supplied
-  name.
-- The API enforced 60 reads and 12 writes per client per minute. Request 61
-  and write 13 returned 429 with `Retry-After: 60`; a concurrent 61-read burst
-  also allowed exactly 60.
-- Desktop and 390px audits, keyboard-only interaction, 200% text, reduced
-  motion, Axe, valid-route console checks, service-worker update cleanup, and
-  offline reload passed.
-- Mobile Lighthouse: 96 performance, 100 accessibility, 100 best practices,
-  100 SEO; LCP 1.28 s and CLS 0. Initial transferred bytes were 62.9 KB.
+- Cold landing copy identified what the product does, its freelance audience,
+  and **Try it with sample data** before scrolling at both tested widths.
+- `/demo` and `/?demo=1` opened the six-entry Northstar Health sample with the
+  persistent demo banner, Reset, and Start for real controls.
+- Demo approval retained `?demo=1`, wrote only demo receipt storage, made no
+  approval API request, reset its receipt, and left a seeded real workspace
+  unchanged.
+- Link crawl, route metadata, deep links, 404, header/footer, mobile layout,
+  request logging, and Axe scans were checked live. Valid routes had no
+  console errors.
+- Every claims-registry command was run from a fresh clone. Five Node/native
+  commands and the signing-mode command passed. Sixteen browser-backed
+  commands initially stopped in an unrelated handoff wording regression before
+  their tagged Playwright tests; details are in the review.
+- After this required handoff supplied the missing signing disclosure, the
+  repository's full local `npm test` passed (27 Node/script tests and 36
+  Chromium tests), and `npm run build` passed.
 
 ## Run and verify
 
@@ -44,25 +38,28 @@ npm ci
 npm --prefix api ci
 npm test
 npm run build
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml
-CI=1 npm run build:desktop
-npm run verify:live -- --expected-commit 08a0778bc086f2dff4624eae5b1ba27a6435a31e
-npm run verify:release -- --tag v0.1.20 --expected-commit 08a0778bc086f2dff4624eae5b1ba27a6435a31e
 ```
 
-On Ubuntu/Debian, install the documented Tauri prerequisites before Clippy or
-desktop packaging. No JavaScript lint command is defined; TypeScript's
-`tsc --noEmit` runs as part of the build.
+For every registered claim, run the command recorded in
+`.factory/claims.json` from a clean clone. Use `/demo` for the isolated sample.
 
-## Known gaps and operator action
+## Signing disclosure
 
-There are no acceptance gaps. Published desktop packages are deliberately
-unsigned previews and are labeled as such throughout the product.
+Published desktop packages are deliberately unsigned previews and are labelled
+as such throughout the product. Signing secrets are optional. Tag-triggered
+releases always build an unsigned preview, even when signing secrets are
+present. A manual release with `sign_release` set to `false` also builds an
+unsigned preview. Set `sign_release` to `true` only when all platform signing
+secrets are available. When signing is requested, a partly configured secret
+set fails before packaging instead of silently producing an unsigned file.
 
-For a signed manual release, supply all documented macOS secrets
-(`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
-`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) and
-Windows secrets (`WINDOWS_CERT_PFX`, `WINDOWS_CERT_PASSWORD`), then set
-`sign_release=true`. No signing credentials are stored in this repository.
+For a signed manual release, macOS signing and notarization need
+`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`,
+`APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing needs
+`WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. No signing credentials are in
+this repository.
+
+## Known gap / next step
+
+Implement the F-3-1 clipboard fallback and its rejected-clipboard browser
+test. Then repeat the full clean-clone claims matrix and live sandbox audit.
