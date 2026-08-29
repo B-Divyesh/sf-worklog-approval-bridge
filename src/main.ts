@@ -4,7 +4,7 @@ type SourceKind = "Git" | "Calendar" | "Manual";
 type Entry = { id: string; date: string; title: string; detail: string; source: SourceKind; duration: number; ready: boolean };
 type Project = { client: string; week: string; rate: number; currency: string; entries: Entry[]; sources: string[] };
 type Packet = { version: 1; client: string; week: string; currency: string; rate: number; entries: Entry[]; createdAt: string; digest: string };
-type LicenseVerdict = { valid: boolean; checkedAt: number; expiresAt?: string };
+type LicenseVerdict = { valid: boolean; checkedAt: number; expiresAt?: string; reason?: string };
 type ApprovalReceipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
 
 const PRODUCT = "worklog-approval-bridge";
@@ -15,6 +15,7 @@ const DEMO_KEY = "demo:worklog-bridge:project";
 const REAL_KEY = "worklog-bridge:project";
 const LICENSE_KEY = `sb_license:${PRODUCT}`;
 const LICENSE_CACHE = `${LICENSE_KEY}:verdict`;
+const LICENSE_CACHE_MAX_AGE = 86_400_000;
 const PACKET_HISTORY = "worklog-bridge:packet-history";
 const APPROVALS_API = "/api/approvals";
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -26,6 +27,12 @@ const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() -
 const esc = (value: unknown) => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]!);
 const money = (amount: number, currency = "USD") => new Intl.NumberFormat("en", { style: "currency", currency }).format(amount);
 const hours = (minutes: number) => `${Math.floor(minutes / 60)}h ${minutes % 60 ? `${minutes % 60}m` : ""}`.trim();
+const nextWeek = (week: string) => {
+  const date = new Date(`${week}T12:00:00`);
+  date.setDate(date.getDate() + 7);
+  return isoDay(date);
+};
+const isMonday = (week: string) => /^\d{4}-\d{2}-\d{2}$/.test(week) && new Date(`${week}T12:00:00`).getDay() === 1;
 
 const sampleProject = (): Project => ({
   client: "Northstar Health",
@@ -73,7 +80,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.5 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.6 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -87,7 +94,7 @@ function landing() {
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
         <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Nothing is saved to your real data.</p></div>
-        <ul class="facts"><li>Worklog details stay on this device</li><li>No screenshots, timers, or keystrokes</li><li>Free core tools · Pro is $12 per month</li></ul>
+        <ul class="facts"><li>Worklog details stay on this device</li><li>No screenshots, timers, or keystrokes</li><li>Free core tools · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
         <picture><source srcset="/assets/night-market-bridge-768.webp 768w, /assets/night-market-bridge-1280.webp 1280w" type="image/webp"><img src="/assets/night-market-bridge-1280.webp" width="1280" height="853" alt="Paper work tickets move along a rail toward an approval stamp in a night market stall." fetchpriority="high" decoding="async"></picture>
@@ -97,7 +104,7 @@ function landing() {
     <section class="preview-section" aria-labelledby="preview-title"><div class="shell">
       <div class="section-head"><p class="eyebrow">A weekly record, already in motion</p><h2 id="preview-title">See the whole handoff before you share</h2><p class="lede">The sample moves from selected evidence to plain client language.</p></div>
       <div class="rail" aria-label="Three-screen product walkthrough">
-        <article class="rail-stage"><span class="stage-number">SCREEN 01 · SELECT</span><h3>Choose the traces</h3><div class="source-ticket"><strong>northstar-portal</strong><small>12 Git commits selected</small></div><div class="source-ticket"><strong>Delivery calendar</strong><small>3 client events selected</small></div></article>
+        <article class="rail-stage"><span class="stage-number">SCREEN 01 · SELECT</span><h3>Choose the traces</h3><div class="source-ticket"><strong>northstar-portal</strong><small>4 Git commits selected</small></div><div class="source-ticket"><strong>Delivery calendar</strong><small>2 client events selected</small></div></article>
         <article class="rail-stage"><span class="stage-number">SCREEN 02 · REVIEW</span><h3>Write what the client needs</h3><div class="source-ticket"><strong>Added audit log export</strong><small>Tue · 2h 50m · Ready</small></div><div class="source-ticket"><strong>Reduced dashboard query time</strong><small>Fri · 3h 15m · Ready</small></div></article>
         <article class="rail-stage"><span class="stage-number">SCREEN 03 · APPROVE</span><h3>Keep the receipt</h3><div class="approval-stamp">Accepted<br>28 Aug</div><p>A server-attested digest records the packet the client accepted.</p></article>
       </div>
@@ -127,8 +134,8 @@ function appPage() {
     <div class="app-heading"><div><p class="eyebrow">Week of ${esc(project.week)}</p><h1 tabindex="-1">Review the weekly worklog</h1></div><div class="week-total"><strong>${hours(totalMinutes)}</strong><span>${money(totalMinutes / 60 * project.rate, project.currency)} at ${money(project.rate, project.currency)}/hour</span></div></div>
     <div class="app-grid">
       <aside class="side-panel" aria-label="Worklog settings">
-        <section class="panel-section"><p class="panel-label">Client and week</p><div class="field"><label for="client">Client</label><input id="client" value="${esc(project.client)}" placeholder="Client name"></div><div class="field"><label for="week">Week starts</label><input id="week" type="date" value="${esc(project.week)}"></div><div class="field"><label for="rate">Hourly rate</label><input id="rate" type="number" min="0" step="1" value="${project.rate}"></div></section>
-        <section class="panel-section"><p class="panel-label">Selected sources</p><form id="git-form"><label class="field" for="git-path">Repository folder</label><div class="inline-form"><input id="git-path" name="path" placeholder="/path/to/repository" required><button type="submit" class="secondary">Read Git</button></div></form><div class="status-line" id="source-status" aria-live="polite"></div><ul class="source-list">${project.sources.length ? project.sources.map(source => `<li><span class="source-dot" aria-hidden="true"></span>${esc(source)}</li>`).join("") : "<li>No sources selected yet.</li>"}</ul><label class="sr-only" for="ics-file">Choose an ICS calendar file</label><input class="sr-only" id="ics-file" type="file" accept=".ics,text/calendar"><button id="import-calendar" class="secondary" type="button">Import calendar file${hasPro() || isDemo() ? "" : " · Pro"}</button></section>
+        <section class="panel-section"><p class="panel-label">Client and week</p><div class="field"><label for="client">Client</label><input id="client" value="${esc(project.client)}" placeholder="Client name"></div><div class="field"><label for="week">Week starts</label><input id="week" type="date" value="${esc(project.week)}"></div><div class="field"><label for="rate">Hourly rate</label><input id="rate" type="number" min="0" step="1" value="${project.rate}"></div><div class="status-line" id="project-status" aria-live="polite"></div></section>
+        <section class="panel-section"><p class="panel-label">Selected sources</p><form id="git-form"><label class="field" for="git-path">Repository folder</label><div class="inline-form"><input id="git-path" name="path" placeholder="/path/to/repository" required><button type="submit" class="secondary">Read Git</button></div></form><div class="status-line" id="source-status" aria-live="polite"></div>${licenseNotice()}<ul class="source-list">${project.sources.length ? project.sources.map(source => `<li><span class="source-dot" aria-hidden="true"></span>${esc(source)}</li>`).join("") : "<li>No sources selected yet.</li>"}</ul><label class="sr-only" for="ics-file">Choose an ICS calendar file</label><input class="sr-only" id="ics-file" type="file" accept=".ics,text/calendar"><button id="import-calendar" class="secondary" type="button">Import calendar file${hasPro() || isDemo() ? "" : " · Pro"}</button></section>
         <section class="panel-section"><p class="panel-label">Privacy check</p><p>No file content is shared. Approval links include only the entries shown here.</p><a href="/privacy" data-route>Read the privacy policy</a></section>
         ${hasPro() ? `<section class="panel-section"><p class="panel-label">Saved approval history · Pro</p>${packetHistory.length ? `<ul class="source-list">${packetHistory.slice(0, 5).map(item => `<li><span class="source-dot" aria-hidden="true"></span><span>${esc(item.client || "Client worklog")}<small>${esc(item.week)} · ${esc(item.digest.slice(0, 10))}</small></span></li>`).join("")}</ul>` : `<p>No packets saved yet. Created links will appear here.</p>`}</section>` : ""}
       </aside>
@@ -196,8 +203,26 @@ function notFound() {
   return `${header()}<main id="main" class="not-found"><div class="narrow"><p class="eyebrow">The receipt rail ends here</p><h1 tabindex="-1">This page is not on the worklog</h1><p class="lede">The address may be old or mistyped.</p>${routeLink("/", "Return home", "button cyan")}</div></main>${footer()}`;
 }
 
+function cachedLicenseVerdict(): LicenseVerdict | null {
+  try {
+    const verdict = JSON.parse(localStorage.getItem(LICENSE_CACHE) || "null") as LicenseVerdict | null;
+    if (!verdict || typeof verdict.valid !== "boolean" || !Number.isFinite(verdict.checkedAt)) return null;
+    return verdict;
+  } catch { return null; }
+}
+
 function hasPro() {
-  try { return Boolean(localStorage.getItem(LICENSE_KEY)) && JSON.parse(localStorage.getItem(LICENSE_CACHE) || "null")?.valid !== false; } catch { return false; }
+  const verdict = cachedLicenseVerdict();
+  return Boolean(localStorage.getItem(LICENSE_KEY))
+    && verdict?.valid === true
+    && Date.now() - verdict.checkedAt < LICENSE_CACHE_MAX_AGE
+    && (!verdict.expiresAt || Date.parse(verdict.expiresAt) > Date.now());
+}
+
+function licenseNotice() {
+  const verdict = cachedLicenseVerdict();
+  if (!localStorage.getItem(LICENSE_KEY) || hasPro() || !verdict || verdict.valid) return "";
+  return `<p class="notice license-notice">License no longer active. <a href="${BILLING}/checkout">Start Pro subscription</a>.</p>`;
 }
 
 async function verifyLicense() {
@@ -212,12 +237,13 @@ async function verifyLicense() {
   if (!token) return;
   let cached: LicenseVerdict | null = null;
   try { cached = JSON.parse(localStorage.getItem(LICENSE_CACHE) || "null"); } catch { /* verify below */ }
-  if (cached && Date.now() - cached.checkedAt < 86_400_000) return;
+  if (cached && Date.now() - cached.checkedAt < LICENSE_CACHE_MAX_AGE) return;
   try {
     const response = await fetch(`${BILLING}/verify?license=${encodeURIComponent(token)}`);
-    if (!response.ok) return;
-    const result = await response.json() as { valid: boolean; expires_at?: string };
-    localStorage.setItem(LICENSE_CACHE, JSON.stringify({ valid: result.valid, expiresAt: result.expires_at, checkedAt: Date.now() }));
+    if (!response.ok) throw new Error("The license could not be checked.");
+    const result = await response.json() as { valid: boolean; reason?: string; expires_at?: string };
+    const valid = result.valid === true && (!result.expires_at || Date.parse(result.expires_at) > Date.now());
+    localStorage.setItem(LICENSE_CACHE, JSON.stringify({ valid, reason: result.reason, expiresAt: result.expires_at, checkedAt: Date.now() }));
   } catch { /* Offline use continues from the cached verdict. */ }
 }
 
@@ -286,19 +312,50 @@ function downloadBlob(name: string, content: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 500);
 }
 
-function parseIcs(text: string): Entry[] {
+function parseIcs(text: string, week: string): Entry[] {
   const unfolded = text.replace(/\r?\n[ \t]/g, "");
   return unfolded.split("BEGIN:VEVENT").slice(1).map(block => {
     const get = (name: string) => block.match(new RegExp(`(?:^|\\n)${name}[^:]*:(.*)`, "i"))?.[1]?.trim() || "";
     const start = get("DTSTART"); const end = get("DTEND");
-    const parseDate = (raw: string) => raw ? new Date(raw.replace(/^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?.*$/, "$1-$2-$3T$4:$5:00")) : new Date();
+    const parseDate = (raw: string) => raw ? new Date(raw.replace(/^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?.*$/, "$1-$2-$3T$4:$5:00")) : new Date("invalid");
     const from = parseDate(start); const to = parseDate(end);
     const duration = Number.isFinite(+to - +from) && +to > +from ? Math.round((+to - +from) / 60000) : 60;
     return { id: uid(), date: isoDay(from), title: get("SUMMARY") || "Calendar event", detail: get("DESCRIPTION").replace(/\\n/g, " ").slice(0, 280), source: "Calendar" as const, duration, ready: false };
+  }).filter(entry => entry.date >= week && entry.date < nextWeek(week));
+}
+
+function openSourceSelection(entries: Entry[], sourceLabel: string, trigger: HTMLElement) {
+  const modal = document.createElement("div"); modal.className = "modal-backdrop";
+  modal.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="source-selection-title"><form id="source-selection-form"><h2 id="source-selection-title">Choose ${entries[0]?.source === "Git" ? "Git commits" : "calendar events"}</h2><p>Select the ${entries[0]?.source === "Git" ? "commits" : "events"} from this week that belong in the worklog.</p><label class="select-all"><input type="checkbox" id="select-all-sources" checked> Select all ${entries.length}</label><ul class="selection-list">${entries.map(entry => `<li><label><input type="checkbox" name="entry" value="${esc(entry.id)}" checked><span><strong>${esc(entry.title)}</strong><small>${esc(entry.date)} · ${hours(entry.duration)}</small></span></label></li>`).join("")}</ul><div class="modal-actions"><button class="secondary" type="button" data-close>Cancel</button><button class="cyan" type="submit">Add selected entries</button></div><div class="status-line" id="selection-status" aria-live="polite"></div></form></div>`;
+  document.body.append(modal);
+  const close = () => { modal.remove(); trigger.focus(); };
+  modal.querySelector("[data-close]")?.addEventListener("click", close);
+  modal.addEventListener("click", event => { if (event.target === modal) close(); });
+  modal.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); close(); return; }
+    if (event.key !== "Tab") return;
+    const focusable = [...modal.querySelectorAll<HTMLElement>('button,input:not([disabled])')];
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
+  const all = modal.querySelector<HTMLInputElement>("#select-all-sources")!;
+  const boxes = () => [...modal.querySelectorAll<HTMLInputElement>('input[name="entry"]')];
+  all.addEventListener("change", () => boxes().forEach(box => box.checked = all.checked));
+  boxes().forEach(box => box.addEventListener("change", () => { all.checked = boxes().every(item => item.checked); all.indeterminate = !all.checked && boxes().some(item => item.checked); }));
+  modal.querySelector<HTMLFormElement>("#source-selection-form")!.addEventListener("submit", event => {
+    event.preventDefault();
+    const selected = new Set(new FormData(event.currentTarget as HTMLFormElement).getAll("entry").map(String));
+    if (!selected.size) { const status = modal.querySelector<HTMLElement>("#selection-status")!; status.textContent = "Select at least one entry to add it."; status.classList.add("error"); return; }
+    const project = loadProject(); project.entries.push(...entries.filter(entry => selected.has(entry.id))); project.sources.push(sourceLabel); saveProject(project); modal.remove(); render();
+  });
+  all.focus();
 }
 
 async function createApprovalLink(project: Project) {
+  if (!project.client.trim()) throw new Error("Add a client name before creating an approval link.");
+  if (!isMonday(project.week)) throw new Error("Choose a Monday as the start of this work week.");
+  if (!Number.isFinite(project.rate) || project.rate < 0) throw new Error("Hourly rate must be zero or more before creating an approval link.");
   const entries = project.entries.filter(entry => entry.ready);
   if (!entries.length) throw new Error("Mark at least one entry ready before creating a link.");
   const base = { version: 1 as const, client: project.client, week: project.week, rate: project.rate, currency: project.currency, entries, createdAt: new Date().toISOString() };
@@ -318,8 +375,26 @@ async function sha256(value: string) {
 function bindApp() {
   const project = loadProject();
   const persistField = (id: string, key: "client" | "week" | "rate") => document.querySelector<HTMLInputElement>(`#${id}`)?.addEventListener("change", event => {
+    const input = event.target as HTMLInputElement;
     const next = loadProject();
-    if (key === "rate") next.rate = Number((event.target as HTMLInputElement).value); else next[key] = (event.target as HTMLInputElement).value;
+    if (key === "rate") {
+      const rate = Number(input.value);
+      if (!Number.isFinite(rate) || rate < 0 || !input.validity.valid) {
+        input.value = String(next.rate);
+        setStatus("Hourly rate must be zero or more. The previous rate was kept.", true, "project-status");
+        return;
+      }
+      next.rate = rate;
+    } else if (key === "week") {
+      if (!isMonday(input.value)) {
+        input.value = next.week;
+        setStatus("Choose a Monday as the start of this work week. The previous week was kept.", true, "project-status");
+        return;
+      }
+      next.week = input.value;
+    } else {
+      next.client = input.value;
+    }
     saveProject(next); render();
   });
   persistField("client", "client"); persistField("week", "week"); persistField("rate", "rate");
@@ -337,7 +412,11 @@ function bindApp() {
     document.querySelector("#entry-list")!.innerHTML = renderEntries(project.entries.filter(entry => `${entry.title} ${entry.detail} ${entry.source}`.toLowerCase().includes(term)));
   });
   document.querySelector("#export-csv")?.addEventListener("click", () => {
-    const quote = (value: unknown) => `"${String(value).replaceAll('"', '""')}"`;
+    const quote = (value: unknown) => {
+      const text = String(value);
+      const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+      return `"${safe.replaceAll('"', '""')}"`;
+    };
     const csv = ["date,summary,detail,source,minutes,ready", ...project.entries.map(entry => [entry.date, entry.title, entry.detail, entry.source, entry.duration, entry.ready].map(quote).join(","))].join("\n");
     downloadBlob(`worklog-${project.week}.csv`, csv, "text/csv");
     setStatus("Exported the CSV file.");
@@ -365,9 +444,9 @@ function bindApp() {
   document.querySelector<HTMLInputElement>("#ics-file")?.addEventListener("change", async event => {
     const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return;
     try {
-      const entries = parseIcs(await file.text());
-      if (!entries.length) throw new Error("No calendar events were found in that file.");
-      const next = loadProject(); next.entries.push(...entries); next.sources.push(`${file.name} · Calendar`); saveProject(next); render();
+      const entries = parseIcs(await file.text(), project.week);
+      if (!entries.length) throw new Error(`No calendar events were found for the week of ${project.week}.`);
+      openSourceSelection(entries, `${file.name} · Calendar`, document.querySelector<HTMLElement>("#import-calendar")!);
     } catch (error) { setStatus(error instanceof Error ? `${error.message} Choose another ICS file.` : "The calendar file could not be read. Choose another ICS file.", true, "source-status"); }
   });
   document.querySelector<HTMLFormElement>("#git-form")?.addEventListener("submit", async event => {
@@ -376,10 +455,10 @@ function bindApp() {
       if (!("__TAURI_INTERNALS__" in window)) throw new Error("Git reading is available in the installed desktop app.");
       setStatus("Reading selected Git metadata…", false, "source-status");
       const { invoke } = await import("@tauri-apps/api/core");
-      const commits = await invoke<Array<{ hash: string; date: string; title: string }>>("collect_git", { path });
-      const next = loadProject();
-      next.entries.push(...commits.map(commit => ({ id: uid(), date: commit.date, title: commit.title, detail: `Commit ${commit.hash.slice(0, 8)}`, source: "Git" as const, duration: 60, ready: false })));
-      next.sources.push(`${path.split(/[\\/]/).pop() || path} · Git`); saveProject(next); render();
+      const commits = await invoke<Array<{ hash: string; date: string; title: string }>>("collect_git", { path, week: project.week, nextWeek: nextWeek(project.week) });
+      const entries = commits.map(commit => ({ id: uid(), date: commit.date, title: commit.title, detail: `Commit ${commit.hash.slice(0, 8)}`, source: "Git" as const, duration: 60, ready: false }));
+      if (!entries.length) throw new Error(`No Git commits were found for the week of ${project.week}.`);
+      openSourceSelection(entries, `${path.split(/[\\/]/).pop() || path} · Git`, document.querySelector<HTMLElement>("#git-form button")!);
     } catch (error) { setStatus(`${error instanceof Error ? error.message : "Git metadata could not be read."} Check the folder and try again.`, true, "source-status"); }
   });
   document.onkeydown = appShortcuts;
@@ -408,14 +487,34 @@ function setStatus(message: string, error = false, id = "app-status") {
 }
 
 function showLicenseModal() {
+  const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const modal = document.createElement("div"); modal.className = "modal-backdrop";
   modal.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="license-title"><h2 id="license-title">Add calendar imports</h2><p>Pro costs $12 per user each month. It adds ICS import and saved approval history.</p><a class="button mint" href="${BILLING}/checkout">Start Pro subscription</a><form id="license-form"><div class="field"><label for="license-token">Have a license? Paste it here</label><input id="license-token" name="token" required autocomplete="off"></div><div class="modal-actions"><button class="secondary" type="button" data-close>Cancel</button><button type="submit" class="cyan">Verify license</button></div><div class="status-line" id="license-status" aria-live="polite"></div></form><p><small>Verification sends only this token to the Sociobot billing API.</small></p></div>`;
-  document.body.append(modal); const close = () => modal.remove();
+  document.body.append(modal); const close = () => { modal.remove(); trigger?.focus(); };
   modal.querySelector("[data-close]")?.addEventListener("click", close);
+  modal.addEventListener("click", event => { if (event.target === modal) close(); });
+  modal.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); close(); return; }
+    if (event.key !== "Tab") return;
+    const focusable = [...modal.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled])')];
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
   modal.querySelector<HTMLFormElement>("#license-form")?.addEventListener("submit", async event => {
-    event.preventDefault(); const token = String(new FormData(event.currentTarget as HTMLFormElement).get("token") || "").trim(); localStorage.setItem(LICENSE_KEY, token); localStorage.removeItem(LICENSE_CACHE);
+    event.preventDefault(); const token = String(new FormData(event.currentTarget as HTMLFormElement).get("token") || "").trim();
     const node = modal.querySelector<HTMLElement>("#license-status")!; node.textContent = "Checking the license…";
-    try { const response = await fetch(`${BILLING}/verify?license=${encodeURIComponent(token)}`); const result = await response.json(); localStorage.setItem(LICENSE_CACHE, JSON.stringify({ valid: result.valid, checkedAt: Date.now(), expiresAt: result.expires_at })); if (!result.valid) throw new Error("This license is not active. Check the token or start a subscription."); close(); render(); }
+    try {
+      const response = await fetch(`${BILLING}/verify?license=${encodeURIComponent(token)}`);
+      if (!response.ok) throw new Error("The license could not be checked. Try again online.");
+      const result = await response.json() as { valid: boolean; reason?: string; expires_at?: string };
+      const valid = result.valid === true && (!result.expires_at || Date.parse(result.expires_at) > Date.now());
+      localStorage.setItem(LICENSE_KEY, token);
+      localStorage.setItem(LICENSE_CACHE, JSON.stringify({ valid, reason: result.reason, checkedAt: Date.now(), expiresAt: result.expires_at }));
+      if (!valid) throw new Error("This license is not active. Check the token or start a subscription.");
+      close(); render();
+    }
     catch (error) { node.textContent = error instanceof Error ? error.message : "The license could not be checked. Try again online."; node.classList.add("error"); }
   });
   modal.querySelector<HTMLInputElement>("#license-token")?.focus();

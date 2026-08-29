@@ -47,10 +47,30 @@ test("@claim:csv-export exports six sample records", async ({ page }) => {
   expect(body).toContain("Added audit log export");
 });
 
+test("@regression:csv-export neutralises spreadsheet formulas", async ({ page }) => {
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Add entry" }).click();
+  await page.getByLabel("Client-ready summary").fill('=HYPERLINK("https://example.invalid","open")');
+  await page.getByLabel("Minutes").fill("1440");
+  await page.getByRole("button", { name: "Save entry" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  const stream = await (await downloadPromise).createReadStream();
+  let body = "";
+  for await (const chunk of stream!) body += chunk.toString();
+  expect(body).toContain(`"'=HYPERLINK(""https://example.invalid"",""open"")"`);
+});
+
 test("@claim:local-demo sends no worklog data to another origin", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   const origins = new Set<string>();
   page.on("request", request => origins.add(new URL(request.url()).origin));
+  await page.goto("/app");
+  await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Real Client", week: "2026-08-24", rate: 80, currency: "USD", entries: [], sources: [] })));
+  await page.goto("/demo");
+  await expect(page.getByLabel("Client")).toHaveValue("Northstar Health");
+  await page.getByRole("link", { name: "Start for real" }).click();
+  await expect(page.getByLabel("Client")).toHaveValue("Real Client");
   await page.goto("/demo");
   await page.getByRole("button", { name: "Edit Investigated slow dashboard queries" }).click();
   await page.getByLabel("Client-ready summary").fill("Investigated dashboard query delay");
@@ -138,10 +158,15 @@ test("@regression:new-approval-link has no console error before its first accept
   expect(errors).toEqual([]);
 });
 
-test("@claim:no-surveillance requests no capture permissions", async ({ page }) => {
+test("@claim:no-surveillance collects no screen, microphone, keystroke, or timer activity", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  const origins = new Set<string>();
+  page.on("request", request => origins.add(new URL(request.url()).origin));
   await page.addInitScript(() => {
-    const counts = { userMedia: 0, displayMedia: 0 };
+    const counts = { userMedia: 0, displayMedia: 0, interval: 0 };
     Object.defineProperty(window, "__captureCounts", { value: counts });
+    const originalInterval = window.setInterval;
+    window.setInterval = (...args) => { counts.interval++; return originalInterval(...args); };
     if (navigator.mediaDevices) {
       navigator.mediaDevices.getUserMedia = async () => { counts.userMedia++; throw new Error("blocked"); };
       if (navigator.mediaDevices.getDisplayMedia) navigator.mediaDevices.getDisplayMedia = async () => { counts.displayMedia++; throw new Error("blocked"); };
@@ -149,24 +174,29 @@ test("@claim:no-surveillance requests no capture permissions", async ({ page }) 
   });
   await page.goto("/demo");
   await page.getByRole("button", { name: "Export CSV" }).click();
-  const counts = await page.evaluate(() => (window as unknown as { __captureCounts: { userMedia: number; displayMedia: number } }).__captureCounts);
-  expect(counts).toEqual({ userMedia: 0, displayMedia: 0 });
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  const counts = await page.evaluate(() => (window as unknown as { __captureCounts: { userMedia: number; displayMedia: number; interval: number } }).__captureCounts);
+  expect(counts).toEqual({ userMedia: 0, displayMedia: 0, interval: 0 });
+  expect([...origins]).toEqual(["http://127.0.0.1:4173"]);
 });
 
-test("@claim:calendar-import imports an ICS event", async ({ page }) => {
+test("@claim:calendar-import imports selected ICS events from the chosen week", async ({ page }) => {
   await page.goto("/demo");
   await page.locator("#ics-file").setInputFiles({
     name: "client-calendar.ics",
     mimeType: "text/calendar",
-    buffer: Buffer.from("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART:20260829T100000Z\r\nDTEND:20260829T113000Z\r\nSUMMARY:Client release planning\r\nDESCRIPTION:Review launch checklist\r\nEND:VEVENT\r\nEND:VCALENDAR")
+    buffer: Buffer.from("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART:20260829T100000Z\r\nDTEND:20260829T113000Z\r\nSUMMARY:Client release planning\r\nDESCRIPTION:Review launch checklist\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nDTSTART:20260902T100000Z\r\nDTEND:20260902T113000Z\r\nSUMMARY:Next week planning\r\nEND:VEVENT\r\nEND:VCALENDAR")
   });
+  await expect(page.getByRole("dialog", { name: "Choose calendar events" })).toBeVisible();
+  await expect(page.getByText("Next week planning")).not.toBeVisible();
+  await page.getByRole("button", { name: "Add selected entries" }).click();
   await expect(page.getByText("Client release planning")).toBeVisible();
   const row = page.locator("[data-entry-id]", { hasText: "Client release planning" });
   await expect(row).toContainText("1h 30m");
   await expect(row).toContainText("Calendar");
 });
 
-test("@claim:license-unlock enables Pro after verification", async ({ page }) => {
+test("@claim:license-unlock enables Pro only after a current valid verdict", async ({ page, context }) => {
   let verifyCalls = 0;
   await page.route("https://api.sociobot.in/**", async route => {
     verifyCalls++;
@@ -181,6 +211,90 @@ test("@claim:license-unlock enables Pro after verification", async ({ page }) =>
   expect(verifyCalls).toBe(1);
   await page.goto("/#pricing");
   await expect(page.locator(".price")).toContainText("$12 / user / month");
+});
+
+test("@regression:an invalid token with no cached verdict cannot unlock Pro offline", async ({ page, context }) => {
+  await page.goto("/app");
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.evaluate(() => {
+    localStorage.setItem("sb_license:worklog-approval-bridge", "definitely-not-a-license");
+    localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
+  });
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Import calendar file · Pro" })).toBeVisible();
+});
+
+test("@regression:license-verdict rejects invalid absent expired and revoked cache states", async ({ page }) => {
+  await page.goto("/app");
+  const states = [
+    null,
+    { valid: false, reason: "invalid", checkedAt: Date.now() },
+    { valid: true, reason: "expired", checkedAt: Date.now(), expiresAt: "2020-01-01T00:00:00Z" },
+    { valid: false, reason: "revoked", checkedAt: Date.now() }
+  ];
+  for (const verdict of states) {
+    await page.evaluate(value => {
+      localStorage.setItem("sb_license:worklog-approval-bridge", "test-token");
+      if (value) localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify(value));
+      else localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
+    }, verdict);
+    await page.reload();
+    await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
+  }
+});
+
+test("@regression:license-verdict permits only fresh valid offline cache and refreshes at 24 hours", async ({ page, context }) => {
+  await page.goto("/app");
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.evaluate(() => {
+    localStorage.setItem("sb_license:worklog-approval-bridge", "valid-token");
+    localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" }));
+  });
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
+  await context.setOffline(false);
+  let calls = 0;
+  await page.route("https://api.sociobot.in/**", async route => {
+    calls++;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
+  });
+  await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
+  await page.reload();
+  await expect.poll(() => calls).toBe(1);
+  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
+});
+
+test("@claim:sample-counts match the sample data", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("4 Git commits selected")).toBeVisible();
+  await expect(page.getByText("2 client events selected")).toBeVisible();
+  await page.goto("/demo");
+  await expect(page.locator("[data-entry-id]")).toHaveCount(6);
+  await expect(page.locator("[data-entry-id]").filter({ hasText: "Git" })).toHaveCount(4);
+  await expect(page.locator("[data-entry-id]").filter({ hasText: "Calendar" })).toHaveCount(2);
+});
+
+test("@claim:pro-price states the monthly Pro price and included features", async ({ page }) => {
+  await page.goto("/#pricing");
+  await expect(page.locator(".price")).toContainText("$12 / user / month");
+  await expect(page.getByText("ICS calendar import")).toBeVisible();
+  await expect(page.getByText("Saved approval packet history")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start Pro subscription" })).toHaveAttribute("href", "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout");
+});
+
+test("@claim:no-analytics sends no analytics or advertising request during the sample flow", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  const origins = new Set<string>();
+  page.on("request", request => origins.add(new URL(request.url()).origin));
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  expect([...origins]).toEqual(["http://127.0.0.1:4173"]);
 });
 
 test("landing and routes meet the semantic and serious accessibility baseline", async ({ page }) => {
@@ -201,6 +315,51 @@ test("mobile demo keeps its primary workflow visible", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Review the weekly worklog" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy approval link" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+test("@regression:negative hourly rate stays invalid and never reaches an approval packet", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  await page.goto("/demo");
+  const rate = page.getByLabel("Hourly rate");
+  await rate.fill("-25");
+  await rate.press("Tab");
+  await expect(page.getByText("Hourly rate must be zero or more. The previous rate was kept.")).toBeVisible();
+  await expect(rate).toHaveValue("135");
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const rateInPacket = await page.evaluate(value => {
+    const bytes = Uint8Array.from(atob(new URL(value).hash.slice(1)), char => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)).rate;
+  }, link);
+  expect(rateInPacket).toBe(135);
+});
+
+test("@regression:license-dialog traps focus closes on Escape and restores its trigger", async ({ page }) => {
+  await page.goto("/app");
+  const trigger = page.getByRole("button", { name: "Import calendar file · Pro" });
+  await trigger.focus();
+  await trigger.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Add calendar imports" })).toBeVisible();
+  for (let index = 0; index < 8; index++) {
+    await page.keyboard.press("Tab");
+    await expect(page.locator("[role=dialog]")).toContainText("Add calendar imports");
+    expect(await page.locator("[role=dialog]").evaluate(dialog => dialog.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
+
+test("@regression:mobile-controls-meet-the-44px-touch-target-baseline", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const route of ["/demo", "/privacy"]) {
+    await page.goto(route);
+    const controls = page.locator("button, a");
+    for (let index = 0; index < await controls.count(); index++) {
+      const box = await controls.nth(index).boundingBox();
+      if (box) expect(box.height, `${route} control ${index}`).toBeGreaterThanOrEqual(44);
+    }
+  }
 });
 
 test("@regression:mobile-installer-commands are keyboard-focusable scroll regions", async ({ page }) => {

@@ -15,10 +15,10 @@
   },
   {
     "id": "local-demo",
-    "claim": "The demo sends no worklog data to another origin",
+    "claim": "The demo is isolated from real worklog data and sends no worklog data to another origin",
     "where": "landing privacy fact, README",
     "test": "npm test -- --grep @claim:local-demo",
-    "sandbox": "fresh browser context; capture all requests through review and approval-link creation"
+    "sandbox": "fresh browser context with a seeded real workspace; enter demo, return to real mode, and capture all requests through review and approval-link creation"
   },
   {
     "id": "approval-receipt",
@@ -36,17 +36,17 @@
   },
   {
     "id": "no-surveillance",
-    "claim": "The product does not request camera, microphone, or screen access",
+    "claim": "The product does not collect screenshots, keystrokes, or timer activity",
     "where": "landing facts and privacy section",
     "test": "npm test -- --grep @claim:no-surveillance",
-    "sandbox": "fresh demo; deny and record browser permission requests while completing the main flow"
+    "sandbox": "fresh demo; record capture API calls and outbound requests while completing the main flow"
   },
   {
     "id": "calendar-import",
-    "claim": "Imports events from an ICS calendar file",
+    "claim": "Lets you choose ICS events from the selected work week",
     "where": "landing how-it-works, README",
     "test": "npm test -- --grep @claim:calendar-import",
-    "sandbox": "fresh demo; import an in-memory ICS event and assert its summary and duration"
+    "sandbox": "fresh demo; provide in-week and next-week ICS events, assert only the in-week event can be selected and imported"
   },
   {
     "id": "git-metadata",
@@ -64,10 +64,31 @@
   },
   {
     "id": "license-unlock",
-    "claim": "A valid Sociobot license enables Pro features and is cached for one day",
+    "claim": "Only a current valid Sociobot license enables Pro features; a valid verdict is cached for one day",
     "where": "pricing, README",
     "test": "npm test -- --grep @claim:license-unlock",
-    "sandbox": "fresh app storage; mocked Sociobot verification response; no live checkout or billing"
+    "sandbox": "fresh app storage; mocked valid, invalid, expired, revoked, absent, offline, and 24-hour-boundary verdicts; no live checkout or billing"
+  },
+  {
+    "id": "sample-counts",
+    "claim": "The sample has four Git entries and two calendar entries",
+    "where": "landing walkthrough, demo documentation",
+    "test": "npm test -- --grep @claim:sample-counts",
+    "sandbox": "fresh browser context; compare landing counts with the six demo entry source labels"
+  },
+  {
+    "id": "pro-price",
+    "claim": "Pro costs $12 per user each month and includes ICS import and saved approval history",
+    "where": "landing pricing, terms, README",
+    "test": "npm test -- --grep @claim:pro-price",
+    "sandbox": "fresh browser context; assert the stated price, listed features, and Sociobot checkout route"
+  },
+  {
+    "id": "no-analytics",
+    "claim": "The sample flow sends no analytics or advertising request",
+    "where": "privacy policy, README",
+    "test": "npm test -- --grep @claim:no-analytics",
+    "sandbox": "fresh demo; capture all browser requests through export and approval-link creation and assert only the product origin"
   },
   {
     "id": "installer-sha256",
