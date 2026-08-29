@@ -722,6 +722,20 @@ test("app supports keyboard shortcuts", async ({ page }) => {
 
 test("routes load without browser console errors", async ({ page }) => {
   const errors: string[] = [];
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      if (String(input) === "https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest") {
+        return Promise.resolve(new Response(JSON.stringify({
+          tag_name: "v0.1.18",
+          target_commitish: "1234567890abcdef1234567890abcdef12345678",
+          html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.18",
+          assets: [{ name: "Worklog.Bridge_0.1.18_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.18/Worklog.Bridge_0.1.18_amd64.AppImage" }]
+        }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      }
+      return originalFetch(input, init);
+    };
+  });
   page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
   page.on("pageerror", error => errors.push(error.message));
   await page.route("https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest", route => route.fulfill({
