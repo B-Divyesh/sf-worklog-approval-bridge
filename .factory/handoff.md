@@ -1,4 +1,48 @@
-# Worklog Bridge — repair 10 handoff
+# Worklog Bridge — repair 11 handoff
+
+## Release outcome: PASS
+
+**Published and deployed candidate:** `f0e8f881e89886ef2d7a7298a680925b1170f6a1`
+
+**Desktop release:** [`v0.1.11`](https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.11)
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
+
+## What changed
+
+- Reproduced the controller’s exact `claims.spec` timeout: `download selects an asset from an immutable release commit` waited for two GitHub calls but observed only `releases/latest` and then showed the unrelated `v0.1.5` source SHA.
+- Replaced variable tag-object traversal with the release workflow’s full `target_commitish`. The download page now needs one deterministic GitHub Release API response, rejects non-SHA values such as `main`, and caches only the new validated release shape.
+- Added browser regressions for the single-request immutable asset path and missing immutable commit fallback. Release verification now also rejects a GitHub release whose full `target_commitish` disagrees with its resolved immutable tag.
+- Published and deployed a new `0.1.11` candidate rather than relabeling earlier artifacts. The managed API receives the same full commit through `WORKLOG_BUILD_COMMIT`.
+
+## Verification evidence
+
+```text
+npm ci; npm --prefix api ci                            PASS (0 vulnerabilities)
+npm test                                                PASS (18 Node/script + 29 Chromium)
+cargo test --manifest-path src-tauri/Cargo.toml        PASS (2 Rust claim tests)
+npm run build                                          PASS (dist/site; 13.89 KB gzip initial app JS)
+CI=1 npm run build:desktop                             PASS (Linux DEB, RPM, AppImage)
+verify-url.sh local and live production URLs           PASS (200; title, lang, H1, main, alt, console)
+npm run verify:release -- --tag v0.1.11 --expected-commit <SHA>
+                                                        PASS
+npm run verify:live -- --expected-commit <SHA>         PASS
+```
+
+The exact browser regression first failed with `Expected length: 2; Received length: 1`, then passed with one explicit `releases/latest` request, the selected versioned asset, and source `f0e8f88`. The malformed `target_commitish: "main"` regression renders the calm publishing state and exposes no download action.
+
+GitHub Actions run <https://github.com/B-Divyesh/sf-worklog-approval-bridge/actions/runs/33246925098> passed macOS arm64/x64, Windows, Linux, and publish. Published `latest.json`, `SHA256SUMS`, DMGs, MSI/EXE, AppImage, and DEB all resolve to the candidate. The release verifier downloaded and hashed `Worklog.Bridge_0.1.11_amd64.deb`: `e24e74beedd3e584c70fb96822ae62ba7b7a0db25e239652a83b6697373d3889`.
+
+Live `/api/health` returns `0.1.11` and exact commit `f0e8f881e89886ef2d7a7298a680925b1170f6a1`. Live `/download` selected a `v0.1.11` AppImage and displayed `Built from source f0e8f88.` without console errors. Desktop and 390 × 844 mobile checks passed with no overflow; keyboard reaches the skip link first; a first-visit demo reloaded offline after `registration.update()`; demo traffic stayed same-origin. The anonymous receipt policy returned 60 × `204`, then `429` with `Retry-After: 60`. Live response headers include HSTS, `nosniff`, strict referrer policy, restrictive CSP with response-header `frame-ancestors 'none'`, no-cache service worker, and immutable hashed assets.
+
+The standalone `@axe-core/cli` was attempted with the factory Playwright Chromium but its bundled ChromeDriver 152 cannot drive Chromium 145. The in-repo Playwright Axe suite ran on that installed Chromium and passed all serious/critical checks across every route.
+
+## Known gaps / operator action
+
+No product release blockers remain. Desktop bundles are intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.
+
+---
+
+# Historical repair 10 handoff
 
 ## Release outcome: PASS
 
