@@ -71,14 +71,14 @@ See `/privacy` and `/terms` in the site. The night-market design and generated-i
 
 The download page reads release metadata from the GitHub API. It shows that release files are not available yet when the API cannot provide an immutable release. It never fetches a GitHub redirect URL. The macOS and Linux `/install.sh` installer rejects a release file when its SHA-256 does not match the published checksum.
 
-Signing is optional so releases can publish an unsigned preview when the owner has no certificates. macOS signing and notarization use `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. The workflow signs only when every secret for that platform is present. A partly configured secret set fails before packaging instead of silently producing an unsigned file.
+Tag releases publish an unsigned preview, regardless of ambient organization secrets. A manual release can set `sign_release` to request signed packages. macOS signing and notarization use `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. A partly configured secret set fails before packaging instead of silently producing an unsigned file.
 
 The anonymous receipt health endpoint is `/api/health`. It returns only service name, version, and a validated deployed source commit. It never returns configuration or storage settings. The static deployment supplies that commit as `WORKLOG_BUILD_COMMIT` or its standard `BUILD_SOURCEVERSION` value.
 
 After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
 
 ```sh
-npm run verify:release -- --tag v0.1.14 --expected-commit "$(git rev-parse v0.1.14^{})"
+npm run verify:release -- --tag v0.1.15 --expected-commit "$(git rev-parse v0.1.15^{})"
 ```
 
 ## License

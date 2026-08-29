@@ -13,21 +13,22 @@ export const signingSecrets = {
   windows: ["WINDOWS_CERT_PFX", "WINDOWS_CERT_PASSWORD"]
 };
 
-export function signingMode(platform, environment = process.env) {
+export function signingMode(platform, environment = process.env, requested = false) {
   const required = signingSecrets[platform];
   if (!required) throw new Error(`Unsupported signing platform: ${platform}`);
+  if (!requested) return { enabled: false, missing: [] };
   const present = required.filter(name => typeof environment[name] === "string" && environment[name].trim());
-  if (present.length === 0) return { enabled: false, missing: required };
   const missing = required.filter(name => !present.includes(name));
   if (missing.length) {
-    throw new Error(`${platform} signing is partly configured. Add ${missing.join(", ")} or remove the other ${platform} signing secrets to build an unsigned preview.`);
+    throw new Error(`${platform} signing was requested but is partly configured. Add ${missing.join(", ")} or run without signed release mode to build an unsigned preview.`);
   }
   return { enabled: true, missing: [] };
 }
 
 async function main() {
   const platform = process.argv[2];
-  const result = signingMode(platform);
+  const requested = process.env.SIGN_RELEASE === "true";
+  const result = signingMode(platform, process.env, requested);
   const label = platform === "macos" ? "macOS" : "Windows";
   process.stdout.write(result.enabled
     ? `${label} signing credentials are complete; signed release checks are enabled.\n`

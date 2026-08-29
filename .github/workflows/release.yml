@@ -8,10 +8,15 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.14
+        default: v0.1.15
       source_commit:
         description: Full immutable source commit to package and release
         required: true
+      sign_release:
+        description: Sign and notarize with the configured platform secrets
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -66,6 +71,7 @@ jobs:
         id: macos-signing
         if: startsWith(matrix.os, 'macos')
         env:
+          SIGN_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.sign_release || false }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -77,6 +83,7 @@ jobs:
         id: windows-signing
         if: startsWith(matrix.os, 'windows')
         env:
+          SIGN_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.sign_release || false }}
           WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
         run: node scripts/signing-mode.mjs windows
@@ -90,12 +97,12 @@ jobs:
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\\worklog-bridge-signing.pfx", $bytes)
       - name: Build Tauri bundles
         env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_CERTIFICATE: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_ID: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ steps.macos-signing.outputs.enabled == 'true' && secrets.APPLE_TEAM_ID || '' }}
         run: npm run build:desktop -- --target ${{ matrix.target }}
       - name: Authenticode-sign Windows bundles
         if: startsWith(matrix.os, 'windows') && steps.windows-signing.outputs.enabled == 'true'
