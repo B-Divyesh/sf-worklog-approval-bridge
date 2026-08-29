@@ -1,32 +1,68 @@
-# Worklog Bridge — polish round 2 handoff
+# Worklog Bridge — verification 16 handoff
 
 ## Outcome
 
-All findings in `.factory/review-1.md` and `.factory/review-2.md` are closed. Worklog Bridge remains a Tauri 2 desktop app with its original editorial ledger design. The site and every app route clearly identify the current build as an unsigned desktop preview.
+**PASS** for candidate `08a0778bc086f2dff4624eae5b1ba27a6435a31e` at
+<https://worklog-approval-bridge.sociobot.in> and published release `v0.1.20`.
+No critical, high, medium, or low product defects were found. Full evidence is
+in `.factory/verification-16.md`.
 
-The sample path is one click from the first screen and opens directly at `https://worklog-approval-bridge.sociobot.in/?demo=1`. Sample edits and approvals use only `demo:` storage. Reset removes sample edits and receipts. Start for real removes every demo key without reading or changing the real workspace.
+The live product completes the researched job: selected Git metadata and ICS
+events become a locally reviewed worklog, CSV export, private approval link,
+and immutable server-attested receipt. Demo data is isolated and one click
+from the first screen. The deployed site/API and every release platform point
+to the exact candidate commit.
 
-## Verification
+## Verification summary
 
-- Every command in `.factory/claims.json` passed separately from a clean clone. All 22 logs are in `/tmp/worklog-polish-2/release-claim-logs/`.
-- `npm test` passed 27 Node/service/workflow tests and 36 Chromium tests. This includes keyboard, mobile, metadata, HTTP 404, focus/scroll restoration, Axe, privacy, offline, demo isolation, hosted pricing, and receipt flows.
-- `cargo test --manifest-path src-tauri/Cargo.toml` passed 2 Rust tests for Git metadata and repository-upload boundaries.
-- `npm run build` produced `dist/site`. Initial JavaScript is 15.60 KB gzip; CSS is 4.85 KB gzip.
-- `npm run build:desktop` produced `Worklog Bridge_0.1.20_amd64.AppImage`, `.deb`, and `.rpm` bundles locally.
-- Lighthouse mobile: performance 100, accessibility 100, best practices 100, SEO 100; FCP 1.1 s, LCP 1.4 s, TBT 0 ms, CLS 0. Evidence: `/tmp/worklog-polish-2/lighthouse.json`.
-- The worker URL verifier returned no console errors and found a title, `lang="en"`, one h1, a main landmark, and complete image/button names on `/`, `/?demo=1`, `/privacy`, and `/terms`. Screenshots and JSON: `/tmp/worklog-polish-2/live-*`.
-- Playwright Axe reported zero violations on the live landing, demo, Privacy, Terms, and Download routes. Evidence: `/tmp/worklog-polish-2/axe-live/playwright-results.json`.
-- The live end-to-end verifier passed hosted checkout, exact API identity, demo-only acceptance with no approval API call, real approval lookup, and genuine HTTP 404 behavior. Log: `/tmp/worklog-polish-2/live-e2e-final.log`.
-- The release verifier checks that the `v0.1.20` target, `latest.json`, checksums, and all platform provenance records resolve to one source commit.
+- All 22 commands in `.factory/claims.json` passed separately after clean
+  dependency installation.
+- `npm test` passed 27 Node/service/workflow tests and 36 Chromium tests.
+- `npm run build`, Rust format, strict Clippy, full Rust tests, and
+  `CI=1 npm run build:desktop` passed.
+- Desktop packaging produced AppImage, DEB, and RPM. The live v0.1.20 release
+  also contains macOS arm64/x64 and Windows MSI/EXE artifacts. The release
+  verifier downloaded and checksum-verified its DEB; the public installer
+  downloaded, verified, and installed the AppImage in a temporary directory.
+- Live real-mode acceptance returned 204 → 201 → 200, persisted across reload,
+  and rejected an overwrite with 409 while returning the original receipt.
+  The POST body contained only the SHA-256 worklog identifier and supplied
+  name.
+- The API enforced 60 reads and 12 writes per client per minute. Request 61
+  and write 13 returned 429 with `Retry-After: 60`; a concurrent 61-read burst
+  also allowed exactly 60.
+- Desktop and 390px audits, keyboard-only interaction, 200% text, reduced
+  motion, Axe, valid-route console checks, service-worker update cleanup, and
+  offline reload passed.
+- Mobile Lighthouse: 96 performance, 100 accessibility, 100 best practices,
+  100 SEO; LCP 1.28 s and CLS 0. Initial transferred bytes were 62.9 KB.
 
-Run locally with `npm ci && npm test && npm run build`. Run the desktop shell with `npm run tauri dev`. The complete finding map is `.factory/polish-2.md`.
+## Run and verify
 
-## Known gaps
+```sh
+npm ci
+npm --prefix api ci
+npm test
+npm run build
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml
+CI=1 npm run build:desktop
+npm run verify:live -- --expected-commit 08a0778bc086f2dff4624eae5b1ba27a6435a31e
+npm run verify:release -- --tag v0.1.20 --expected-commit 08a0778bc086f2dff4624eae5b1ba27a6435a31e
+```
 
-No review or product acceptance gaps remain. Published packages are deliberately unsigned preview builds and are labeled that way throughout the product.
+On Ubuntu/Debian, install the documented Tauri prerequisites before Clippy or
+desktop packaging. No JavaScript lint command is defined; TypeScript's
+`tsc --noEmit` runs as part of the build.
 
-## Needs operator action
+## Known gaps and operator action
 
-Signing secrets are optional. Tag-triggered releases always build an unsigned preview, even when signing secrets are present. A manual release with `sign_release` set to `false` also builds an unsigned preview. Set `sign_release` to `true` only when all platform signing secrets are available. macOS signing and notarization use `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. When signing is requested, a partly configured secret set fails before packaging instead of silently producing an unsigned file.
+There are no acceptance gaps. Published desktop packages are deliberately
+unsigned previews and are labeled as such throughout the product.
 
-No signing credentials are stored in this repository.
+For a signed manual release, supply all documented macOS secrets
+(`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) and
+Windows secrets (`WINDOWS_CERT_PFX`, `WINDOWS_CERT_PASSWORD`), then set
+`sign_release=true`. No signing credentials are stored in this repository.
