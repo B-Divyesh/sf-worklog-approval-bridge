@@ -1,4 +1,49 @@
-# Worklog Bridge — verifier 10 handoff
+# Worklog Bridge — repair 10 handoff
+
+## Release outcome: PASS
+
+**Published and deployed candidate:** `57e2b3529311b69bf5697ff1b5dda5adb481df9c`
+
+**Desktop release:** [`v0.1.10`](https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.10)
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
+
+The verifier's exact release failure was reproduced before the repair: `verify:release --tag v0.1.9 --expected-commit 170cfd8be5590896b01bd8f86004844d0c8905ac` rejected predecessor `44694c0b6dc7ba9728c4d5dd219aa5a155104aeb`. The exact historical live mismatch is covered by regression; after `npm ci`, the live expected-commit assertion also correctly rejects the old candidate against the new deployment.
+
+`170cfd8…` was a documentation-only commit after immutable `v0.1.9`. Relabeling it would have violated provenance, so this repair publishes the new versioned candidate above from one source SHA.
+
+## What changed
+
+- Added an exact regression for verification 10: it rejects the old live health identity and old `v0.1.9` release for nominated `170cfd8…`.
+- Manual desktop release dispatch now requires an explicit full `source_commit`; every matrix build, attestation, tag, manifest, and release verification uses it.
+- Bumped desktop, API, and site version to `0.1.10` and set production `WORKLOG_BUILD_COMMIT` to the full candidate SHA before deploying `dist/site` and `api`.
+
+## Evidence
+
+```text
+npm ci; npm --prefix api ci                           PASS (0 vulnerabilities)
+npm test                                               PASS (18 Node/script + 28 Chromium tests)
+cargo test --manifest-path src-tauri/Cargo.toml       PASS (2 Rust claim tests)
+npm run build                                         PASS (dist/site; 13.97 KB gzip initial app JS)
+CI=1 npm run build:desktop                            PASS (Linux DEB, RPM, AppImage)
+verify-url.sh local production preview                PASS (200; title, lang, one H1, main, alt, no console errors)
+npm run verify:live -- --expected-commit <SHA>        PASS
+npm run verify:release -- --tag v0.1.10 --expected-commit <SHA>
+                                                       PASS
+```
+
+Live `/api/health` returns `0.1.10` and exact commit `57e2b3529311b69bf5697ff1b5dda5adb481df9c`. The release verifier downloaded and hashed `Worklog.Bridge_0.1.10_amd64.deb`: `4eb9049b72f82b9403346de06968229c9618db7d13d64f1834ab0b3123a64551`.
+
+GitHub Actions run <https://github.com/B-Divyesh/sf-worklog-approval-bridge/actions/runs/33245442101> passed the macOS arm64/x64, Windows, Linux, and publish jobs. It published DMGs, MSI/EXE, AppImage/DEB, `SHA256SUMS`, and `latest.json`, all tied to the candidate source commit.
+
+Live desktop and 390 × 844 mobile demo checks passed without horizontal overflow or console errors; the skip link is first in keyboard order. The passing browser suite covers offline/update, same-origin privacy, approval receipts, keyboard/dialog behavior, touch controls, and serious/critical Axe checks. Live headers include HSTS, `nosniff`, strict referrer policy, restrictive CSP, response-header `frame-ancestors 'none'`, and `service-worker.js` is `no-cache`.
+
+## Known gaps / operator action
+
+No release blockers remain. Desktop bundles are intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.
+
+---
+
+# Historical verifier 10 handoff
 
 ## Release verdict: **FAIL**
 
