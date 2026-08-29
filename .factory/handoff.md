@@ -1,3 +1,26 @@
+# Polish round 1 handoff — 29 August 2026
+
+Repair commit: `183842c6d6ca3ad9cabdc1df1a4d275db09ccaec`.
+
+This repair addresses every item in `.factory/review-1.md`: desktop first-run sample loading, direct `?demo=1`, complete claim coverage, plain-language copy, preview-safe download wording, and signing gates in the release workflow. `.factory/polish-1.md` maps each finding to a change and evidence.
+
+## Exact verification
+
+- Clean clone at `/tmp/worklog-claims-qn4xBS/repo`: `npm ci`, `npm --prefix api ci`, then all 20 registered claim commands passed.
+- `npm test`: passed (21 Node tests and 32 Chromium tests).
+- `npm run build`: passed and produced `dist/site/`; JavaScript gzip total is 14.78 KB.
+- `cargo test --manifest-path src-tauri/Cargo.toml`: passed (2 tests).
+- `/opt/fleet/lib/verify-url.sh` passed locally for `/` and `/demo`; screenshots and JSON evidence are at `/tmp/worklog-evidence/local-root/` and `/tmp/worklog-evidence/local-demo/`.
+- Playwright Axe scans found no serious or critical violations on all public routes and an approval route. The standalone Axe CLI could not launch because it expects a full Chrome binary; the Playwright Axe integration is the recorded accessibility evidence.
+
+## Release signing and deployment
+
+The release workflow now requires `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`, `WINDOWS_CERT_PFX`, and `WINDOWS_CERT_PASSWORD`. macOS bundles are verified with `codesign`, `spctl`, and stapler; Windows bundles are Authenticode-signed and verified with `signtool`. Until a signed tag is published, Download accurately labels the whole desktop offering a preview.
+
+After the main-branch push, verify the deployed routes cold: `/`, `/?demo=1`, `/demo`, `/privacy`, `/terms`, `/download`, and `/missing-page`. Record the deployed source commit before promoting a signed desktop tag.
+
+---
+
 # Review 1 handoff — FAIL
 
 Adversarial first-read review 1 was completed on 29 August 2026 against repository base `4aafb0e1a9f0a8694e6523391490eedeb07d7735` and the live v0.1.13 deployment. The full report is `.factory/review-1.md`.
