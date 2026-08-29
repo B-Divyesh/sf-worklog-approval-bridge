@@ -95,7 +95,7 @@ function landing() {
       <div class="hero-copy">
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
-        <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Nothing is saved to your real data.</p></div>
+        <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Your real worklog stays unchanged.</p></div>
         <ul class="facts"><li>Worklogs are stored on this device until you share a private link</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
@@ -328,6 +328,33 @@ function downloadBlob(name: string, content: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 500);
 }
 
+function showApprovalLinkDialog(link: string, trigger: HTMLElement) {
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `<div class="modal share-link-modal" role="dialog" aria-modal="true" aria-labelledby="share-link-title" aria-describedby="share-link-help">
+    <h2 id="share-link-title">Copy approval link</h2>
+    <p id="share-link-help">Copy this approval link, then send it to your client.</p>
+    <div class="field"><label for="manual-approval-link">Approval link</label><input id="manual-approval-link" class="share-link-field" type="text" value="${esc(link)}" readonly spellcheck="false" autocomplete="off"></div>
+    <div class="modal-actions"><button class="secondary" type="button" data-close>Close</button></div>
+  </div>`;
+  document.body.append(modal);
+  const field = modal.querySelector<HTMLInputElement>("#manual-approval-link")!;
+  const close = () => { modal.remove(); trigger.focus(); };
+  modal.querySelector("[data-close]")?.addEventListener("click", close);
+  modal.addEventListener("click", event => { if (event.target === modal) close(); });
+  modal.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); close(); return; }
+    if (event.key !== "Tab") return;
+    const focusable = [...modal.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')];
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+  field.addEventListener("focus", () => field.select());
+  field.focus();
+  field.select();
+}
+
 function parseIcs(text: string, week: string): Entry[] {
   const unfolded = text.replace(/\r?\n[ \t]/g, "");
   return unfolded.split("BEGIN:VEVENT").slice(1).map(block => {
@@ -437,10 +464,10 @@ function bindApp() {
     downloadBlob(`worklog-${project.week}.csv`, csv, "text/csv");
     setStatus("Exported the CSV file.");
   });
-  document.querySelector("#create-link")?.addEventListener("click", async () => {
+  document.querySelector<HTMLButtonElement>("#create-link")?.addEventListener("click", async event => {
+    const trigger = event.currentTarget as HTMLButtonElement;
     try {
       const link = await createApprovalLink(project);
-      await navigator.clipboard.writeText(link);
       if (hasPro()) {
         const packet = decodePacketFromLink(link);
         if (packet) {
@@ -449,7 +476,13 @@ function bindApp() {
           localStorage.setItem(PACKET_HISTORY, JSON.stringify(history.slice(0, 50)));
         }
       }
-      setStatus("Copied the approval link. Send it only to the client.");
+      try {
+        await navigator.clipboard.writeText(link);
+        setStatus("Copied the approval link. Send it only to the client.");
+      } catch {
+        setStatus("Clipboard access is unavailable. Copy the approval link from the dialog.", true);
+        showApprovalLinkDialog(link, trigger);
+      }
     }
     catch (error) { setStatus(error instanceof Error ? error.message : "The link could not be created. Try again.", true); }
   });

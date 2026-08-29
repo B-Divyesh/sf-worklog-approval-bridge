@@ -187,6 +187,28 @@ test("@regression:new-approval-link has no console error before its first accept
   expect(errors).toEqual([]);
 });
 
+test("@regression:clipboard-denial shows a selected approval link without browser error text", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.clipboard, "writeText", {
+      configurable: true,
+      value: () => Promise.reject(new DOMException("Write permission denied", "NotAllowedError"))
+    });
+  });
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  const dialog = page.getByRole("dialog", { name: "Copy approval link" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Copy this approval link, then send it to your client.")).toBeVisible();
+  const field = dialog.getByLabel("Approval link");
+  await expect(field).toHaveValue(/\/approve\?demo=1#/);
+  await expect(field).toHaveAttribute("readonly", "");
+  await expect(field).toBeFocused();
+  const selection = await field.evaluate(input => ({ start: (input as HTMLInputElement).selectionStart, end: (input as HTMLInputElement).selectionEnd, length: (input as HTMLInputElement).value.length }));
+  expect(selection).toEqual({ start: 0, end: selection.length, length: selection.length });
+  await expect(page.getByText("Write permission denied", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("Clipboard access is unavailable. Copy the approval link from the dialog.")).toBeVisible();
+});
+
 test("@claim:no-surveillance collects no screen, microphone, keystroke, or timer activity", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   const origins = new Set<string>();

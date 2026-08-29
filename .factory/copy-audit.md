@@ -9,7 +9,7 @@ Audited 29 August 2026 after polish round 2. Every landing-page sentence and mea
 | For freelancers who rebuild billable work from Git and calendars each week. | 12 | Pass |
 | Try it with sample data | 5 | Pass |
 | A filled weekly worklog opens next. | 6 | Pass |
-| Nothing is saved to your real data. | 7 | Pass |
+| Your real worklog stays unchanged. | 5 | Pass |
 | Worklogs are stored on this device until you share a private link | 12 | Pass |
 | Saved work stays available offline after the first visit | 9 | Pass |
 | Free editor and exports · Pro is $12 per user each month | 11 | Pass |
@@ -71,4 +71,4 @@ Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Para
 | Paid level | Pro |
 | Isolated sample workspace | demo |
 
-Catalog description: “Turn selected Git and calendar activity into a client-ready worklog.” (11 words, 70 characters)
+Catalog description: “Turn selected Git commits and calendar events into a client-ready worklog.” (11 words, 74 characters)
