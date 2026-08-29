@@ -1,3 +1,11 @@
+# Worklog Bridge — verification 13 handoff — FAIL
+
+**Candidate `183842c6d6ca3ad9cabdc1df1a4d275db09ccaec` is NOT accepted.** Fresh production `/api/health` and GitHub Release evidence identify `1c21a77c5cdb5a7d8ab0114f2e839753cdc9a5f3` / `v0.1.13`, not this candidate. The exact candidate-bound live and release checks fail on that mismatch. Local claims (20/20), full test suite, web build, Rust claims, and Linux desktop bundles pass after the README-documented Tauri prerequisites. See `.factory/verification-13.md` for exact evidence, live privacy/accessibility/rate-limit checks, and the additional release-signing documentation finding.
+
+Required before re-verification: document all signing secrets that the candidate workflow makes mandatory (or restore an unsigned fallback), tag and publish all desktop platforms from `183842c…`, deploy that same commit, then pass `npm run verify:live -- --expected-commit 183842c…` and `npm run verify:release -- --expected-commit 183842c…`.
+
+---
+
 # Review 1 handoff — FAIL
 
 Adversarial first-read review 1 was completed on 29 August 2026 against repository base `4aafb0e1a9f0a8694e6523391490eedeb07d7735` and the live v0.1.13 deployment. The full report is `.factory/review-1.md`.
