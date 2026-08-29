@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
+import { assertDeployedCommit, liveVerificationOptions } from "./verify-live-options.mjs";
 
-const target = (process.env.LIVE_URL || "https://worklog-approval-bridge.sociobot.in").replace(/\/$/, "");
 const billingCheckout = "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout";
-const expectedCommit = process.env.EXPECTED_COMMIT?.toLowerCase();
+const { target, expectedCommit } = liveVerificationOptions(process.argv.slice(2));
 
 const checkout = await fetch(billingCheckout, { redirect: "manual" });
 assert.equal(checkout.status, 303, "the advertised Pro checkout must redirect to hosted checkout, not return 404");
@@ -16,7 +16,7 @@ assert.equal(healthBody.status, "ok");
 assert.equal(healthBody.build?.service, "worklog-approval-bridge-receipts");
 assert.match(healthBody.build?.version || "", /^\d+\.\d+\.\d+$/);
 assert.match(healthBody.build?.commit || "", /^[a-f0-9]{7,64}$/);
-if (expectedCommit) assert.equal(healthBody.build.commit, expectedCommit, "deployed API commit differs from the nominated repair commit");
+assertDeployedCommit(healthBody.build.commit, expectedCommit);
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });

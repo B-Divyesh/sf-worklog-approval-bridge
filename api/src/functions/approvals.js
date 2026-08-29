@@ -1,10 +1,9 @@
 import { app } from "@azure/functions";
 import { TableClient } from "@azure/data-tables";
 import { randomBytes } from "node:crypto";
-import { acceptApproval, ReceiptError, verifyAttestation } from "../receipt-service.js";
-import { consumeRateLimit } from "../rate-limit.js";
-import { missingReceiptStatus } from "../approval-protocol.js";
+import { ReceiptError } from "../receipt-service.js";
 import { buildIdentity } from "../build-identity.js";
+import { handleApprovalRequest } from "../approval-handler.js";
 
 const TABLE = "worklogapprovals";
 const SECRET_PARTITION = "system";
@@ -12,10 +11,6 @@ const SECRET_ROW = "attestation";
 
 function json(status, body) {
   return { status, jsonBody: body, headers: { "Cache-Control": "no-store", "Content-Type": "application/json" } };
-}
-
-function noContent(status) {
-  return { status, headers: { "Cache-Control": "no-store" } };
 }
 
 app.http("approvalHealth", {
@@ -83,30 +78,5 @@ async function storage() {
 
 app.http("approvals", {
   methods: ["GET", "POST"], route: "approvals/{receiptId?}", authLevel: "anonymous",
-  handler: async (request) => {
-    try {
-      const store = await storage();
-      const limit = await consumeRateLimit(store, { client: request.headers.get("x-forwarded-for") || "unknown", method: request.method });
-      if (!limit.allowed) return { ...json(429, { error: "Too many approval requests. Try again in one minute." }), headers: { "Cache-Control": "no-store", "Content-Type": "application/json", "Retry-After": String(limit.retryAfter) } };
-      if (request.method === "GET") {
-        const receiptId = request.params.receiptId;
-        const packetDigest = request.query.get("packetDigest")?.toLowerCase();
-        if (!packetDigest || !/^[a-f0-9]{64}$/.test(packetDigest)) throw new ReceiptError(400, "A valid packet digest is required.");
-        const receipt = await store.findByDigest(packetDigest);
-        if (!receipt) {
-          const status = missingReceiptStatus(receiptId);
-          return status === 204 ? noContent(status) : json(status, { error: "Receipt not found." });
-        }
-        const valid = verifyAttestation(receipt, await store.getSigningSecret());
-        if (receiptId && receiptId !== receipt.receiptId) return json(404, { error: "Receipt not found." });
-        return json(200, { receipt, valid });
-      }
-      const result = await acceptApproval(await request.json(), store);
-      return json(result.created ? 201 : 409, { receipt: result.receipt, created: result.created });
-    } catch (error) {
-      if (error instanceof ReceiptError) return json(error.status, { error: error.message });
-      console.error("approval request failed", error);
-      return json(503, { error: "The approval record could not be saved. Try again shortly." });
-    }
-  }
+  handler: async (request) => handleApprovalRequest(request, storage)
 });

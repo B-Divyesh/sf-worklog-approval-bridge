@@ -78,7 +78,7 @@ as `WORKLOG_BUILD_COMMIT` (or its standard `BUILD_SOURCEVERSION` value).
 After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
 
 ```sh
-npm run verify:release -- --tag v0.1.7 --expected-commit "$(git rev-parse v0.1.7^{})"
+npm run verify:release -- --tag v0.1.8 --expected-commit "$(git rev-parse v0.1.8^{})"
 ```
 
 ## License

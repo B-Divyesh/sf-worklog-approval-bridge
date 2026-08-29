@@ -410,6 +410,17 @@ test("@regression:mobile-installer-commands are keyboard-focusable scroll region
   expect(results.violations.filter(item => ["serious", "critical"].includes(item.impact || ""))).toEqual([]);
 });
 
+test("@regression:approval-route-has-no-serious-or-critical-axe-violations", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  await mockApprovalService(page);
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  await page.goto(await page.evaluate(() => navigator.clipboard.readText()));
+  await expect(page.getByLabel("Your name")).toBeVisible();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter(item => ["serious", "critical"].includes(item.impact || ""))).toEqual([]);
+});
+
 test("download selects an asset from an immutable release commit", async ({ page }) => {
   const commit = "1234567890abcdef1234567890abcdef12345678";
   const githubRequests: string[] = [];

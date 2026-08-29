@@ -220,6 +220,7 @@ input::placeholder, textarea::placeholder { color: #768294; }
 .approval-sheet .entry-row strong { color: #111722; }
 .approval-sheet .entry-row small { color: #56616d; }
 .approval-form { padding: 28px; color: #17202c; background: #f4eddf; }
+.approval-form .field label { color: #17202c; }
 .approval-form input { color: #111722; background: #fff; border-color: #5a6573; }
 .receipt { margin-top: 24px; padding: 20px; border: 3px double #157249; color: #0d5034; background: #e8fff2; overflow-wrap: anywhere; }
 .receipt code { font: 12px var(--mono); }

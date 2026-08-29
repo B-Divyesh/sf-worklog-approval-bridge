@@ -4,6 +4,7 @@ import { acceptApproval, normaliseApproval, verifyAttestation } from "../src/rec
 import { clientRateKey, consumeRateLimit, READ_LIMIT, WRITE_LIMIT } from "../src/rate-limit.js";
 import { missingReceiptStatus } from "../src/approval-protocol.js";
 import { buildIdentity } from "../src/build-identity.js";
+import { handleApprovalRequest } from "../src/approval-handler.js";
 
 function memoryStore() {
   const records = new Map();
@@ -60,6 +61,24 @@ test("@regression:durable-rate-limit rejects the 61st shared read and 13th share
   assert.equal(writes.find(result => !result.allowed)?.retryAfter, 60);
 });
 
+test("@regression:approval-api-returns-429-and-retry-after-on-the-61st-sequential-read", async () => {
+  const store = concurrentRateStore();
+  store.findByDigest = async () => null;
+  const request = {
+    method: "GET",
+    headers: new Headers({ "x-forwarded-for": "203.0.113.61" }),
+    params: {},
+    query: new URLSearchParams({ packetDigest: "a".repeat(64) })
+  };
+  const responses = [];
+  for (let index = 0; index <= READ_LIMIT; index += 1) {
+    responses.push(await handleApprovalRequest(request, async () => store, Date.parse("2026-08-28T12:00:00.000Z")));
+  }
+  assert.deepEqual(responses.slice(0, READ_LIMIT).map(response => response.status), Array(READ_LIMIT).fill(204));
+  assert.equal(responses[READ_LIMIT].status, 429);
+  assert.equal(responses[READ_LIMIT].headers["Retry-After"], "60");
+});
+
 test("@regression:durable-rate-limit does not treat a forwarded source port as a new client", () => {
   assert.equal(clientRateKey("203.0.113.8:44123, 10.0.0.2"), clientRateKey("203.0.113.8:51234, 10.0.0.2"));
 });
@@ -73,7 +92,7 @@ test("@regression:public-api-health-identity exposes only a safe version and dep
   const identity = buildIdentity({ WORKLOG_BUILD_COMMIT: "ABCDEF0123456789", DATABASE_URL: "must-not-leak" });
   assert.deepEqual(identity, {
     service: "worklog-approval-bridge-receipts",
-    version: "0.1.7",
+    version: "0.1.8",
     commit: "abcdef0123456789"
   });
   assert.equal(buildIdentity({ WORKLOG_BUILD_COMMIT: "not-a-commit" }).commit, "unavailable");
