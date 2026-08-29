@@ -1,127 +1,61 @@
-# Worklog Bridge repair 6 handoff
+# Worklog Bridge verification 7 handoff — FAIL
 
-**Failed candidate:** `2779b430b23fcaa32be4b27853e42061c7673cb8`
+**Result:** FAIL
 
-**Repaired release:** [`v0.1.5`](https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.5)
+**Candidate:** `f72287adaed092c9494f01bd8afc97f10c363bd6` (`v0.1.5`)
 
-**Deployment:** https://worklog-approval-bridge.sociobot.in
+**Live URL:** https://worklog-approval-bridge.sociobot.in
 
-The repaired candidate is the commit resolved by `v0.1.5^{commit}`. The tag,
-global manifest commit, and every file-level manifest commit must all resolve to
-that same SHA. No documentation-only commit may be added after this handoff.
+**Verified:** 29 August 2026 UTC
 
-## Reproduced failure and root cause
+## Why it fails
 
-The required reproduction failed as reported:
+1. **Critical:** `Start Pro subscription` opens the documented Sociobot checkout URL, but that URL returns HTTP 404 with `{"error":"enabled factory product","status":404}`. Pro cannot be purchased.
+2. **Critical:** any string in `sb_license:worklog-approval-bridge` unlocks Pro offline when no cached verdict exists. An invalid token enabled ICS import and saved approval history without verification.
+3. **High:** the hourly-rate field stores negative values despite native invalid state. `-25` rendered a negative total and was encoded into a client approval packet.
+4. **High:** unregistered landing/privacy claims fail the claims cross-check. The advertised sample says 12 Git commits and 3 calendar events, while the actual sample has 4 and 2; those numbers are absent from both `claims.json` and the copy audit.
+5. **High:** Git collection ignores the selected week and imports up to 200 commits from 12 weeks; ICS import adds every event. This does not provide selected weekly evidence without extensive manual deletion.
+6. **Medium:** the Pro dialog does not close on Escape, traps no focus, and restores no trigger focus.
+7. **Medium:** several 390 px controls are 19–36 px high, below the 44 px baseline.
+8. **Medium:** CSV output leaves spreadsheet-formula prefixes active.
 
-```text
-npm run verify:release -- --tag v0.1.4 --expected-commit 2779b430b23fcaa32be4b27853e42061c7673cb8
-AssertionError: latest release is not built from the expected repaired commit
-actual:   dc3d4d68ab203e646d4b015f71ada614eb5e5b7e
-expected: 2779b430b23fcaa32be4b27853e42061c7673cb8
-```
+Full reproduction details are in `.factory/verification-7.md`.
 
-`v0.1.4` correctly described its own source, but the candidate was a later
-documentation commit. The workflow's manual path also used the requested tag as
-its checkout ref, so a caller could not nominate an untagged candidate. The
-manifest recorded only the publish job's commit; it did not independently prove
-that every matrix bundle came from that commit.
+## What passed
 
-## Repair
+- Cold first-read and one-click sample demo.
+- All 12 declared claim commands after locked dependency install and documented Tauri prerequisites.
+- `npm test`: 13 Node/API/script and 15 Chromium tests.
+- Rust: 2 tests.
+- `npm run build` and `CI=1 npm run build:desktop`; DEB, RPM, and AppImage produced locally.
+- Live demo editing, CSV, ICS recovery, same-origin approval, immutable receipt, persistence, concurrency, rate limits, offline reload, service-worker replacement, route semantics, and Axe serious/critical scan.
+- Lighthouse mobile: 99 performance, 100 accessibility, 100 best practices, 100 SEO; LCP 1.24 s, CLS 0, TBT 126 ms.
+- Static security/cache headers and bundle budgets.
+- The previous provenance failure is fixed: live files match this candidate, `v0.1.5` and every release manifest file name `f72287a`, the published DEB checksum passes, and the live Linux installer installs the matching AppImage.
 
-- Bumped the unchanged desktop product and site to `0.1.5`.
-- Manual release dispatch now accepts an optional full `source_commit`. Every
-  build and publish checkout uses it and rejects a non-full or mismatched SHA.
-- Tag pushes still build the tag. Publishing rejects an existing tag that does
-  not peel to the checked-out source. New manual tags use that exact source via
-  `target_commitish`.
-- Each macOS arm64, macOS x64, Windows x64, and Linux x64 job now generates a
-  provenance record before upload. It binds every bundle filename and SHA-256
-  to that job's checked-out commit.
-- Manifest creation rejects a missing, changed, wrong-platform, duplicate, or
-  mixed-commit bundle. `latest.json` records `commit` on every desktop file.
-- `verify:release` now compares the complete set of downloadable desktop assets
-  with the manifest and checks every file-level commit against the nominated
-  candidate. It still resolves the tag through the CORS-safe GitHub API and
-  downloads a DEB to verify its published SHA-256.
-- The site keeps its CORS-safe `api.github.com` lookup and now uses the
-  `worklog-bridge:release-v3` cache key, so a cached `v0.1.4` response cannot
-  delay the new download links.
-
-## Focused regression coverage
-
-- `regression: one stale matrix artifact blocks the whole release` recreates a
-  Windows bundle from the stale SHA among four current matrix jobs. Manifest
-  creation must reject the entire release.
-- `@claim:release-provenance` generates all five required platform fixtures,
-  creates per-job provenance, and proves every manifest file has the nominated
-  commit.
-- The release validator compares the complete manifest and downloadable
-  desktop-asset sets and rejects any file-level commit mismatch.
-- The workflow regression asserts nominated-source checkout, build provenance,
-  and exact-tag creation are present.
-- The browser regression uses `v0.1.5` GitHub API fixtures and proves the
-  selected platform URL and displayed source SHA belong to one immutable tag.
-
-## Clean local verification — 29 August 2026
-
-The original clean command sequence was run exactly:
+## Commands used
 
 ```sh
 npm ci
 npm --prefix api ci
 npm test
 cargo test --manifest-path src-tauri/Cargo.toml
+npm run build
 CI=1 npm run build:desktop
-```
-
-- Both clean npm installs reported zero vulnerabilities.
-- `npm test`: 13 Node/API/script tests and 15 Chromium tests passed. This covers
-  all browser claims, integration paths, desktop and 390 × 844 layouts,
-  keyboard shortcuts, visible semantics, Axe serious/critical checks, console
-  errors, privacy request capture, offline reload, and versioned update-cache
-  behaviour.
-- Rust: 2/2 Git metadata/privacy claim tests passed after installing the exact
-  Ubuntu prerequisites documented in `README.md`.
-- Desktop consumer build: DEB, RPM, and AppImage `0.1.5` completed. GitHub
-  Actions remains the source of downloadable cross-platform packages.
-- `npm run build`: passed and produced `dist/site`. Initial JavaScript is
-  12.89 KB + 1.01 KB gzip; CSS is 4.62 KB gzip.
-- `/opt/fleet/lib/verify-url.sh` passed `/`, `/download`, and `/demo` at desktop
-  and 390 px: title, `lang`, one `h1`, `main`, alt/labels, and zero console
-  errors.
-- Local Lighthouse: performance 100, accessibility 100, best practices 100,
-  SEO 100; LCP 1.4 s, CLS 0, total blocking time 20 ms.
-- Workflow YAML parses, `git diff --check` passes, and the focused provenance,
-  workflow, download-page, and production-build regressions pass.
-
-## Release, live identity, and deployment verification
-
-The final release gate is:
-
-```sh
-npm run verify:release -- --tag v0.1.5 --expected-commit "$(git rev-parse v0.1.5^{commit})"
-```
-
-It checks the latest public release, peeled tag, global manifest SHA, every
-downloadable artifact name, every file-level source SHA, all published
-checksums, the four required platform classes, and a downloaded Linux DEB.
-
-The static deployment uses the work order configuration:
-
-```sh
-npm run build:site
-/opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site
 npm run verify:live
+npm run verify:release -- --tag v0.1.5 --expected-commit f72287adaed092c9494f01bd8afc97f10c363bd6
 ```
 
-Post-deploy verification also runs `verify-url.sh` against the live landing,
-demo, and download routes, checks fresh Linux/macOS/Windows download selection,
-and confirms the site displays the short `v0.1.5` source SHA without console
-errors.
+## Required next work
 
-## Known gaps and operator action
+- Register/enable the live billing product and verify a real checkout redirect.
+- Require a cached valid license verdict for offline Pro access; test invalid, absent, expired, revoked, offline, and 24-hour boundary cases.
+- Validate client/week/rate as a group and prevent invalid values from reaching storage, exports, or approval packets.
+- Filter imported Git/ICS records to the chosen week and let users select entries in bulk.
+- Register or remove every claim-like statement; make the sample numbers match and complete the copy audit.
+- Repair license-dialog focus management and all sub-44 px touch targets.
+- Neutralise CSV cells beginning with spreadsheet formula prefixes.
 
-The artifacts remain unsigned. macOS notarization requires
-`APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No
-signing material is stored in this repository.
+## Operator action after repair
+
+Desktop packages are intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`. Do not release the current candidate even though its unsigned artifacts and provenance are otherwise valid.
