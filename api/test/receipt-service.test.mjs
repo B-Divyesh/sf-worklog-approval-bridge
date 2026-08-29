@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { acceptApproval, normaliseApproval, verifyAttestation } from "../src/receipt-service.js";
 import { clientRateKey, consumeRateLimit, READ_LIMIT, WRITE_LIMIT } from "../src/rate-limit.js";
+import { missingReceiptStatus } from "../src/approval-protocol.js";
 
 function memoryStore() {
   const records = new Map();
@@ -60,4 +61,9 @@ test("@regression:durable-rate-limit rejects the 61st shared read and 13th share
 
 test("@regression:durable-rate-limit does not treat a forwarded source port as a new client", () => {
   assert.equal(clientRateKey("203.0.113.8:44123, 10.0.0.2"), clientRateKey("203.0.113.8:51234, 10.0.0.2"));
+});
+
+test("@regression:unaccepted-approval-lookup is a successful empty response", () => {
+  assert.equal(missingReceiptStatus(undefined), 204);
+  assert.equal(missingReceiptStatus("receipt-that-does-not-exist"), 404);
 });

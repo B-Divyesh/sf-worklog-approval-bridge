@@ -1,69 +1,89 @@
-# Worklog Bridge verification handoff — FAIL
+# Worklog Bridge repair handoff
 
-## Current independent verification status
+## Repair scope
 
-**FAIL — do not release candidate `a29334e51fdfa70ac4f2b480e025640101bfa6cd`.**
+This repair addresses every release blocker in independent verification 3
+(`bb0412401850f9aae3bfa73afd097e4e211aa97b`) while preserving the Tauri
+desktop app, local-first worklog editor, isolated demo, receipt flow, and
+static-site deployment.
 
-Independent live verification at
-https://worklog-approval-bridge.sociobot.in found that a normal first visit to
-a newly created, not-yet-accepted approval link emits Chromium’s
-`Failed to load resource: the server responded with a status of 404 ()` console
-error. The UI otherwise handles the absence of a receipt, but the error fails
-the required no-console-errors-on-load quality gate. Unknown live routes also
-return HTTP 200 while displaying the in-app not-found page. Full evidence,
-commands, passed claims, and repair steps are in
-`.factory/verification-3.md`.
+## Reproduced failures
 
-The following is the prior builder repair handoff, retained as historical
-implementation and release context.
+Before the repair, a fresh Chromium context opened the live `/demo`, created
+a new approval link, and opened that exact `/approve#…` URL. It displayed the
+unaccepted form but logged:
 
-**Repair commit:** `a1157eeaae5bb4775b2e2f520509a8b532b85bee`  
-**Repaired verifier candidate:** `0fc5cc62213ce7ded7010def5b025d7b0a8321ab`  
-**Deployment:** `https://worklog-approval-bridge.sociobot.in` (Static Web Apps + managed same-origin API)
+```
+Failed to load resource: the server responded with a status of 404 ()
+```
+
+The expected absent receipt was the API's `404` response. A direct live check
+also returned `200` for `/missing-page` even though the designed not-found
+view rendered.
 
 ## What changed
 
-- Replaced the process-local receipt limiter with a durable Azure Table bucket. It uses ETag-conditional writes, holds one rotating bucket per hashed client and request type, never stores a raw IP, and fails closed during excessive contention. Read requests allow 60/minute; writes allow 12/minute.
-- Repaired the Linux AppImage packaging chain. The GTK linuxdeploy cache patch is now idempotent and supplies the current `--plugin-type` probe even when a partially patched plugin is cached. The release job installs the `file` utility required by linuxdeploy's bundled appimagetool.
-- Added exact regressions for concurrent shared read/write limits, forwarded source-port normalisation, linuxdeploy cache compatibility, its CI package prerequisite, and the existing `CI=1` normalisation.
-- Preserved the Tauri desktop artifact, Vite static site, demo, local-first storage, durable receipt flow, privacy boundary, and passed accessibility behaviour.
+- An unaccepted approval packet lookup now returns `204 No Content`, the
+  successful empty state. A lookup for an explicit missing receipt ID still
+  returns `404`.
+- The approval page treats `204` as unaccepted and continues to bind the
+  acceptance form; receipts and genuine API errors retain their existing
+  behavior.
+- Static Web Apps now has explicit rewrites for the real browser routes
+  (`/demo`, `/app`, `/privacy`, `/terms`, `/download`, and `/approve`) instead
+  of a catch-all `navigationFallback`. Unknown paths keep HTTP `404` while the
+  response override serves the product's designed `404.html` shell.
+- Added exact regressions for the API status contract, the generated fresh
+  approval-link console path, the static-routing allowlist, and a
+  `npm run verify:live` browser script that checks both repaired paths after a
+  deployment.
+- Updated `@azure/functions` from 4.7.2 to 4.16.2. A clean API dependency
+  audit is now zero vulnerabilities (the prior lockfile reported one moderate
+  and one high advisory through `undici`).
 
 ## Verification
 
-Clean dependency installation was run with `npm ci` and `(cd api && npm ci)`. Ubuntu desktop prerequisites used were:
+Commands run on 2026-08-29:
 
 ```sh
-sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-```
-
-All of these passed on 2026-08-28:
-
-```sh
+npm ci
+(cd api && npm ci)
 npm test
 cargo test --manifest-path src-tauri/Cargo.toml
 CI=1 npm run build:desktop
-/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173/ <fresh-evidence-dir>
+/opt/fleet/lib/verify-url.sh http://127.0.0.1:4281/ /tmp/worklog-url-evidence
 ```
 
-- `npm test`: 7 Node regressions, TypeScript production build, and 12 Playwright checks passed. Those checks cover claims, desktop, 390px mobile, keyboard, reduced motion, offline reload, privacy request payloads, console errors, and Axe serious/critical findings on all routes.
-- Rust: 2 claim tests passed (`claim_git_metadata` and `claim_no_repository_upload`).
-- Exact production desktop command completed with 3 bundles. AppImage evidence: `src-tauri/target/release/bundle/appimage/Worklog Bridge_0.1.0_amd64.AppImage` (57,492,682 bytes; SHA-256 `3414478aa4b73ca60e4bf28a5b955795aec511d4e06fbc5ae9416b711609c167`).
-- `verify-url.sh` passed: HTTP 200, title, `lang=en`, one `h1`, `<main>`, no missing image alt text or unlabeled buttons, and no page/console errors. The standalone Axe CLI was attempted but its Selenium Chrome binary is not present in this worker; the pinned Playwright Axe integration above passed.
-- Deployment `7dbb395e-014f-4285-8e6f-ad55e12a314d` succeeded. On the live endpoint, one browser context made 61 invalid reads: 60 returned 400 and the 61st returned 429 with `Retry-After: 60`. Thirteen same-context writes gave 201 once, 409 eleven times, then 429 with `Retry-After: 60`.
+- `npm test` passed: 9 Node regressions, production TypeScript/Vite build,
+  and 13 Playwright tests. This includes claims, desktop browser flow, 390 px
+  mobile layout, keyboard shortcuts, reduced motion, privacy requests,
+  offline reload, console checks, and Axe serious/critical checks.
+- Rust passed: 2 claim tests (`claim_git_metadata` and
+  `claim_no_repository_upload`).
+- Desktop packaging passed on Linux and emitted DEB, RPM, and AppImage. The
+  AppImage SHA-256 is
+  `0888c77f89e34e110322aafb7147fda046943efbed211d01103d3457a2a7bd65`.
+- The Static Web Apps emulator returned `200` for `/approve` and `404` for
+  `/missing-page`; its 404 body is the designed shell. `verify-url.sh` passed
+  title, `lang=en`, one h1, main landmark, image alt text, labelled buttons,
+  and a clean browser console.
+- Production build sizes remain 12.67 KB gzip JavaScript and 4.61 KB gzip CSS.
 
-## Release and operator notes
+## Deployment and live confirmation
 
-Initial tag `v0.1.1` exposed a Windows-only `spawn EINVAL` from invoking the
-`npx.cmd` shim without `cmd.exe`; the release wrapper now uses `shell: true`
-only on Windows and has regression coverage. `v0.1.2` proved all four bundle
-jobs, but was incorrectly marked prerelease and therefore invisible to the
-GitHub `releases/latest` endpoint used by the download page. Stable tag
-`v0.1.3` is published from the final repair commit for the unsigned macOS
-(x64/arm64), Windows, and Linux matrix. GitHub Actions run `33216402640`
-completed successfully. It publishes `.dmg`, `.msi`/`.exe`, `.AppImage`/`.deb`,
-`SHA256SUMS`, and `latest.json` through GitHub Releases. The GitHub latest
-release API now returns stable `v0.1.3`; the live Linux download button resolves
-to the AppImage. A full 79,485,432-byte release AppImage was downloaded and
-matched its published SHA-256: `2f0c59c0131267b9d0f0ef36d381d970d1a88dfcc35aa5f517b358c643de2182`.
+Deploy `dist/site` with `api` as the managed Function app to Static Web App
+`sf-worklog-approval-bridge` in resource group `sociobot`, then run:
 
-No signing certificates are present. macOS notarization requires `APPLE_CERTIFICATE`; Windows signing requires `WINDOWS_CERT_PFX` if signed installers are required.
+```sh
+npm run verify:live
+```
+
+That check creates a unique sample approval packet, confirms its initial
+receipt check emits no browser error, and verifies `/missing-page` returns
+HTTP 404 while rendering the designed return-home page.
+
+## Known gaps / operator action
+
+- macOS notarization needs `APPLE_CERTIFICATE`; Windows signing needs
+  `WINDOWS_CERT_PFX` if signed desktop installers are required. Current
+  release artifacts remain unsigned as documented.

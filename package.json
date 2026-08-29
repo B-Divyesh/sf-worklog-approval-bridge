@@ -10,6 +10,7 @@
     "build:site": "tsc --noEmit && vite build && node scripts/postbuild.mjs",
     "build:desktop": "node scripts/build-desktop.mjs",
     "test": "node --test api/test/*.test.mjs scripts/*.test.mjs && npm run build:site && playwright test",
+    "verify:live": "node scripts/verify-live.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

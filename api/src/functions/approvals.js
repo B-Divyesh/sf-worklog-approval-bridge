@@ -3,6 +3,7 @@ import { TableClient } from "@azure/data-tables";
 import { randomBytes } from "node:crypto";
 import { acceptApproval, ReceiptError, verifyAttestation } from "../receipt-service.js";
 import { consumeRateLimit } from "../rate-limit.js";
+import { missingReceiptStatus } from "../approval-protocol.js";
 
 const TABLE = "worklogapprovals";
 const SECRET_PARTITION = "system";
@@ -10,6 +11,10 @@ const SECRET_ROW = "attestation";
 
 function json(status, body) {
   return { status, jsonBody: body, headers: { "Cache-Control": "no-store", "Content-Type": "application/json" } };
+}
+
+function noContent(status) {
+  return { status, headers: { "Cache-Control": "no-store" } };
 }
 
 function table() {
@@ -82,7 +87,10 @@ app.http("approvals", {
         const packetDigest = request.query.get("packetDigest")?.toLowerCase();
         if (!packetDigest || !/^[a-f0-9]{64}$/.test(packetDigest)) throw new ReceiptError(400, "A valid packet digest is required.");
         const receipt = await store.findByDigest(packetDigest);
-        if (!receipt) return json(404, { error: "No acceptance has been recorded for this packet." });
+        if (!receipt) {
+          const status = missingReceiptStatus(receiptId);
+          return status === 204 ? noContent(status) : json(status, { error: "Receipt not found." });
+        }
         const valid = verifyAttestation(receipt, await store.getSigningSecret());
         if (receiptId && receiptId !== receipt.receiptId) return json(404, { error: "Receipt not found." });
         return json(200, { receipt, valid });

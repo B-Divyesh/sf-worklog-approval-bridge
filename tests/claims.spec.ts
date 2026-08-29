@@ -3,12 +3,15 @@ import { AxeBuilder } from "@axe-core/playwright";
 
 type Receipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
 
-function mockApprovalService(page: import("@playwright/test").Page, observed?: { bodies: unknown[] }) {
+function mockApprovalService(page: import("@playwright/test").Page, observed?: { bodies: unknown[]; lookupStatuses?: number[] }) {
   let receipt: Receipt | undefined;
   return page.route("**/api/approvals**", async route => {
     const request = route.request();
     if (request.method() === "GET") {
-      if (!receipt) return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: "No acceptance has been recorded for this packet." }) });
+      if (!receipt) {
+        observed?.lookupStatuses?.push(204);
+        return route.fulfill({ status: 204 });
+      }
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ receipt, valid: true }) });
     }
     const body = JSON.parse(request.postData() || "{}");
@@ -112,6 +115,27 @@ test("@claim:approval-receipt records one durable, verifiable acceptance", async
   }, link);
   await page.goto(tampered);
   await expect(page.getByRole("heading", { name: "This worklog was changed" })).toBeVisible();
+});
+
+test("@regression:new-approval-link has no console error before its first acceptance", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  const observed = { bodies: [] as unknown[], lookupStatuses: [] as number[] };
+  await mockApprovalService(page, observed);
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Edit Investigated slow dashboard queries" }).click();
+  await page.getByLabel("Client-ready summary").fill(`New approval packet ${Date.now()}`);
+  await page.getByRole("button", { name: "Save entry" }).click();
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const errors: string[] = [];
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(link);
+  await expect(page.getByRole("heading", { name: "Review this weekly worklog" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Accept and record receipt" })).toBeEnabled();
+  await page.waitForLoadState("networkidle");
+  expect(observed.lookupStatuses).toEqual([204]);
+  expect(errors).toEqual([]);
 });
 
 test("@claim:no-surveillance requests no capture permissions", async ({ page }) => {

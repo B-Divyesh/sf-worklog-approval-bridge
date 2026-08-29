@@ -1,6 +1,5 @@
 {
-  "navigationFallback": { "rewrite": "/index.html", "exclude": ["/api/*", "/assets/*", "/*.xml", "/*.txt", "/*.svg", "/install.*"] },
-  "responseOverrides": { "404": { "rewrite": "/404.html" } },
+  "responseOverrides": { "404": { "rewrite": "/404.html", "statusCode": 404 } },
   "globalHeaders": {
     "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.github.com https://api.sociobot.in; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.sociobot.in; frame-ancestors 'none'",
     "X-Content-Type-Options": "nosniff",
@@ -9,6 +8,12 @@
   },
   "mimeTypes": { ".webmanifest": "application/manifest+json" },
   "routes": [
+    { "route": "/demo", "rewrite": "/index.html" },
+    { "route": "/app", "rewrite": "/index.html" },
+    { "route": "/privacy", "rewrite": "/index.html" },
+    { "route": "/terms", "rewrite": "/index.html" },
+    { "route": "/download", "rewrite": "/index.html" },
+    { "route": "/approve", "rewrite": "/index.html" },
     { "route": "/assets/*", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } },
     { "route": "/service-worker.js", "headers": { "Cache-Control": "no-cache" } }
   ]

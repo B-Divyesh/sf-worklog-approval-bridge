@@ -6,6 +6,6 @@
   "engines": { "node": ">=20" },
   "dependencies": {
     "@azure/data-tables": "13.3.0",
-    "@azure/functions": "4.7.2"
+    "@azure/functions": "4.16.2"
   }
 }

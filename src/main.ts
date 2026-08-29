@@ -443,7 +443,7 @@ async function bindApproval() {
         [...formNode.querySelectorAll<HTMLInputElement>("input")].forEach(input => input.disabled = true);
         return;
       }
-      if (response.status !== 404) throw new Error((await response.json() as { error?: string }).error || "The acceptance record could not be checked.");
+      if (response.status !== 204) throw new Error((await response.json() as { error?: string }).error || "The acceptance record could not be checked.");
     } catch (error) {
       if (submit) submit.disabled = true;
       if (area) area.innerHTML = `<p class="error">${esc(error instanceof Error ? error.message : "The acceptance record could not be checked.")} Reconnect and reload before accepting.</p>`;
