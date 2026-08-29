@@ -1,37 +1,43 @@
-# Worklog Bridge — review 3 handoff
+# Worklog Bridge — polish round 3 handoff
 
 ## Outcome
 
-Independent adversarial review 3 is **FAIL**. No product code was changed.
-The live site and demo were checked at 390 px and desktop, and this handoff
-and `.factory/review-3.md` are the only review artifacts added.
+Repair version **0.1.21** closes the clipboard-denial failure from adversarial
+review 3 and re-verifies every earlier finding. When clipboard access is
+blocked, **Copy approval link** now opens a keyboard-managed dialog with a
+selected, labelled, read-only approval URL and the instruction: “Copy this
+approval link, then send it to your client.” It never exposes the browser
+exception.
 
-One blocking product gap remains: if a browser denies clipboard access, **Copy
-approval link** exposes a raw `writeText` exception and does not provide the
-link for manual copying. See `F-3-1` in `.factory/review-3.md` for the exact
-reproduction and required recovery UI/test.
+The first-screen outcome now says the real worklog stays unchanged. The one
+click `/demo` and `?demo=1` paths remain isolated in `demo:` storage, retain
+the banner/reset/exit controls, and keep demo approval receipts out of the
+production API. The catalog description is verb-first and 74 characters.
 
-## What was verified
+## Verification
 
-- Cold landing copy identified what the product does, its freelance audience,
-  and **Try it with sample data** before scrolling at both tested widths.
-- `/demo` and `/?demo=1` opened the six-entry Northstar Health sample with the
-  persistent demo banner, Reset, and Start for real controls.
-- Demo approval retained `?demo=1`, wrote only demo receipt storage, made no
-  approval API request, reset its receipt, and left a seeded real workspace
-  unchanged.
-- Link crawl, route metadata, deep links, 404, header/footer, mobile layout,
-  request logging, and Axe scans were checked live. Valid routes had no
-  console errors.
-- Every claims-registry command was run from a fresh clone. Five Node/native
-  commands and the signing-mode command passed. Sixteen browser-backed
-  commands initially stopped in an unrelated handoff wording regression before
-  their tagged Playwright tests; details are in the review.
-- After this required handoff supplied the missing signing disclosure, the
-  repository's full local `npm test` passed (27 Node/script tests and 36
-  Chromium tests), and `npm run build` passed. A second clean clone of the
-  committed review state then passed all 22 exact registry commands
-  individually.
+- Fresh clone: `/tmp/worklog-polish-3-clean.cRU0Sm/repo` ran all 22 exact
+  commands in `.factory/claims.json` separately and ended with
+  `ALL_CLAIMS_PASSED 22`.
+- Full local suite: `npm test` passed 27 Node/service/workflow tests and 37
+  Chromium tests, including the new clipboard-denial regression.
+- Native suite: `cargo test --manifest-path src-tauri/Cargo.toml` passed 2
+  Rust claims.
+- Build: `npm run build` produced `dist/site`; initial JavaScript is 15.93 KB
+  gzip across the core and app chunks. `CI=1 npm run build:desktop` produced
+  0.1.21 Linux AppImage, DEB, and RPM artifacts.
+- Accessibility and browser behavior are covered by the full Playwright suite:
+  Axe scans, 390 px layout/touch targets, keyboard shortcuts, dialog focus,
+  reduced motion, offline reload, route titles/metadata, navigation focus and
+  scroll restoration, privacy request captures, and the genuine HTTP 404.
+- Local evidence: `/tmp/worklog-polish-3/local-clipboard-fallback.png` shows
+  the 390 px manual-copy recovery dialog.
+- Mobile Lighthouse: 100 performance, 100 accessibility, 100 best practices,
+  and 100 SEO; FCP 1.1 s, LCP 1.4 s, CLS 0. Evidence:
+  `/tmp/worklog-polish-3/lighthouse/mobile-stable.json`.
+- Post-deploy cold checks and live evidence are recorded in
+  `/tmp/worklog-polish-3/live/`; see `.factory/polish-3.md` for the full
+  finding-by-finding matrix.
 
 ## Run and verify
 
@@ -39,11 +45,14 @@ reproduction and required recovery UI/test.
 npm ci
 npm --prefix api ci
 npm test
+cargo test --manifest-path src-tauri/Cargo.toml
 npm run build
+CI=1 npm run build:desktop
 ```
 
-For every registered claim, run the command recorded in
-`.factory/claims.json` from a clean clone. Use `/demo` for the isolated sample.
+For a Linux desktop build, install the documented packages, including
+`libglib2.0-dev`, before the desktop command. The static deployment builds
+with `npm ci && npm test && npm run build:site` and publishes `dist/site`.
 
 ## Signing disclosure
 
@@ -61,7 +70,15 @@ For a signed manual release, macOS signing and notarization need
 `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. No signing credentials are in
 this repository.
 
-## Known gap / next step
+## Release and deployment
 
-Implement the F-3-1 clipboard fallback and its rejected-clipboard browser
-test. Then repeat the full clean-clone claims matrix and live sandbox audit.
+The repair is tagged `v0.1.21` from the final repair commit. The GitHub Actions
+release workflow builds macOS Intel/Apple Silicon, Windows, and Linux assets,
+then publishes SHA256SUMS and latest.json with immutable provenance. The static
+site is deployed from `dist/site` through this work order's static target.
+
+## Known gaps
+
+None. The current downloadable desktop packages remain honestly labelled as
+unsigned previews; signing a non-preview release requires the operator-owned
+certificate secrets listed above.
