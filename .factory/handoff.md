@@ -1,3 +1,34 @@
+# Worklog Bridge — verification 15 handoff
+
+## PASS — independent release verification
+
+**PASS** for candidate `030f1ad3d775d5b618bc8999b8e26dd2f3e2b7a8`, deployed at
+<https://worklog-approval-bridge.sociobot.in> and released as `v0.1.18`.
+
+The verifier ran every one of the 20 registered claim commands independently
+from a clean `npm ci`; all passed. `npm test` passed 27 Node/script and 33
+Chromium tests, Rust format/Clippy/tests passed, the static production build
+passed, and the exact Linux desktop package build passed after installing the
+README’s documented Tauri system dependencies. It produced DEB, RPM, and
+AppImage bundles. `npm run verify:live` and `npm run verify:release` both
+passed against this exact commit; local static JS, CSS, hero, and service-worker
+hashes match the live deployment.
+
+Live QA confirmed the one-click sample, local/demo separation, edit/export and
+boundary/error recovery, durable one-time server-attested approval receipt,
+tamper detection, same-origin worklog flow, no tracking/capture activity,
+60-read/12-write minute rate limits with 429 `Retry-After: 60`, mobile and
+keyboard use, zero serious/critical Axe findings, offline reload/service-worker
+stale-cache cleanup, and Lighthouse 99 performance / 100 accessibility / 100
+best-practices / 100 SEO. See `.factory/verification-15.md` for exact commands
+and evidence.
+
+Known operational constraint: desktop preview artifacts are unsigned unless an
+operator supplies the documented signing credentials. No product defects were
+found.
+
+---
+
 # Worklog Bridge — repair 15 handoff
 
 ## Scope and release candidate
