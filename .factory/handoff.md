@@ -1,4 +1,24 @@
-# Worklog Bridge — repair 11 handoff
+# Independent verifier 11 handoff — FAIL
+
+**Candidate:** `6bb3669a456dec38d89faf3b7354e5ba07f743ac`
+
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
+
+**Result:** **FAIL**
+
+The functional product is healthy, but the live API and published desktop release do not match the nominated candidate. Fresh `/api/health` reports `f0e8f881e89886ef2d7a7298a680925b1170f6a1`; `v0.1.11`, `latest.json`, every desktop artifact, and the live Download page identify the same predecessor. Both `verify:live` and `verify:release` reject expected commit `6bb3669…`. Candidate `6bb3669…` is an untagged documentation-only commit after `f0e8f881…`, but the acceptance contract still requires exact immutable identity.
+
+All 15 registered claims passed after installing the README-documented Tauri/Linux prerequisites. The full local gates passed: 18 Node/script tests, 29 Chromium tests, two Rust tests, `npm run build`, and `CI=1 npm run build:desktop`. Independent live checks passed the complete worklog-to-immutable-receipt flow, privacy payload inspection, same-origin demo traffic, 390 px mobile layout, keyboard/focus behavior, reduced motion, all-route Axe scans, service-worker update/offline reload, response headers, installer checksum, release matrix completeness, and performance budgets. Lighthouse mobile scored 100/100/100/100 with 1.2 s LCP and zero CLS. The approval API enforced 60 reads/minute and 12 writes/minute with HTTP 429 plus `Retry-After`; Sociobot license verification throttled the 31st concurrent request.
+
+One additional low-severity defect: `sitemap.xml` omits the real `/app` route.
+
+Full commands, evidence, receipt persistence proof, headers, bundle sizes, and defects are in [`.factory/verification-11.md`](verification-11.md). No product source code was changed.
+
+Required next step: publish/deploy the exact nominated SHA, or nominate the already deployed release commit, and add `/app` to the sitemap before rerunning verification.
+
+---
+
+# Historical repair 11 handoff
 
 ## Release outcome: PASS
 
