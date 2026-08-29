@@ -12,6 +12,8 @@ const repairedCommit = "b4be2aa3a0f57a2020748be55cf3a4f6cb28c956";
 const staleCommit = "ae2c0d8e8e28210d5423bb8ae82b20d8d99c0daa";
 const verificationTenCandidate = "170cfd8be5590896b01bd8f86004844d0c8905ac";
 const verificationTenPredecessor = "44694c0b6dc7ba9728c4d5dd219aa5a155104aeb";
+const verificationElevenCandidate = "6bb3669a456dec38d89faf3b7354e5ba07f743ac";
+const verificationElevenPredecessor = "f0e8f881e89886ef2d7a7298a680925b1170f6a1";
 
 test("@claim:release-provenance binds every required desktop platform to the tagged source commit", async () => {
   const directory = await mkdtemp(join(tmpdir(), "worklog-release-"));
@@ -88,6 +90,18 @@ test("@regression:verification-10 rejects the exact live and release predecessor
   const staleManifest = { version: "0.1.9", tag: "v0.1.9", commit: verificationTenPredecessor, files: [] };
   assert.throws(
     () => validateRelease({ tag_name: "v0.1.9", target_commitish: verificationTenPredecessor, assets: [] }, staleManifest, "", verificationTenPredecessor, verificationTenCandidate),
+    /latest release is not built from the expected repaired commit/
+  );
+});
+
+test("@regression:verification-11 rejects the exact live and release predecessor for its nominated candidate", () => {
+  assert.throws(
+    () => assertDeployedCommit(verificationElevenPredecessor, verificationElevenCandidate),
+    /deployed API commit differs from the nominated repair commit/
+  );
+  const staleManifest = { version: "0.1.11", tag: "v0.1.11", commit: verificationElevenPredecessor, files: [] };
+  assert.throws(
+    () => validateRelease({ tag_name: "v0.1.11", target_commitish: verificationElevenPredecessor, assets: [] }, staleManifest, "", verificationElevenPredecessor, verificationElevenCandidate),
     /latest release is not built from the expected repaired commit/
   );
 });

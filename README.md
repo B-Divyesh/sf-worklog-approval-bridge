@@ -17,7 +17,7 @@ linuxdeploy's AppImage generator uses it:
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
 ```
 
 ```sh
@@ -78,7 +78,7 @@ as `WORKLOG_BUILD_COMMIT` (or its standard `BUILD_SOURCEVERSION` value).
 After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
 
 ```sh
-npm run verify:release -- --tag v0.1.11 --expected-commit "$(git rev-parse v0.1.11^{})"
+npm run verify:release -- --tag v0.1.12 --expected-commit "$(git rev-parse v0.1.12^{})"
 ```
 
 ## License

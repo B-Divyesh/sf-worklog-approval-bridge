@@ -12,3 +12,11 @@ test("@regression:static-routing serves only real SPA routes and preserves a gen
     assert.equal(rewrites.get(route), "/index.html", `${route} must remain reloadable`);
   }
 });
+
+test("@regression:verification-11-sitemap-lists-every-public-route-but-not-private-approval-links", async () => {
+  const sitemap = await readFile(new URL("../public/sitemap.xml", import.meta.url), "utf8");
+  const listedPaths = [...sitemap.matchAll(/<loc>https:\/\/worklog-approval-bridge\.sociobot\.in([^<]+)<\/loc>/g)]
+    .map(([, path]) => path);
+  assert.deepEqual(listedPaths, ["/", "/demo", "/app", "/privacy", "/terms", "/download"]);
+  assert.equal(listedPaths.includes("/approve"), false, "approval packets are private fragment URLs and must not be indexed");
+});

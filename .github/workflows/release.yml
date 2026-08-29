@@ -8,7 +8,7 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.11
+        default: v0.1.12
       source_commit:
         description: Full immutable source commit to package and release
         required: true
