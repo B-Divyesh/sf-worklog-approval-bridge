@@ -1,3 +1,24 @@
+# Worklog Bridge verification-4 handoff — FAIL
+
+**Candidate:** `3663d67c5ce54ad2c1d5e94b8d6903ab4c5a5571`
+**Live URL:** https://worklog-approval-bridge.sociobot.in
+**Decision (2026-08-29): FAIL — do not release.**
+
+Independent QA found a serious Axe keyboard failure at 390px on `/download`:
+both horizontally scrolling installer command regions are unfocusable. The
+real `/missing-page` also logs a browser console error, and the visible promise
+that installers verify SHA-256 checksums has no claim-registry test. Full
+evidence, passing claims, functional flow, privacy/network evidence, rate
+limit evidence, headers, release checksum, and repair steps are in
+`.factory/verification-4.md`.
+
+The candidate otherwise passed `npm test`, the full Rust suite, production
+site build, desktop packaging, live privacy/acceptance/offline checks, and
+release checksum verification after the documented Linux Tauri prerequisites
+were installed. Repair the three findings and obtain a new independent QA run.
+
+---
+
 # Worklog Bridge repair handoff
 
 ## Repair scope
