@@ -7,7 +7,8 @@ cumulative reports in `.factory/review-1.md`, `.factory/review-2.md`, and
 ## Evidence keys
 
 - **C** — Every one of the 22 exact `.factory/claims.json` commands passed
-  independently in a fresh clone at `/tmp/worklog-polish-3-clean.cRU0Sm/repo`.
+  independently in a fresh clone at `/tmp/worklog-polish-3-final.RTX8Dl/repo`
+  of repair commit `47a2c6b969886cd9033c288354a0d2f1aee6b32c`.
 - **T** — `npm test`, `cargo test --manifest-path src-tauri/Cargo.toml`, and
   `CI=1 npm run build:desktop` passed for 0.1.21. The desktop build wrote the
   Linux AppImage, DEB, and RPM bundles.
@@ -16,10 +17,14 @@ cumulative reports in `.factory/review-1.md`, `.factory/review-2.md`, and
   metadata, history, and genuine-404 regressions in `tests/claims.spec.ts`.
 - **S** — Clipboard-denial screenshot:
   `/tmp/worklog-polish-3/local-clipboard-fallback.png` (390 × 844).
-- **L** — Cold live checks after deployment: `/`, `/?demo=1`, `/demo`,
-  `/app`, `/privacy`, `/terms`, `/download`, `/approve?demo=1`, and an
-  unknown URL; screenshots and verifier output are recorded in
-  `/tmp/worklog-polish-3/live/`.
+- **L** — Cold live audit, 29 August 2026 UTC: `npm run verify:live --
+  --expected-commit 47a2c6b969886cd9033c288354a0d2f1aee6b32c` passed against
+  `https://worklog-approval-bridge.sociobot.in`. `verify-url.sh` passed `/`,
+  `/?demo=1`, `/demo`, `/privacy`, `/terms`, and `/download` with no browser errors;
+  `/missing-page` is HTTP 404 and renders its recovery heading. The
+  new-context rejected-Clipboard API check passed at `/demo`; evidence is
+  `/tmp/worklog-polish-3/live/clipboard-denial-390.png` and
+  `/tmp/worklog-polish-3/live/clipboard-denial.json`.
 
 ## Finding closure
 
@@ -65,8 +70,8 @@ cumulative reports in `.factory/review-1.md`, `.factory/review-2.md`, and
 | F-2-4 | Kept route-specific title, description, canonical, Open Graph, and Twitter metadata. | A `routes set specific metadata and the 404 uses plain recovery copy`; L all routes |
 | F-2-5 | Kept **entry** for the editable unit and **worklog** for the finished record. | `.factory/copy-audit.md`; L `/`, `/demo` |
 | F-2-6 | Kept receipt wording plain and specific to the accepted worklog. | `.factory/copy-audit.md`; C `@claim:approval-receipt`; L `/` |
-| F-2-7 | Kept the genuine 404 as “Page not found” with a Return home link. | A route/404 regression; L `/not-a-real-page` |
-| F-3-1 | Added an accessible clipboard-denial recovery dialog. It selects a labelled read-only approval URL and says “Copy this approval link, then send it to your client.” The status supplies a plain next step; raw browser exceptions are never shown. | A `@regression:clipboard-denial shows a selected approval link without browser error text`; S; L `/?demo=1` |
+| F-2-7 | Kept the genuine 404 as “Page not found” with a Return home link. | A route/404 regression; L `/missing-page` |
+| F-3-1 | Added an accessible clipboard-denial recovery dialog. It selects a labelled read-only approval URL and says “Copy this approval link, then send it to your client.” The status supplies a plain next step; raw browser exceptions are never shown. | A `@regression:clipboard-denial shows a selected approval link without browser error text`; S; L `/demo` |
 
 ## Round-3 additions
 

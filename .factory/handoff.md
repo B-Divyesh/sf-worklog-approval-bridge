@@ -16,9 +16,9 @@ production API. The catalog description is verb-first and 74 characters.
 
 ## Verification
 
-- Fresh clone: `/tmp/worklog-polish-3-clean.cRU0Sm/repo` ran all 22 exact
-  commands in `.factory/claims.json` separately and ended with
-  `ALL_CLAIMS_PASSED 22`.
+- Fresh clone: `/tmp/worklog-polish-3-final.RTX8Dl/repo` checked out repair
+  commit `47a2c6b969886cd9033c288354a0d2f1aee6b32c`, ran all 22 exact commands
+  in `.factory/claims.json` separately, and ended with `ALL_CLAIMS_PASSED 22`.
 - Full local suite: `npm test` passed 27 Node/service/workflow tests and 37
   Chromium tests, including the new clipboard-denial regression.
 - Native suite: `cargo test --manifest-path src-tauri/Cargo.toml` passed 2
@@ -35,9 +35,18 @@ production API. The catalog description is verb-first and 74 characters.
 - Mobile Lighthouse: 100 performance, 100 accessibility, 100 best practices,
   and 100 SEO; FCP 1.1 s, LCP 1.4 s, CLS 0. Evidence:
   `/tmp/worklog-polish-3/lighthouse/mobile-stable.json`.
-- Post-deploy cold checks and live evidence are recorded in
-  `/tmp/worklog-polish-3/live/`; see `.factory/polish-3.md` for the full
-  finding-by-finding matrix.
+- Production: `npm run verify:live -- --expected-commit
+  47a2c6b969886cd9033c288354a0d2f1aee6b32c` passed against
+  `https://worklog-approval-bridge.sociobot.in`; it checks hosted checkout,
+  API identity, demo isolation, a real approval lookup, and the HTTP 404.
+  `/opt/fleet/lib/verify-url.sh` then passed cold root, demo, privacy, terms,
+  and download routes with zero console errors, one `h1`, `lang=en`, a main
+  landmark, and no missing alt text or unlabelled buttons. The live Axe sweep
+  found zero serious or critical violations on those routes and the 404.
+  The 390 px clipboard-denial evidence is
+  `/tmp/worklog-polish-3/live/clipboard-denial-390.png` and its JSON asserts
+  the selected manual URL with no raw error. Full live evidence is in
+  `/tmp/worklog-polish-3/live/`; see `.factory/polish-3.md` for the mapping.
 
 ## Run and verify
 
@@ -72,10 +81,14 @@ this repository.
 
 ## Release and deployment
 
-The repair is tagged `v0.1.21` from the final repair commit. The GitHub Actions
-release workflow builds macOS Intel/Apple Silicon, Windows, and Linux assets,
-then publishes SHA256SUMS and latest.json with immutable provenance. The static
-site is deployed from `dist/site` through this work order's static target.
+Repair commit `47a2c6b969886cd9033c288354a0d2f1aee6b32c` is tagged `v0.1.21`.
+GitHub Actions run `33280857088` completed successfully for macOS Intel/Apple
+Silicon, Windows, and Linux, publishing SHA256SUMS and latest.json. `npm run
+verify:release -- --tag v0.1.21 --expected-commit 47a2c6b969886cd9033c288354a0d2f1aee6b32c`
+downloaded and verified `Worklog.Bridge_0.1.21_amd64.deb` as
+`5951f4fd9d33ce6cc9d129fccc620bc62957130e939a7aefc12afeadaf8461ed`.
+The static site and Functions API were deployed through the configured Azure
+Static Web App; `/api/health` now identifies version 0.1.21 and this commit.
 
 ## Known gaps
 
