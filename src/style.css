@@ -186,6 +186,7 @@ input::placeholder, textarea::placeholder { color: #768294; }
 .empty-state { padding: 64px 24px; text-align: center; }
 .empty-lantern { width: 58px; height: 72px; margin: 0 auto 20px; border: 2px solid var(--lantern); border-radius: 45%; box-shadow: 0 0 26px rgba(255,189,74,.25); }
 .empty-state p { max-width: 460px; margin-inline: auto; color: var(--smoke); }
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 24px; }
 .review-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; border-top: 1px solid var(--line); background: #101722; }
 .review-bar p { margin: 0; color: var(--smoke); font-size: 13px; }
 .review-actions { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -271,6 +272,8 @@ input::placeholder, textarea::placeholder { color: #768294; }
   .review-bar { align-items: stretch; flex-direction: column; }
   .review-actions { flex-direction: column; }
   .review-actions > * { width: 100%; }
+  .empty-actions { align-items: stretch; flex-direction: column; }
+  .empty-actions > * { width: 100%; }
   .modal-actions { flex-direction: column-reverse; }
   .approval-sheet .entry-row { grid-template-columns: 1fr auto; }
 }

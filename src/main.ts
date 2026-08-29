@@ -82,7 +82,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v${__WORKLOG_VERSION__} · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready weekly record.</p><p class="build-id">v${__WORKLOG_VERSION__} · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -92,32 +92,31 @@ function landing() {
   return `${header("home")}<main id="main">
     <section class="hero"><div class="shell hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">Local work evidence · client approval</p>
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
         <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Nothing is saved to your real data.</p></div>
-        <ul class="facts"><li>Worklog details stay on this device</li><li>Saved work stays available offline after the first visit</li><li>Free core tools · Pro is $12 per user each month</li></ul>
+        <ul class="facts"><li>Worklog details stay on this device</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
         <picture><source srcset="/assets/night-market-bridge-768.webp 768w, /assets/night-market-bridge-1280.webp 1280w" type="image/webp"><img src="/assets/night-market-bridge-1280.webp" width="1280" height="853" alt="Paper work tickets move along a rail toward an approval stamp in a night market stall." fetchpriority="high" decoding="async"></picture>
-        <figcaption class="image-note">Your selected traces move through one review rail.</figcaption>
+        <figcaption class="image-note">Review selected Git commits and calendar events before sharing.</figcaption>
       </figure>
     </div></section>
     <section class="preview-section" aria-labelledby="preview-title"><div class="shell">
-      <div class="section-head"><p class="eyebrow">A weekly record, already in motion</p><h2 id="preview-title">See the whole handoff before you share</h2><p class="lede">The sample moves from selected evidence to plain client language.</p></div>
+      <div class="section-head"><p class="eyebrow">Sample weekly worklog</p><h2 id="preview-title">Preview the worklog before sharing</h2><p class="lede">The sample shows selected commits and events rewritten for a client.</p></div>
       <div class="rail" aria-label="Three-screen product walkthrough">
-        <article class="rail-stage"><span class="stage-number">SCREEN 01 · SELECT</span><h3>Choose the traces</h3><div class="source-ticket"><strong>northstar-portal</strong><small>4 Git commits selected</small></div><div class="source-ticket"><strong>Delivery calendar</strong><small>2 client events selected</small></div></article>
+        <article class="rail-stage"><span class="stage-number">SCREEN 01 · SELECT</span><h3>Select Git commits and calendar events</h3><div class="source-ticket"><strong>northstar-portal</strong><small>4 Git commits selected</small></div><div class="source-ticket"><strong>Delivery calendar</strong><small>2 client events selected</small></div></article>
         <article class="rail-stage"><span class="stage-number">SCREEN 02 · REVIEW</span><h3>Write what the client needs</h3><div class="source-ticket"><strong>Added audit log export</strong><small>Tue · 2h 50m · Ready</small></div><div class="source-ticket"><strong>Reduced dashboard query time</strong><small>Fri · 3h 15m · Ready</small></div></article>
-        <article class="rail-stage"><span class="stage-number">SCREEN 03 · APPROVE</span><h3>Keep the receipt</h3><div class="approval-stamp">Accepted<br>28 Aug</div><p>A server-attested digest records the packet the client accepted.</p></article>
+        <article class="rail-stage"><span class="stage-number">SCREEN 03 · APPROVE</span><h3>Keep the receipt</h3><div class="approval-stamp">Accepted<br>28 Aug</div><p>The receipt identifies the exact worklog the client accepted.</p></article>
       </div>
     </div></section>
-    <section class="steps-section" aria-labelledby="steps-title"><div class="shell"><p class="eyebrow">How it works</p><h2 id="steps-title">From evidence to answer in three steps</h2><div class="steps">
+    <section class="steps-section" aria-labelledby="steps-title"><div class="shell"><p class="eyebrow">How it works</p><h2 id="steps-title">Create and approve a worklog in three steps</h2><div class="steps">
       <article class="step"><h3>Select sources</h3><p>Point the desktop app at a Git repository. Pro users can also import an ICS calendar file.</p></article>
       <article class="step"><h3>Review each line</h3><p>Set time, rewrite technical notes, and remove anything the client should not see.</p></article>
-      <article class="step"><h3>Send for approval</h3><p>Copy a private link. The client can accept it once and download a server-attested receipt.</p></article>
+      <article class="step"><h3>Send for approval</h3><p>Copy a private link. The client can accept it once and download a receipt signed by the receipt service.</p></article>
     </div></div></section>
-    <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">A boundary, not a tracker</p><h2 id="privacy-title">Only chosen evidence enters the worklog</h2><p class="lede">The app reads commit metadata and imported calendar fields. You review every shared word.</p><p>Acceptance sends only the packet digest, supplied name, and server time. The worklog stays in the private link.</p></div><div><h3>Worklog Bridge does not</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
-    <section class="pricing-section" id="pricing" aria-labelledby="pricing-title"><div class="shell"><p class="eyebrow">Simple monthly plan</p><h2 id="pricing-title">Start free, add recurring workflows</h2><div class="price-board"><div class="price-copy"><h3>Worklog Bridge Pro</h3><p class="price">$12 <span>/ user / month</span></p><p>Keep the free editor and exports. Add calendar imports and saved approval history.</p></div><div class="price-actions"><ul class="check-list"><li>ICS calendar import</li><li>Saved approval packet history</li><li>License use on another device</li></ul><a class="button mint" href="${BILLING}/checkout">Start Pro subscription</a><p><small>Sociobot/Dodo is the merchant of record. Cancel under its checkout terms.</small></p></div></div></div></section>
+    <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">What Worklog Bridge collects</p><h2 id="privacy-title">Only selected commits and calendar events enter the worklog</h2><p class="lede">The app reads commit details and imported calendar fields. You review every shared word.</p><p>Acceptance sends only the worklog identifier, supplied name, and server time. The worklog stays in the private link.</p></div><div><h3>What Worklog Bridge does not collect</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
+    <section class="pricing-section" id="pricing" aria-labelledby="pricing-title"><div class="shell"><p class="eyebrow">Monthly plan</p><h2 id="pricing-title">Free editor and Pro calendar tools</h2><div class="price-board"><div class="price-copy"><h3>Worklog Bridge Pro</h3><p class="price">$12 <span>/ user / month</span></p><p>Keep the free editor and exports. Add calendar imports and saved approval history.</p></div><div class="price-actions"><ul class="check-list"><li>ICS calendar import</li><li>Saved approval history</li></ul><a class="button mint" href="${BILLING}/checkout">Start Pro subscription</a><p><small>Subscriptions open in Sociobot checkout.</small></p></div></div></div></section>
   </main>${footer()}`;
 }
 
@@ -139,7 +138,7 @@ function appPage() {
         <section class="panel-section"><p class="panel-label">Client and week</p><div class="field"><label for="client">Client</label><input id="client" value="${esc(project.client)}" placeholder="Client name"></div><div class="field"><label for="week">Week starts</label><input id="week" type="date" value="${esc(project.week)}"></div><div class="field"><label for="rate">Hourly rate</label><input id="rate" type="number" min="0" step="1" value="${project.rate}"></div><div class="status-line" id="project-status" aria-live="polite"></div></section>
         <section class="panel-section"><p class="panel-label">Selected sources</p><form id="git-form"><label class="field" for="git-path">Repository folder</label><div class="inline-form"><input id="git-path" name="path" placeholder="/path/to/repository" required><button type="submit" class="secondary">Read Git</button></div></form><div class="status-line" id="source-status" aria-live="polite"></div>${licenseNotice()}<ul class="source-list">${project.sources.length ? project.sources.map(source => `<li><span class="source-dot" aria-hidden="true"></span>${esc(source)}</li>`).join("") : "<li>No sources selected yet.</li>"}</ul><label class="sr-only" for="ics-file">Choose an ICS calendar file</label><input class="sr-only" id="ics-file" type="file" accept=".ics,text/calendar"><button id="import-calendar" class="secondary" type="button">Import calendar file${hasPro() || isDemo() ? "" : " · Pro"}</button></section>
         <section class="panel-section"><p class="panel-label">Privacy check</p><p>No file content is shared. Approval links include only the entries shown here.</p><a href="/privacy" data-route>Read the privacy policy</a></section>
-        ${hasPro() ? `<section class="panel-section"><p class="panel-label">Saved approval history · Pro</p>${packetHistory.length ? `<ul class="source-list">${packetHistory.slice(0, 5).map(item => `<li><span class="source-dot" aria-hidden="true"></span><span>${esc(item.client || "Client worklog")}<small>${esc(item.week)} · ${esc(item.digest.slice(0, 10))}</small></span></li>`).join("")}</ul>` : `<p>No packets saved yet. Created links will appear here.</p>`}</section>` : ""}
+        ${hasPro() ? `<section class="panel-section"><p class="panel-label">Saved approval history · Pro</p>${packetHistory.length ? `<ul class="source-list">${packetHistory.slice(0, 5).map(item => `<li><span class="source-dot" aria-hidden="true"></span><span>${esc(item.client || "Client worklog")}<small>${esc(item.week)} · ${esc(item.digest.slice(0, 10))}</small></span></li>`).join("")}</ul>` : `<p>No approval links saved yet. Created links will appear here.</p>`}</section>` : ""}
       </aside>
       <section class="work-panel" aria-labelledby="entries-title">
         <div class="work-toolbar"><div><h2 id="entries-title">Entries</h2><span>${readyCount} of ${filtered.length} ready</span></div><div class="filter-group"><label class="sr-only" for="entry-filter">Filter entries</label><input id="entry-filter" type="search" placeholder="Filter entries · press /"><button id="add-entry" class="secondary" type="button">Add entry</button></div></div>
@@ -151,7 +150,7 @@ function appPage() {
 }
 
 function renderEntries(entries: Entry[]) {
-  if (!entries.length) return `<li class="empty-state"><div class="empty-lantern" aria-hidden="true"></div><h3>No work entries yet</h3><p>Add an entry or read a Git repository. Your reviewed work will appear here.</p><button type="button" class="cyan" data-empty-add>Add first entry</button></li>`;
+  if (!entries.length) return `<li class="empty-state"><div class="empty-lantern" aria-hidden="true"></div><h3>No work entries yet</h3><p>Add an entry, read a Git repository, or load a complete sample project.</p><div class="empty-actions"><button type="button" class="cyan" data-load-sample>Load sample project</button><button type="button" class="secondary" data-empty-add>Add first entry</button></div></li>`;
   return entries.map(entry => `<li class="entry-row" data-entry-id="${entry.id}">
     <span class="entry-date">${esc(new Date(`${entry.date}T12:00:00`).toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" }))}</span>
     <span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span>
@@ -165,24 +164,24 @@ function legalPage(kind: "privacy" | "terms") {
   document.title = `${privacy ? "Privacy" : "Terms"} — Worklog Bridge`;
   return `${header(kind)}<main id="main" class="legal"><article class="narrow"><p class="eyebrow">Last updated 28 August 2026</p><h1 tabindex="-1">${privacy ? "Privacy without surveillance" : "Terms for Worklog Bridge"}</h1>${privacy ? `
     <p class="lede">Worklog Bridge keeps project data in the app or browser storage you control.</p>
-    <h2>What stays on your device</h2><p>Client names, work entries, repository paths, rates, and imported events stay in local storage. The installed app reads selected Git commit metadata on your device.</p>
-    <h2>What a shared link contains</h2><p>An approval link stores the visible worklog inside the link fragment. Browsers do not send that fragment to our server. Anyone with the link can read its entries, so send it only to the intended client.</p>
-    <h2>What acceptance records</h2><p>When a client accepts, the receipt service stores only the packet digest, their supplied name, a server timestamp, and an attestation. It never receives the worklog entries or repository content.</p>
-    <h2>License checks</h2><p>If you add a Pro license, the app sends that token to the Sociobot billing API. It stores the result for one day. Checkout and refunds are handled by Sociobot/Dodo.</p>
+    <h2>What stays on your device</h2><p>Client names, work entries, repository paths, rates, and imported events stay in local storage. The installed app reads selected Git commit details on your device.</p>
+    <h2>What a shared link contains</h2><p>An approval link stores the visible worklog after the #. Browsers do not send that part of the link to our server. Anyone with the link can read its entries, so send it only to the intended client.</p>
+    <h2>What acceptance records</h2><p>When a client accepts, the receipt service stores only the worklog identifier, their supplied name, a server timestamp, and a signature. It never receives the worklog entries or repository content.</p>
+    <h2>License checks</h2><p>If you add a Pro license, the app sends that token to the Sociobot billing API. It stores the result for one day.</p>
     <h2>What we do not collect</h2><p>We do not collect screenshots, keystrokes, repository content, calendar accounts, analytics, or advertising identifiers.</p>
-    <h2>Delete your data</h2><p>Remove entries in the app or clear the site data in your browser. Uninstalling the desktop app removes access to its local data.</p>
+    <h2>Delete your data</h2><p>Remove entries in the app or clear the site data in your browser. To remove desktop data, clear the app data folder before uninstalling.</p>
     <h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p>` : `
     <p class="lede">These terms cover the Worklog Bridge website, app, and Pro subscription.</p>
     <h2>Use of the app</h2><p>You may use the app to prepare and share your own work records. You are responsible for checking entries before sharing them.</p>
-    <h2>Approval receipts</h2><p>A receipt service records the first acceptance for one packet digest. It returns a receipt ID, server timestamp, and attestation that anyone with the packet can verify. It does not verify legal identity or replace legal advice.</p>
-    <h2>Pro subscription</h2><p>Pro costs $12 per user each month. Sociobot/Dodo is the merchant of record. Billing, cancellation, and refunds follow the terms shown during checkout. A refund or cancellation may make the license inactive.</p>
+    <h2>Approval receipts</h2><p>A receipt service records the first acceptance for one worklog identifier. It returns a receipt ID, server timestamp, and signature that anyone with the worklog can verify. It does not verify legal identity or replace legal advice.</p>
+    <h2>Pro subscription</h2><p>Pro costs $12 per user each month. Subscriptions open in Sociobot checkout. A canceled subscription can make the license inactive.</p>
     <h2>No warranty</h2><p>The software is provided as available, without warranties. Keep your own copies of records needed for billing or tax purposes.</p>
     <h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> with a terms question.</p>`}</article></main>${footer()}`;
 }
 
 function downloadPage() {
   document.title = "Download — Worklog Bridge";
-  return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop app</p><h1 tabindex="-1">Install Worklog Bridge</h1><p class="lede">Choose the app for your computer. Your worklogs remain local after installation.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> The first release is unsigned. Your operating system may ask you to confirm that you trust it.</div></div></main>${footer()}`;
+  return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop preview</p><h1 tabindex="-1">Install Worklog Bridge preview</h1><p class="lede">Choose the preview app for your computer. Browser worklogs stay in this browser.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> Confirm you trust this preview before opening it.</div></div></main>${footer()}`;
 }
 
 function decodePacket(): Packet | null {
@@ -197,7 +196,7 @@ function approvalPage() {
   const packet = decodePacket();
   if (!packet) return `${header()}<main id="main" class="not-found"><div class="narrow"><p class="eyebrow">Approval link error</p><h1 tabindex="-1">This worklog link is incomplete</h1><p class="lede">The private part of the link is missing or damaged. Ask the sender to create a new approval link.</p>${routeLink("/", "Return home", "button secondary")}</div></main>${footer()}`;
   const total = packet.entries.reduce((sum, item) => sum + item.duration, 0);
-  return `${header()}<main id="main" class="approval-page"><div class="narrow"><p class="eyebrow">Client review · packet ${esc(packet.digest.slice(0, 10))}</p><h1 tabindex="-1">Review this weekly worklog</h1><p class="lede">Check each entry before you accept the record.</p><article class="approval-sheet"><header><h2>${esc(packet.client || "Client worklog")}</h2><p>Week of ${esc(packet.week)} · ${hours(total)} · ${money(total / 60 * packet.rate, packet.currency)}</p></header><ul class="entry-list">${packet.entries.map(entry => `<li class="entry-row"><span class="entry-date">${esc(entry.date)}</span><span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span><span class="entry-duration">${hours(entry.duration)}</span></li>`).join("")}</ul><form class="approval-form" id="approval-form"><h2>Accept this worklog</h2><p>The receipt service records your name, this packet digest, and its server time. It never receives these entries.</p><div class="field"><label for="approver">Your name</label><input id="approver" name="approver" autocomplete="name" required></div><label><input type="checkbox" name="confirmed" required> I reviewed these entries and accept this worklog.</label><div class="modal-actions"><button class="mint" type="submit">Accept and record receipt</button></div><div id="receipt-area" aria-live="polite"></div></form></article></div></main>${footer()}`;
+  return `${header()}<main id="main" class="approval-page"><div class="narrow"><p class="eyebrow">Client review · worklog ${esc(packet.digest.slice(0, 10))}</p><h1 tabindex="-1">Review this weekly worklog</h1><p class="lede">Check each entry before you accept the record.</p><article class="approval-sheet"><header><h2>${esc(packet.client || "Client worklog")}</h2><p>Week of ${esc(packet.week)} · ${hours(total)} · ${money(total / 60 * packet.rate, packet.currency)}</p></header><ul class="entry-list">${packet.entries.map(entry => `<li class="entry-row"><span class="entry-date">${esc(entry.date)}</span><span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span><span class="entry-duration">${hours(entry.duration)}</span></li>`).join("")}</ul><form class="approval-form" id="approval-form"><h2>Accept this worklog</h2><p>The receipt service records your name, this worklog identifier, and its server time. It never receives these entries.</p><div class="field"><label for="approver">Your name</label><input id="approver" name="approver" autocomplete="name" required></div><label><input type="checkbox" name="confirmed" required> I reviewed these entries and accept this worklog.</label><div class="modal-actions"><button class="mint" type="submit">Accept and record receipt</button></div><div id="receipt-area" aria-live="polite"></div></form></article></div></main>${footer()}`;
 }
 
 function notFound() {
@@ -251,6 +250,7 @@ async function verifyLicense() {
 
 function currentRoute() {
   const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/" && isDemo()) return appPage();
   if (path === "/") return landing();
   if (path === "/demo" || path === "/app") return appPage();
   if (path === "/privacy") return legalPage("privacy");
@@ -401,6 +401,7 @@ function bindApp() {
   });
   persistField("client", "client"); persistField("week", "week"); persistField("rate", "rate");
   document.querySelector("#reset-demo")?.addEventListener("click", () => { localStorage.setItem(DEMO_KEY, JSON.stringify(sampleProject())); render(); });
+  document.querySelector("[data-load-sample]")?.addEventListener("click", () => navigate("/demo"));
   document.querySelector("#add-entry")?.addEventListener("click", () => openEntryModal());
   document.querySelector("[data-empty-add]")?.addEventListener("click", () => openEntryModal());
   document.querySelectorAll<HTMLElement>("[data-edit]").forEach(button => button.addEventListener("click", () => openEntryModal(project.entries.find(entry => entry.id === button.dataset.edit))));

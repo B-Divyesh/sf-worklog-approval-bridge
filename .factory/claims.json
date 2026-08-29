@@ -1,107 +1,22 @@
 [
-  {
-    "id": "offline-reload",
-    "claim": "Saved work remains available offline after the first visit",
-    "where": "landing fact, app offline state, README",
-    "test": "npm test -- --grep @claim:offline-reload",
-    "sandbox": "fresh browser context; demo data; load once, set context offline, reload"
-  },
-  {
-    "id": "csv-export",
-    "claim": "Exports the reviewed worklog as CSV",
-    "where": "app export button, README",
-    "test": "npm test -- --grep @claim:csv-export",
-    "sandbox": "demo data; assert CSV header and six data records"
-  },
-  {
-    "id": "local-demo",
-    "claim": "The demo is isolated from real worklog data and sends no worklog data to another origin",
-    "where": "landing privacy fact, README",
-    "test": "npm test -- --grep @claim:local-demo",
-    "sandbox": "fresh browser context with a seeded real workspace; enter demo, return to real mode, and capture all requests through review and approval-link creation"
-  },
-  {
-    "id": "approval-receipt",
-    "claim": "A client can accept a shared packet once and download a server-attested receipt",
-    "where": "landing how-it-works, README",
-    "test": "npm test -- --grep @claim:approval-receipt",
-    "sandbox": "demo data; create link, open it, accept, reload the exact URL, and inspect the returned receipt ID and attestation"
-  },
-  {
-    "id": "worklog-details-local",
-    "claim": "Worklog details stay on the device; acceptance submits only the packet digest and supplied name",
-    "where": "landing facts, privacy section, privacy policy",
-    "test": "npm test -- --grep @claim:worklog-details-local",
-    "sandbox": "demo data; intercept the same-origin acceptance request and assert its exact two-field body contains no worklog text"
-  },
-  {
-    "id": "no-surveillance",
-    "claim": "The product does not collect screenshots, keystrokes, or timer activity",
-    "where": "landing facts and privacy section",
-    "test": "npm test -- --grep @claim:no-surveillance",
-    "sandbox": "fresh demo; record capture API calls and outbound requests while completing the main flow"
-  },
-  {
-    "id": "calendar-import",
-    "claim": "Lets you choose ICS events from the selected work week",
-    "where": "landing how-it-works, README",
-    "test": "npm test -- --grep @claim:calendar-import",
-    "sandbox": "fresh demo; provide in-week and next-week ICS events, assert only the in-week event can be selected and imported"
-  },
-  {
-    "id": "git-metadata",
-    "claim": "Reads hash, date, and subject metadata from a selected local Git repository",
-    "where": "landing privacy section, README",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_git_metadata",
-    "sandbox": "temporary Git repository with one local commit; no network"
-  },
-  {
-    "id": "no-repository-upload",
-    "claim": "Reading a selected repository does not upload it",
-    "where": "landing privacy section, privacy policy",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_no_repository_upload",
-    "sandbox": "temporary repository with a configured loopback Git remote; collect metadata and assert no remote connection is opened"
-  },
-  {
-    "id": "license-unlock",
-    "claim": "Only a current valid Sociobot license enables Pro features; a valid verdict is cached for one day",
-    "where": "pricing, README",
-    "test": "npm test -- --grep @claim:license-unlock",
-    "sandbox": "fresh app storage; mocked valid, invalid, expired, revoked, absent, offline, and 24-hour-boundary verdicts; no live checkout or billing"
-  },
-  {
-    "id": "sample-counts",
-    "claim": "The sample has four Git entries and two calendar entries",
-    "where": "landing walkthrough, demo documentation",
-    "test": "npm test -- --grep @claim:sample-counts",
-    "sandbox": "fresh browser context; compare landing counts with the six demo entry source labels"
-  },
-  {
-    "id": "pro-price",
-    "claim": "Pro costs $12 per user each month and includes ICS import and saved approval history",
-    "where": "landing pricing, terms, README",
-    "test": "npm test -- --grep @claim:pro-price",
-    "sandbox": "fresh browser context; assert the stated price, listed features, and Sociobot checkout route"
-  },
-  {
-    "id": "no-analytics",
-    "claim": "The sample flow sends no analytics or advertising request",
-    "where": "privacy policy, README",
-    "test": "npm test -- --grep @claim:no-analytics",
-    "sandbox": "fresh demo; capture all browser requests through export and approval-link creation and assert only the product origin"
-  },
-  {
-    "id": "installer-sha256",
-    "claim": "The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum",
-    "where": "Download page, README",
-    "test": "node --test --test-name-pattern @claim:installer-sha256 scripts/installer-verification.test.mjs",
-    "sandbox": "temporary installer fixture; mocked release metadata, asset download, and SHA256SUMS; assert matching bytes install and mismatched bytes are rejected before installation"
-  },
-  {
-    "id": "release-provenance",
-    "claim": "Every published desktop platform is tied to the immutable release source commit",
-    "where": "Download page, latest.json, README",
-    "test": "node --test --test-name-pattern @claim:release-provenance scripts/release-provenance.test.mjs",
-    "sandbox": "temporary macOS x64/arm64, Windows, AppImage, and DEB fixtures; record each matrix build checksum and commit; reject one stale platform; assert latest.json covers every downloadable artifact at the nominated commit"
-  }
+  {"id":"offline-reload","claim":"Saved work remains available offline after the first visit","where":"landing fact, app offline state, README","test":"npm test -- --grep @claim:offline-reload","sandbox":"fresh browser context; demo data; load once, set context offline, reload"},
+  {"id":"csv-export","claim":"Exports the reviewed worklog as CSV","where":"app export button, README","test":"npm test -- --grep @claim:csv-export","sandbox":"demo data; assert CSV header and six data records"},
+  {"id":"local-demo","claim":"The demo is isolated from real worklog data and sends worklog data only to this site","where":"landing privacy fact, README","test":"npm test -- --grep @claim:local-demo","sandbox":"seed real workspace; enter, edit, reset, and leave demo while recording requests"},
+  {"id":"desktop-sample-project","claim":"The installed app can load the isolated six-entry sample from its first-run screen","where":"desktop empty state, demo documentation","test":"npm test -- --grep @claim:desktop-sample-project","sandbox":"fresh browser profile at the configured /app first-run route; load sample in one action"},
+  {"id":"entry-review","claim":"Lets you edit text and time, mark entries ready, remove entries, and export the reviewed result","where":"landing steps, README","test":"npm test -- --grep @claim:entry-review","sandbox":"demo data; edit, change duration, mark ready, remove, reload, and inspect CSV"},
+  {"id":"free-editor","claim":"The free editor lets an unlicensed workspace add entries and export CSV","where":"landing pricing, README","test":"npm test -- --grep @claim:free-editor","sandbox":"fresh real workspace without license; add entry and inspect downloaded CSV"},
+  {"id":"approval-receipt","claim":"A client can accept a shared worklog once and download a server-attested receipt","where":"landing how-it-works, README","test":"npm test -- --grep @claim:approval-receipt","sandbox":"demo data; create link, accept, reload, and inspect downloaded receipt"},
+  {"id":"worklog-details-local","claim":"Worklog details stay on the device; acceptance submits only the worklog identifier and supplied name","where":"landing facts, privacy section, privacy policy","test":"npm test -- --grep @claim:worklog-details-local","sandbox":"intercept acceptance request and assert its exact body excludes worklog text"},
+  {"id":"no-surveillance","claim":"The product does not collect screenshots, keystrokes, or timer activity","where":"landing facts and privacy section","test":"npm test -- --grep @claim:no-surveillance","sandbox":"fresh demo; record capture APIs and requests during the main flow"},
+  {"id":"calendar-import","claim":"Lets you choose ICS events from the selected work week","where":"landing how-it-works, README","test":"npm test -- --grep @claim:calendar-import","sandbox":"provide in-week and next-week events; assert only the in-week event can be selected"},
+  {"id":"git-metadata","claim":"Reads hash, date, and subject metadata from a selected local Git repository","where":"landing privacy section, README","test":"cargo test --manifest-path src-tauri/Cargo.toml claim_git_metadata","sandbox":"temporary Git repository with one local commit; no network"},
+  {"id":"no-repository-upload","claim":"Reading a selected repository does not upload it","where":"landing privacy section, privacy policy","test":"cargo test --manifest-path src-tauri/Cargo.toml claim_no_repository_upload","sandbox":"temporary repository with loopback remote; collect metadata and assert no remote connection"},
+  {"id":"license-unlock","claim":"Only a current valid Sociobot license enables Pro features; a valid check is cached for one day","where":"pricing, README","test":"npm test -- --grep @claim:license-unlock","sandbox":"valid, invalid, absent, expired, revoked, offline, and one-day-boundary mocked verdicts"},
+  {"id":"sample-counts","claim":"The sample has four Git entries and two calendar entries","where":"landing walkthrough, demo documentation","test":"npm test -- --grep @claim:sample-counts","sandbox":"fresh browser context; compare landing counts with demo source labels"},
+  {"id":"pro-price","claim":"Pro costs $12 per user each month, includes ICS import, and saves approval history for licensed users","where":"landing pricing, terms, README","test":"npm test -- --grep @claim:pro-price","sandbox":"mocked current license; verify price, checkout route, and saved history after a reload"},
+  {"id":"no-analytics","claim":"The sample flow sends no analytics or advertising request","where":"privacy policy, README","test":"npm test -- --grep @claim:no-analytics","sandbox":"record exact request paths through demo export and sharing; permit only shell assets"},
+  {"id":"release-discovery","claim":"The download page reads the GitHub release API, selects an immutable asset, and states when files are unavailable","where":"README, Download page","test":"npm test -- --grep @claim:release-discovery","sandbox":"mock GitHub API success and missing-immutable-commit responses; assert API-only discovery and fallback copy"},
+  {"id":"public-health-fields","claim":"The public health endpoint returns only service, version, and deployed commit","where":"README","test":"node --test --test-name-pattern @claim:public-health-fields api/test/receipt-service.test.mjs","sandbox":"build identity with a secret-looking environment value and assert exact response keys"},
+  {"id":"installer-sha256","claim":"The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum","where":"Download page, README","test":"node --test --test-name-pattern @claim:installer-sha256 scripts/installer-verification.test.mjs","sandbox":"mocked release, download, and checksum fixtures; assert mismatch stops before installation"},
+  {"id":"release-provenance","claim":"Every published desktop platform is tied to the immutable release source commit","where":"Download page, latest.json, README","test":"node --test --test-name-pattern @claim:release-provenance scripts/release-provenance.test.mjs","sandbox":"platform fixture matrix; reject one stale artifact and assert manifest coverage"}
 ]

@@ -196,7 +196,7 @@ test("@claim:calendar-import imports selected ICS events from the chosen week", 
   await expect(row).toContainText("Calendar");
 });
 
-test("@claim:license-unlock enables Pro only after a current valid verdict", async ({ page, context }) => {
+test("@claim:license-unlock enables Pro only after a current valid verdict and only uses a fresh cache offline", async ({ page, context }) => {
   let verifyCalls = 0;
   await page.route("https://api.sociobot.in/**", async route => {
     verifyCalls++;
@@ -211,6 +211,34 @@ test("@claim:license-unlock enables Pro only after a current valid verdict", asy
   expect(verifyCalls).toBe(1);
   await page.goto("/#pricing");
   await expect(page.locator(".price")).toContainText("$12 / user / month");
+  await page.goto("/app");
+  await page.unroute("https://api.sociobot.in/**");
+  await context.setOffline(true);
+  for (const verdict of [
+    null,
+    { valid: false, reason: "invalid", checkedAt: Date.now() },
+    { valid: true, reason: "expired", checkedAt: Date.now(), expiresAt: "2020-01-01T00:00:00Z" },
+    { valid: false, reason: "revoked", checkedAt: Date.now() }
+  ]) {
+    await page.evaluate(value => {
+      localStorage.setItem("sb_license:worklog-approval-bridge", "test-token");
+      if (value) localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify(value));
+      else localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
+    }, verdict);
+    await page.reload();
+    await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
+  }
+  await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" })));
+  await page.reload();
+  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
+  await context.setOffline(false);
+  await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
+  await page.route("https://api.sociobot.in/**", async route => {
+    verifyCalls++;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
+  });
+  await page.reload();
+  await expect.poll(() => verifyCalls).toBeGreaterThan(1);
 });
 
 test("@regression:an invalid token with no cached verdict cannot unlock Pro offline", async ({ page, context }) => {
@@ -279,22 +307,79 @@ test("@claim:sample-counts match the sample data", async ({ page }) => {
   await expect(page.locator("[data-entry-id]").filter({ hasText: "Calendar" })).toHaveCount(2);
 });
 
-test("@claim:pro-price states the monthly Pro price and included features", async ({ page }) => {
+test("@claim:pro-price shows the monthly price and keeps licensed approval history", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  await page.route("https://api.sociobot.in/**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) }));
   await page.goto("/#pricing");
   await expect(page.locator(".price")).toContainText("$12 / user / month");
   await expect(page.getByText("ICS calendar import")).toBeVisible();
-  await expect(page.getByText("Saved approval packet history")).toBeVisible();
+  await expect(page.getByText("Saved approval history", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Start Pro subscription" })).toHaveAttribute("href", "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout");
+  await page.goto("/app?license=licensed-test-token");
+  await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Pro history client", week: "2026-08-24", rate: 100, currency: "USD", sources: [], entries: [{ id: "history-entry", date: "2026-08-25", title: "Prepared approval history", detail: "A saved Pro history test.", source: "Manual", duration: 60, ready: true }] })));
+  await page.reload();
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  await page.reload();
+  await expect(page.getByText("Pro history client")).toBeVisible();
 });
 
 test("@claim:no-analytics sends no analytics or advertising request during the sample flow", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
-  const origins = new Set<string>();
-  page.on("request", request => origins.add(new URL(request.url()).origin));
+  const requests: string[] = [];
+  page.on("request", request => requests.push(new URL(request.url()).pathname));
   await page.goto("/demo");
   await page.getByRole("button", { name: "Export CSV" }).click();
   await page.getByRole("button", { name: "Copy approval link" }).click();
-  expect([...origins]).toEqual(["http://127.0.0.1:4173"]);
+  expect(requests.every(path => path === "/demo" || path === "/favicon.svg" || path === "/service-worker.js" || path.startsWith("/src/") || path.startsWith("/@") || path.startsWith("/node_modules/") || path.startsWith("/assets/"))).toBe(true);
+  expect(requests.some(path => /analytics|advertis|collect|events|telemetry/i.test(path))).toBe(false);
+});
+
+test("@claim:entry-review saves edits, time, readiness, removal, and the resulting export", async ({ page }) => {
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Edit Investigated slow dashboard queries" }).click();
+  await page.getByLabel("Client-ready summary").fill("Reviewed dashboard query delay");
+  await page.getByLabel("Minutes").fill("150");
+  await page.getByLabel("Ready to share").check();
+  await page.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByText("Reviewed dashboard query delay")).toBeVisible();
+  await expect(page.locator("[data-entry-id]", { hasText: "Reviewed dashboard query delay" })).toContainText("2h 30m");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Remove Release review" }).click();
+  await page.reload();
+  await expect(page.getByText("Reviewed dashboard query delay")).toBeVisible();
+  await expect(page.getByText("Release review")).toHaveCount(0);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  const stream = await (await downloadPromise).createReadStream();
+  let csv = ""; for await (const chunk of stream!) csv += chunk.toString();
+  expect(csv).toContain("Reviewed dashboard query delay");
+  expect(csv).not.toContain("Release review");
+});
+
+test("@claim:free-editor lets an unlicensed workspace edit and export", async ({ page }) => {
+  await page.goto("/app");
+  await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add entry" }).click();
+  await page.getByLabel("Client-ready summary").fill("Unlicensed editor entry");
+  await page.getByRole("button", { name: "Save entry" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  const stream = await (await downloadPromise).createReadStream();
+  let csv = ""; for await (const chunk of stream!) csv += chunk.toString();
+  expect(csv).toContain("Unlicensed editor entry");
+});
+
+test("@claim:desktop-sample-project loads the isolated sample from the configured first-run route", async ({ page }) => {
+  await page.goto("/app");
+  await expect(page.getByRole("button", { name: "Load sample project" })).toBeVisible();
+  await page.getByRole("button", { name: "Load sample project" }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+  await expect(page.locator("[data-entry-id]")).toHaveCount(6);
+  expect(await page.evaluate(() => localStorage.getItem("worklog-bridge:project"))).toBeNull();
+  await page.goto("/?demo=1");
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+  await expect(page.locator("[data-entry-id]")).toHaveCount(6);
 });
 
 test("landing and routes meet the semantic and serious accessibility baseline", async ({ page }) => {
@@ -323,7 +408,7 @@ test("@regression:landing-keeps-privacy-offline-and-price-facts-in-the-first-des
   for (const fact of [
     "Worklog details stay on this device",
     "Saved work stays available offline after the first visit",
-    "Free core tools · Pro is $12 per user each month"
+    "Free editor and exports · Pro is $12 per user each month"
   ]) {
     const box = await page.getByText(fact, { exact: true }).boundingBox();
     expect(box, fact).not.toBeNull();
@@ -421,7 +506,7 @@ test("@regression:approval-route-has-no-serious-or-critical-axe-violations", asy
   expect(results.violations.filter(item => ["serious", "critical"].includes(item.impact || ""))).toEqual([]);
 });
 
-test("download selects an asset from an immutable release commit", async ({ page }) => {
+test("@claim:release-discovery reads the GitHub API, selects an immutable asset, and shows the unavailable-files state", async ({ page }) => {
   const commit = "1234567890abcdef1234567890abcdef12345678";
   const githubRequests: string[] = [];
   const releaseUrl = "https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest";
@@ -453,6 +538,20 @@ test("download selects an asset from an immutable release commit", async ({ page
   const box = await allReleaseFiles.boundingBox();
   expect(box?.width || 0).toBeGreaterThanOrEqual(44);
   expect(box?.height || 0).toBeGreaterThanOrEqual(44);
+  await page.unrouteAll();
+  await page.evaluate(async () => {
+    localStorage.removeItem("worklog-bridge:release-v4");
+    for (const registration of await navigator.serviceWorker.getRegistrations()) await registration.unregister();
+    for (const key of await caches.keys()) await caches.delete(key);
+  });
+  await page.route(/^https:\/\/api\.github\.com\/repos\/B-Divyesh\/sf-worklog-approval-bridge\//, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ tag_name: "v0.1.5", target_commitish: "main", html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.5", assets: [] })
+  }));
+  await page.goto("/download");
+  await expect(page.getByRole("heading", { name: "Downloads are being published" })).toBeVisible();
+  await expect(page.getByText("The release files are not available yet.")).toBeVisible();
 });
 
 test("download rejects a release without an immutable source commit", async ({ page }) => {

@@ -91,7 +91,7 @@ test("@regression:unaccepted-approval-lookup is a successful empty response", ()
   assert.equal(missingReceiptStatus("receipt-that-does-not-exist"), 404);
 });
 
-test("@regression:public-api-health-identity exposes only a safe version and deployed commit", () => {
+test("@claim:public-health-fields exposes only service, version, and deployed commit", () => {
   const identity = buildIdentity({ WORKLOG_BUILD_COMMIT: "ABCDEF0123456789", DATABASE_URL: "must-not-leak" });
   assert.deepEqual(identity, {
     service: "worklog-approval-bridge-receipts",
