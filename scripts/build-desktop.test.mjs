@@ -31,6 +31,7 @@ test("@regression:appimage-linuxdeploy-ci-installs-file-command", async () => {
   assert.match(workflow, /apt-get install -y file\s+libwebkit2gtk-4\.1-dev/);
   assert.doesNotMatch(workflow, /prerelease:\s*true/);
   assert.match(workflow, /source_commit:/);
+  assert.match(workflow, /source_commit:\s*\n\s*description: Full immutable source commit to package and release\s*\n\s*required: true/);
   assert.match(workflow, /inputs\.source_commit \|\| github\.sha/);
   assert.match(workflow, /build-provenance\.mjs/);
   assert.match(workflow, /target_commitish:/);

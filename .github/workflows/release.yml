@@ -8,10 +8,10 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.1.9
+        default: v0.1.10
       source_commit:
-        description: Full source commit to package (defaults to the dispatched commit)
-        required: false
+        description: Full immutable source commit to package and release
+        required: true
 
 permissions:
   contents: write
