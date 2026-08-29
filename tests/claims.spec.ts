@@ -203,6 +203,24 @@ test("mobile demo keeps its primary workflow visible", async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
+test("@regression:mobile-installer-commands are keyboard-focusable scroll regions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/download");
+  const commands = page.locator(".code-line");
+  await expect(commands).toHaveCount(2);
+  for (let index = 0; index < await commands.count(); index++) {
+    const command = commands.nth(index);
+    expect(await command.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+    await command.focus();
+    await expect(command).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => command.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+  }
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter(item => ["serious", "critical"].includes(item.impact || ""))).toEqual([]);
+});
+
 test("app supports keyboard shortcuts", async ({ page }) => {
   await page.goto("/demo");
   await page.keyboard.press("/");

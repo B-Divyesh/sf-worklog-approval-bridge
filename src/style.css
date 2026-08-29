@@ -203,6 +203,7 @@ input::placeholder, textarea::placeholder { color: #768294; }
 .download-box { margin-top: 36px; padding: 28px; border: 1px solid var(--cyan); background: var(--paper); }
 .platform-label { color: var(--smoke); font: 13px var(--mono); }
 .code-line { overflow-x: auto; padding: 14px; color: var(--mint); background: #05070a; font: 13px var(--mono); white-space: nowrap; }
+.code-line:focus-visible { outline-color: var(--focus); outline-offset: 4px; }
 .approval-sheet { margin-top: 32px; color: #17202c; background: #fffaf0; box-shadow: 12px 12px 0 rgba(99,230,255,.12); }
 .approval-sheet header { padding: 28px; border-bottom: 2px dashed #7c8794; }
 .approval-sheet h2 { color: #111722; }

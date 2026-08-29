@@ -68,5 +68,12 @@
     "where": "pricing, README",
     "test": "npm test -- --grep @claim:license-unlock",
     "sandbox": "fresh app storage; mocked Sociobot verification response; no live checkout or billing"
+  },
+  {
+    "id": "installer-sha256",
+    "claim": "The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum",
+    "where": "Download page, README",
+    "test": "node --test --test-name-pattern @claim:installer-sha256 scripts/installer-verification.test.mjs",
+    "sandbox": "temporary installer fixture; mocked release metadata, asset download, and SHA256SUMS; assert matching bytes install and mismatched bytes are rejected before installation"
   }
 ]

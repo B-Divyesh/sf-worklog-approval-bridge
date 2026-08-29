@@ -68,7 +68,7 @@ See `/privacy` and `/terms` in the site. The night-market design and generated-i
 
 `npm run build:site` writes `dist/site/index.html`. Deploy that directory as the static site. `.github/workflows/release.yml` builds unsigned macOS Intel/Apple Silicon, Windows, and Linux bundles for `v*` tags. It publishes `SHA256SUMS` and `latest.json` with the GitHub Release.
 
-The site reads release metadata from the GitHub API and falls back to a calm publishing message. It never fetches a GitHub redirect URL. `/install.sh` and `/install.ps1` verify release checksums before installation.
+The site reads release metadata from the GitHub API and falls back to a calm publishing message. It never fetches a GitHub redirect URL. The macOS and Linux `/install.sh` installer rejects a release file when its SHA-256 does not match the published checksum.
 
 ## License
 
