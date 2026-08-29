@@ -71,16 +71,19 @@ CI=1 npm run build:desktop
 
 ## Deployment and live confirmation
 
-Deploy `dist/site` with `api` as the managed Function app to Static Web App
-`sf-worklog-approval-bridge` in resource group `sociobot`, then run:
+Commit `3eec79a` was pushed to `main` and deployed on 2026-08-29 to Static
+Web App `sf-worklog-approval-bridge` in resource group `sociobot`, with
+`dist/site` and the managed `api` Function app. The post-deploy command was:
 
 ```sh
 npm run verify:live
 ```
 
-That check creates a unique sample approval packet, confirms its initial
-receipt check emits no browser error, and verifies `/missing-page` returns
-HTTP 404 while rendering the designed return-home page.
+It passed against `https://worklog-approval-bridge.sociobot.in`: the script
+created a unique sample approval packet, confirmed its initial receipt check
+emitted no browser error, and verified `/missing-page` returns HTTP 404 while
+rendering the designed return-home page. Direct live checks also returned 200
+for `/approve` and 404 for `/missing-page`.
 
 ## Known gaps / operator action
 
