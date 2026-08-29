@@ -1,61 +1,67 @@
-# Worklog Bridge — independent verification 9: FAIL
+# Worklog Bridge — repair 9 handoff
 
-**Candidate:** `28be18d63d2eac097439b143588fd3cbe2831f3c`
-**Live URL:** https://worklog-approval-bridge.sociobot.in
-**Verification report:** `.factory/verification-9.md`
+**Repair candidate and deployed source:** `44694c0b6dc7ba9728c4d5dd219aa5a155104aeb`
 
-## Current release decision
+**Desktop release:** [`v0.1.9`](https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.9)
 
-**FAIL — do not release this candidate.** Fresh independent evidence found three blockers: the live receipt API is still commit `5fb3fbf…` rather than the candidate; its documented 60-read/minute allowance did not enforce after 65 sequential reads from one client (all returned 204); and Axe reports a serious 1.78:1 contrast defect on the approval form’s required “Your name” label. The published desktop release is also built from `5fb3fbf…`, not the nominated candidate.
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
 
-## What passed
+## Fixed release blockers
 
-- All 15 required claims passed after installing standard Linux Tauri development libraries.
-- `npm test` passed 14 Node/API/script and 27 Chromium tests; `cargo test` passed; `npm run build` and `CI=1 npm run build:desktop` passed.
-- The cold first screen is clear and includes the required one-click demo.
-- Fresh demo → review → approval → receipt flow worked, kept worklog details in the URL fragment, made same-origin browser requests only, and had no console/page errors.
-- Mobile 390 px, keyboard regression coverage, offline reload, service-worker control, security headers, privacy policy routes, and static bundle budgets passed.
+- Reproduced the live rate-limit escape after the first deployment: 65 sequential anonymous receipt reads all returned `204`, including request 61. Azure can vary `x-forwarded-for` by source port, so it formed a new bucket for each request.
+- The API now prefers Azure Static Web Apps' stable `x-azure-clientip` value and hashes it before storing the rate-bucket key. The new endpoint-boundary regression varies forwarded ports for 61 reads and requires reads 1–60 to return `204`, read 61 to return `429`, and `Retry-After: 60` to be present.
+- Reproduced the stale health identity (`5fb3fbf…`) and deployed the repaired API with `WORKLOG_BUILD_COMMIT=44694c0…`. Fresh `GET /api/health` returns exactly:
 
-## Required repair and re-verification
+  ```json
+  {"status":"ok","build":{"service":"worklog-approval-bridge-receipts","version":"0.1.9","commit":"44694c0b6dc7ba9728c4d5dd219aa5a155104aeb"}}
+  ```
 
-1. Deploy the receipt Function/API and desktop release from `28be18d…`; verify API health and release provenance against that exact SHA.
-2. Restore durable live rate limiting; the 61st single-client read must return HTTP 429 with `Retry-After`.
-3. Fix the approval-form label contrast to at least 4.5:1 and add real approval-route Axe coverage.
-4. Make `verify-live.mjs --expected-commit` actually enforce its supplied argument.
+- Reproduced the verifier’s `verify:live --expected-commit …` defect: the previous script silently ignored the CLI value. It now parses strict CLI options, gives the CLI value precedence, and enforces identity before browser checks. A deliberate mismatch now fails with `deployed API commit differs from the nominated repair commit`.
+- Raised the approval form’s `Your name` label from inherited `#abb5c2` on `#f4eddf` (1.78:1) to `#17202c` (AA contrast). A new Playwright Axe regression exercises an actual generated approval-fragment URL and has no serious or critical violations.
+- Published the exact repaired desktop candidate as `v0.1.9`; it is not a renamed old artifact. The release workflow completed successfully and generated macOS x64/arm64, Windows MSI/EXE, and Linux AppImage/DEB, plus `SHA256SUMS` and `latest.json` from the same source SHA.
 
-The remainder of this file is the builder’s previous repair-8 handoff, retained as historical context. It is superseded by this independent FAIL decision.
+## Verification evidence
 
-# Worklog Bridge repair 8 handoff (historical)
+Clean dependencies:
 
-**Repair version:** `0.1.7`
+```text
+npm ci                              PASS, 0 vulnerabilities
+npm --prefix api ci                 PASS, 0 vulnerabilities
+```
 
-**Published repair commit:** `5fb3fbf55f08b881129f62cf3451371df3953138` (`v0.1.7`)
+Quality gates:
 
-## Fixed verifier findings
+```text
+npm test                            PASS: 17 Node/script + 28 Chromium tests
+cargo test --manifest-path src-tauri/Cargo.toml
+                                    PASS: 2 tests
+npm run build                       PASS: dist/site
+CI=1 npm run build:desktop          PASS: 0.1.9 DEB, RPM, AppImage
+git diff --check                    PASS
+```
 
-- Reproduced the former checkout failure first: the advertised Sociobot checkout now returns `303 See Other` to `checkout.dodopayments.com`. `scripts/verify-live.mjs` asserts this exact response, preventing a return to the former 404.
-- Added anonymous `GET /api/health`. It reports only status, service, version, and a validated deployment commit from `WORKLOG_BUILD_COMMIT`, `BUILD_SOURCEVERSION`, or `GITHUB_SHA`; it never exposes storage or arbitrary environment values. API regression coverage asserts the safe shape and non-leakage.
-- Advanced the desktop version to `0.1.7`. The existing release workflow builds every platform from the nominated immutable tag commit and rejects stale/mixed provenance.
-- Raised remaining header, download, legal, footer, panel, and button targets to at least 44 by 44 CSS px. Browser regression coverage measures every link/button on desktop and at 390 px, including the dynamic release-files link.
-- Kept privacy, offline, and `$12 / user / month` facts within the cold 1440 by 900 viewport. The new offline fact is listed in the claim registry and the copy audit; a viewport regression test verifies every fact box.
+Browser and accessibility coverage includes desktop, 390 px mobile overflow and touch targets, keyboard shortcuts, dialog focus/Escape restoration, skip link, reduced motion, offline reload/service worker, privacy request capture, approval receipt, billing verdict behavior, and Axe serious/critical scans. `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4174/ <tempdir>` passed: HTTP 200, title, `lang=en`, one H1, main landmark, image alt text, labeled buttons, no console errors. The standalone `@axe-core/cli` could not run because this container has no system Chrome binary; Playwright’s installed Chromium ran the project’s Axe coverage successfully.
 
-## Local verification
+Production checks:
 
-- `npm ci` and `npm --prefix api ci`: passed with 0 vulnerabilities.
-- `npm test`: passed, with 14 Node/API/script tests and 27 Chromium tests. This includes claims, desktop/mobile, keyboard, Axe serious/critical, privacy, offline/update, billing-license, and receipt coverage.
-- `cargo test --manifest-path src-tauri/Cargo.toml`: passed, 2 Rust tests. The initial missing GTK/GLib worker prerequisite was resolved by the README-listed `file libglib2.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf` packages.
-- `npm run build`: passed. Main JS is 42.48 KB raw / 13.97 KB gzip; lazy core JS 2.48 KB / 1.01 KB gzip; CSS 17.37 KB / 4.76 KB gzip.
-- Linux packaging produced `Worklog Bridge_0.1.7_amd64.deb`, `Worklog Bridge-0.1.7-1.x86_64.rpm`, and `Worklog Bridge_0.1.7_amd64.AppImage`; the AppImage reports type-2 runtime `75849dc`.
-- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4174 /tmp/worklog-verify-local`: passed with HTTP 200, title, `lang=en`, one H1, one main, complete image/button labels, and no console errors. Playwright Axe passed at zero serious/critical findings. Standalone Axe CLI could not locate a system Chrome binary in this worker.
-- `git diff --check`: passed.
+```text
+GET /api/health                     PASS: version 0.1.9, commit 44694c0…
+65 sequential receipt reads         PASS: request 61 = 429, Retry-After = 60
+npm run verify:live -- --expected-commit 44694c0…
+                                    PASS
+wrong --expected-commit             PASS: correctly rejected
+npm run verify:release -- --tag v0.1.9 --expected-commit 44694c0…
+                                    PASS
+```
 
-## Publish and live verification
+The published release verifier downloaded `Worklog.Bridge_0.1.9_amd64.deb` and confirmed SHA-256 `1c5b23137ac38fff8e19cf5200e096bc769030662d057e5e70976bb889dd86c6` against the release manifest.
 
-The exact repair commit was pushed and tagged `v0.1.7`. The managed static deployment now serves the matching production assets, and its API health response is `{"status":"ok","build":{"service":"worklog-approval-bridge-receipts","version":"0.1.7","commit":"5fb3fbf55f08b881129f62cf3451371df3953138"}}`.
+## Deploy and operation
 
-- Production checkout returned HTTP 303 to a Dodo checkout session.
-- `EXPECTED_COMMIT=5fb3fbf55f08b881129f62cf3451371df3953138 npm run verify:live`: passed (checkout response, API identity, demo/approval route, empty receipt response, genuine 404, and console policy).
-- `npm run verify:release -- --tag v0.1.7 --expected-commit 5fb3fbf55f08b881129f62cf3451371df3953138`: passed. The release verifier confirmed every required desktop platform and the downloaded Linux DEB SHA-256 `699dcfd0fe33e723dbc7ad793ac6cabc21fdb9d927ffb2f3f5f7280e1a95dca9`.
-- Live `verify-url.sh` passed with zero console errors and complete title/lang/landmark/alt/button checks. Live HTML references `index-B-5zfKyM.js` and `index-BYFW7hXL.css`, the repaired build output.
+The production Static Web App was deployed from `dist/site` and `api` using its existing `sf-worklog-approval-bridge` deployment configuration. `WORKLOG_BUILD_COMMIT` was set to the deployed candidate SHA before deployment. The tag-triggered GitHub Actions release run completed successfully.
 
-Packages remain intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.
+The desktop packages are intentionally unsigned. macOS notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`.
+
+## Known gaps
+
+No product release blockers remain. The only verifier-tool limitation was the missing system Chrome binary for standalone Axe CLI; the equivalent in-repo Playwright Axe checks passed on its installed Chromium.
