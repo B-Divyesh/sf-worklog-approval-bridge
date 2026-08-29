@@ -2,6 +2,10 @@
 
 **Repair version:** `0.1.6`
 
+**Repair commit:** `2eb1c4a7fa0b09b4e4a8758c95e1c397894457fe`
+
+**Deployed URL:** https://worklog-approval-bridge.sociobot.in
+
 **Status:** Code, browser, accessibility, privacy, offline, source-selection, and local desktop-package repairs are complete. The live Sociobot billing product is still not registered, so its checkout endpoint remains a release blocker outside this repository.
 
 ## Repairs made
@@ -35,7 +39,8 @@ git diff --check
 - Local package build passed and wrote `Worklog Bridge_0.1.6_amd64.AppImage`, `Worklog Bridge_0.1.6_amd64.deb`, and `Worklog Bridge-0.1.6-1.x86_64.rpm`.
 - Browser tests exercise desktop and 390 px mobile, keyboard dialogs, Axe serious/critical scans, request privacy, offline reload, service worker cache, CSV, source selection, approval receipts, and license boundaries.
 - `verify-url.sh` passed locally with no console errors, one title/lang/h1/main, and complete image/button labeling.
-- Live routing and approval-identity checks passed against `https://worklog-approval-bridge.sociobot.in` before deployment.
+- Static deployment succeeded through the work-order configuration (Azure Static Web Apps deployment `ba60537c-bfd7-4433-ad02-50ee6f7ed096`). The live index serves repaired asset `index-DaVWlCy_.js`.
+- Post-deployment `verify-url.sh` passed in 604 ms with no console errors, one title/lang/h1/main, complete image/button labeling, and `npm run verify:live` passed the live routing and approval-identity flow.
 
 ## Known release blocker and exact evidence
 
