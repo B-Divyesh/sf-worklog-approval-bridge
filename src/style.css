@@ -251,7 +251,8 @@ input::placeholder, textarea::placeholder { color: #768294; }
   h1 { font-size: clamp(2.75rem, 14vw, 4rem); }
   .hero-grid { gap: 40px; }
   .hero-actions { align-items: stretch; flex-direction: column; }
-  .after-click { max-width: none; }
+  .after-click { max-width: none; font-size: 16px; line-height: 1.4; }
+  .facts li { font-size: 16px; }
   .preview-section, .steps-section, .privacy-section, .pricing-section { padding-block: 64px; }
   .footer-grid { flex-direction: column; }
   .demo-banner { position: relative; flex-wrap: wrap; gap: 8px; text-align: center; }

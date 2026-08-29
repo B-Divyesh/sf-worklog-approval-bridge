@@ -22,7 +22,10 @@ const command = process.platform === "win32" ? "npx.cmd" : "npx";
 // Windows cannot directly spawn a .cmd shim with Node's default CreateProcess
 // mode. Run the npx shim through cmd.exe while every other platform stays
 // shell-free.
-const child = spawn(command, ["tauri", "build", ...process.argv.slice(2)], {
+// Tauri's native runtime is intentionally opt-in so the registered Rust
+// claims can run in a clean, non-desktop worker. Every installable bundle
+// explicitly restores it here.
+const child = spawn(command, ["tauri", "build", "--features", "desktop", ...process.argv.slice(2)], {
   stdio: "inherit", env: process.env, shell: process.platform === "win32"
 });
 child.on("exit", code => process.exit(code ?? 1));

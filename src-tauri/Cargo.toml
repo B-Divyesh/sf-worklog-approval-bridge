@@ -1,6 +1,6 @@
 [package]
 name = "worklog-approval-bridge"
-version = "0.1.16"
+version = "0.1.17"
 description = "Local-first Git and calendar worklog approval app"
 authors = ["Param Factory"]
 license = "MIT"
@@ -11,12 +11,18 @@ edition = "2021"
 name = "worklog_approval_bridge_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# The Git collector is deliberately usable in the clean worker that runs the
+# registered privacy claims.  Only an installed desktop bundle needs Tauri's
+# platform webview runtime and its native system libraries.
+desktop = ["dep:tauri", "dep:tauri-build"]
+
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2", optional = true, features = [] }
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-tauri = { version = "2", features = [] }
+tauri = { version = "2", optional = true, features = [] }
 
 [profile.release]
 panic = "abort"

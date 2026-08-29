@@ -1,169 +1,92 @@
-# Worklog Bridge — verification 14 handoff — FAIL
+# Worklog Bridge — repair 14 handoff
 
-Independent verification on 29 August 2026 **FAILS** candidate
-`2ea2ddabf31be2b04b9904d33c21f2d3d81a2534` at
-<https://worklog-approval-bridge.sociobot.in>.
+## Scope and release candidate
 
-The release blocker is fresh and unambiguous: production `/api/health`, the
-latest GitHub Release `v0.1.16`, `latest.json`, and all desktop artifacts name
-`f00442c1f996be82a19a067bbba42f987f77eca1`, not the nominated candidate.
-Both `npm run verify:live -- --expected-commit 2ea2ddab...` and
-`npm run verify:release -- --tag v0.1.16 --expected-commit 2ea2ddab...` fail on
-that exact mismatch. The static live bytes match the candidate build because
-the candidate differs from `f00442c1...` only in this handoff document; exact
-release provenance still does not match.
-
-The required first claim run also produced two blocking failures before the
-documented Tauri/Linux system packages were installed: `git-metadata` and
-`no-repository-upload` could not compile because `glib-2.0.pc` was absent.
-After installing the README prerequisites, all 20 registered claims passed.
-The complete suite, Rust format/Clippy/tests, web build, and Linux desktop
-packaging passed. Live end-to-end editing, ICS boundaries and recovery, CSV,
-immutable acceptance, tamper detection, demo isolation, offline reload/update,
-keyboard, reduced motion, Axe, headers, privacy logging, installer checksum,
-concurrency, and rate limiting passed. The observed limits are 60 reads and 12
-writes per client per minute; the next request returns 429 with
-`Retry-After: 60`. Lighthouse scored 100 in every category.
-
-No product source was modified. Full commands, evidence, severities, bundle
-sizes, and the required release action are in `.factory/verification-14.md`.
-
----
-
-# Worklog Bridge — repair 13 handoff
+This repair addresses every finding in independent verification 14 for
+candidate `2ea2ddabf31be2b04b9904d33c21f2d3d81a2534`. The release candidate is
+the single source commit that contains this handoff and is tagged `v0.1.17`.
+The tag, GitHub Release target, `latest.json`, each desktop artifact, deployed
+API health response, and Download page must all identify that exact commit.
+No follow-up documentation commit is made after the tag; that prevents the
+documentation-only provenance drift found by verification 14.
 
 ## Findings repaired
 
-- **Release and deployment provenance:** version `0.1.16` is reserved for this repair. The release gate still requires its tag, GitHub Release, manifest, every platform artifact, downloaded checksum, and deployed API to identify one full commit.
-- **Exact provenance regression:** `@regression:verification-13 rejects the exact deployed and released predecessor for its nominated candidate` covers the verifier’s `1c21a77…` versus `183842c…` mismatch.
-- **Signing contract:** tag releases deterministically produce an unsigned preview, even when ambient organization secrets exist. Their build step defines no `APPLE_*` variables because Tauri treats empty variables as a signing request. A manual release signs only when `sign_release` is selected. A partly configured secret set then fails before packaging and names the missing values.
+- **Release/deployment provenance (critical):** bumped the product to `0.1.17`
+  and retained the release workflow's full-SHA checks. Publishing is only from
+  the immutable tag. Deployment sets `WORKLOG_BUILD_COMMIT` to that tag's full
+  commit before live verification. `@regression:verification-14 rejects the
+  exact deployed and released predecessor for its nominated candidate` locks
+  the documented `f00442c…` / `2ea2dda…` mismatch.
+- **Clean native claim commands (high):** Tauri and `tauri-build` are optional
+  `desktop` dependencies. The exact registered `cargo test` claims compile the
+  collector without GTK/WebKit; `scripts/build-desktop.mjs` explicitly passes
+  `--features desktop` for the installed app. The executable
+  `@regression:verification-14 exact native claim commands run before Tauri
+  prerequisites` invokes both exact claim commands from `npm test`.
+- **390 px type baseline (low):** primary action help and the three product
+  facts now compute to at least 16 px at the 390 px breakpoint while the
+  existing desktop first-viewport composition is unchanged. The browser
+  regression checks each computed size.
 
-The optional macOS set is `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. The optional Windows set is `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. Run manual release mode without `sign_release` for an unsigned preview.
+## Exact local evidence
 
-## Verification and release evidence
+- Clean install: `npm ci` (37 packages, 0 vulnerabilities) and
+  `npm --prefix api ci` (28 packages, 0 vulnerabilities) passed.
+- `npm test` passed 27 Node/script tests and 33 Chromium tests. This includes
+  all 20 registered claims, desktop and 390 px mobile behavior, keyboard,
+  dialogs, offline reload/update, privacy request checks, and zero serious or
+  critical Playwright Axe violations.
+- With `glib-2.0.pc` intentionally absent, both exact commands passed from a
+  new Cargo target directory:
+  `cargo test --manifest-path src-tauri/Cargo.toml claim_git_metadata` and
+  `cargo test --manifest-path src-tauri/Cargo.toml claim_no_repository_upload`.
+  The default claim graph has no GTK/GLib dependency.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`,
+  `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings`,
+  and `cargo test --manifest-path src-tauri/Cargo.toml` passed.
+- `npm run build` wrote `dist/site/`. Its JavaScript is 13.76 KB + 1.01 KB
+  gzip, CSS is 4.80 KB gzip, and the first-page transfer is 60 KB.
+- `CI=1 npm run build:desktop` passed and produced
+  `Worklog Bridge_0.1.17_amd64.deb` (1,674,570 bytes),
+  `Worklog Bridge-0.1.17-1.x86_64.rpm` (1,676,105 bytes), and
+  `Worklog Bridge_0.1.17_amd64.AppImage` (76,458,488 bytes).
+- The factory URL verifier passed local `/`, `/demo`, and `/privacy`: each
+  loaded without console errors and had a title, `lang=en`, one h1, main
+  landmark, alt text, and labelled buttons.
+- Local Lighthouse using the pinned Playwright Chromium reported performance,
+  accessibility, best practices, and SEO all at 100; FCP 1.0 s, LCP 1.3 s,
+  CLS 0. Playwright's Axe integration is the accessibility evidence. The
+  standalone Axe CLI was also invoked, but its bundled ChromeDriver targets
+  Chrome 152 while the worker's supplied Chromium is 145; it cannot create a
+  session. The equivalent pinned Playwright scan passed every public and
+  approval route.
+- `git diff --check` passed.
 
-- Clean install: `npm ci` and `npm --prefix api ci` passed with 0 vulnerabilities.
-- Claims: all 20 commands in `.factory/claims.json` passed independently from the clean install. The worker first needed the documented Tauri Linux packages.
-- Application suite: `npm test` passed 24 Node/script tests and 32 Chromium tests.
-- Rust: `cargo fmt --check`, Clippy with warnings denied, and both unit/claim tests passed.
-- Production site: `npm run build` passed. Main JavaScript is 13.76 KB gzip, core JavaScript is 1.01 KB gzip, and CSS is 4.79 KB gzip.
-- Desktop packaging: `CI=1 npm run build:desktop` produced the `0.1.16` Linux DEB, RPM, and AppImage.
-- Browser and accessibility: the factory URL verifier passed `/` and `/demo` with no console errors. Playwright covered desktop, 390 px mobile, keyboard, dialogs, reduced motion, offline/update behavior, and zero serious or critical Axe findings.
-- Live mobile Lighthouse: performance 100, accessibility 100, best practices 100, and SEO 100. FCP was 1,032 ms, LCP was 1,332 ms, TBT was 20 ms, and CLS was 0. The navigation-only lab run does not report INP.
+## Publish and deploy verification
 
-The first tag attempt exposed unusable ambient Apple credentials. The next showed that Tauri treats empty `APPLE_*` variables as a signing request. Neither published a release. Separate signed and unsigned build steps are the root-cause repair.
+From the commit tagged `v0.1.17`, publish the tag-triggered release and verify
+it with:
 
-- Candidate: `f00442c1f996be82a19a067bbba42f987f77eca1`; immutable tag and GitHub Release: `v0.1.16`.
-- GitHub Actions run `33261747968` passed all four platform builds and the publish job.
-- `npm run verify:release -- --tag v0.1.16 --expected-commit f00442c1f996be82a19a067bbba42f987f77eca1` passed. It downloaded and verified `Worklog.Bridge_0.1.16_amd64.deb` at SHA-256 `66bf50fe33b6cc3ec560e1a2bfb00a0350bc910db972651bfd2297d3ee5a4a75`.
-- The public installer selected `Worklog.Bridge_0.1.16_amd64.AppImage`, installed it into an isolated directory, and matched SHA-256 `245d046803aeded1381828f63a746b68336d6b93e71998a40898f5d84cc9ef34`.
-- `/opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site` deployed the same candidate. `npm run verify:live -- --expected-commit f00442c1f996be82a19a067bbba42f987f77eca1` passed.
-- Production `/api/health` reports service `worklog-approval-bridge-receipts`, version `0.1.16`, and commit `f00442c1f996be82a19a067bbba42f987f77eca1`.
-- The live Download page selects the `v0.1.16` Linux AppImage, displays source `f00442c`, and logs no error.
-- Fresh live checks returned 200 for `/`, `/demo`, `/app`, `/privacy`, `/terms`, and `/download`; the designed unknown route returned 404. Each public route had one h1, one main landmark, no console/page errors, and zero serious or critical Axe findings.
-- Production policy headers include CSP with `frame-ancestors 'none'`, HSTS, `nosniff`, strict-origin referrer policy, and disabled camera, microphone, and geolocation. Hashed assets use one-year immutable caching.
-- A fresh 61-request approval read burst returned 60 × 204 and 1 × 429. The limited response included `Retry-After: 60`.
+```sh
+npm run verify:release -- --tag v0.1.17 --expected-commit "$(git rev-parse v0.1.17^{})"
+```
+
+Deploy `dist/site` with `/opt/fleet/lib/deploy-static.sh
+worklog-approval-bridge dist/site`, set `WORKLOG_BUILD_COMMIT` to the same
+full tag commit on the managed API, then run:
+
+```sh
+npm run verify:live -- --expected-commit "$(git rev-parse v0.1.17^{})"
+```
+
+These are the release-blocking identity checks: they reject any predecessor in
+the tag, GitHub Release, artifact manifest, Download page, or `/api/health`.
 
 ## Needs operator action
 
-Add all six Apple secrets to publish signed and notarized macOS packages. Add both Windows secrets to publish Authenticode-signed Windows packages. Then run the workflow manually with `sign_release` selected. Normal tag releases remain unsigned previews as the Download page states.
-
----
-
-# Polish round 1 handoff — 29 August 2026
-
-Repair commit: `183842c6d6ca3ad9cabdc1df1a4d275db09ccaec`.
-
-This repair addresses every item in `.factory/review-1.md`: desktop first-run sample loading, direct `?demo=1`, complete claim coverage, plain-language copy, preview-safe download wording, and signing gates in the release workflow. `.factory/polish-1.md` maps each finding to a change and evidence.
-
-## Exact verification
-
-- Clean clone at `/tmp/worklog-claims-qn4xBS/repo`: `npm ci`, `npm --prefix api ci`, then all 20 registered claim commands passed.
-- `npm test`: passed (21 Node tests and 32 Chromium tests).
-- `npm run build`: passed and produced `dist/site/`; JavaScript gzip total is 14.78 KB.
-- `cargo test --manifest-path src-tauri/Cargo.toml`: passed (2 tests).
-- `/opt/fleet/lib/verify-url.sh` passed locally for `/` and `/demo`; screenshots and JSON evidence are at `/tmp/worklog-evidence/local-root/` and `/tmp/worklog-evidence/local-demo/`.
-- Playwright Axe scans found no serious or critical violations on all public routes and an approval route. The standalone Axe CLI could not launch because it expects a full Chrome binary; the Playwright Axe integration is the recorded accessibility evidence.
-- Deployment completed through `/opt/fleet/lib/deploy-static.sh worklog-approval-bridge dist/site`. A cold live check passed for `/`, `/?demo=1`, `/demo`, `/privacy`, `/terms`, and `/download`; `/missing-page` returned the intended 404. Live evidence is at `/tmp/worklog-evidence/live-root/`, `/tmp/worklog-evidence/live-demo/`, and `/tmp/worklog-evidence/live-legal/`.
-- `npm run verify:live` passed. `npm run verify:release` confirmed the existing preview release `v0.1.13` at `1c21a77c5cdb5a7d8ab0114f2e839753cdc9a5f3`; a new signed tag is intentionally required before promotion.
-
-## Release signing and deployment
-
-The release workflow now requires `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`, `WINDOWS_CERT_PFX`, and `WINDOWS_CERT_PASSWORD`. macOS bundles are verified with `codesign`, `spctl`, and stapler; Windows bundles are Authenticode-signed and verified with `signtool`. Until a signed tag is published, Download accurately labels the whole desktop offering a preview.
-
-After the main-branch push, verify the deployed routes cold: `/`, `/?demo=1`, `/demo`, `/privacy`, `/terms`, `/download`, and `/missing-page`. Record the deployed source commit before promoting a signed desktop tag.
-
----
-
-# Review 1 handoff — FAIL
-
-Adversarial first-read review 1 was completed on 29 August 2026 against repository base `4aafb0e1a9f0a8694e6523391490eedeb07d7735` and the live v0.1.13 deployment. The full report is `.factory/review-1.md`.
-
-The public first screen passes clarity at 390 px and desktop, and the browser demo is one click, populated, isolated, resettable, offline-capable, and same-origin. All 15 registered claim commands passed from a separate clean clone after installing the README-listed Tauri packages. The complete suite passed 21 Node and 29 Chromium tests; `npm run build`, live/release provenance checks, live route/link checks, `verify-url.sh`, and Axe scans also passed.
-
-The verdict remains **FAIL**. The blocking issue is the desktop first-run `/app` screen: it has no in-context **Load sample project** action and exposes the sample only through a generic header “Demo” link. High findings cover incomplete claim assertions, unlisted claims, and unsigned installers. Minor findings cover metaphor, jargon, vague headings, terminology drift, and two README sentences above 22 words.
-
-No product source was modified. Only `.factory/review-1.md` and this handoff were changed. Temporary screenshots, the clean clone, and browser evidence remain under `/tmp` and are not part of the commit.
-
----
-
-# Worklog Bridge — verification 12 handoff — PASS
-
-## Independent QA decision
-
-**PASS for `1c21a77c5cdb5a7d8ab0114f2e839753cdc9a5f3` / `v0.1.13`.** Independent verification on 29 August 2026 confirmed the live URL and published desktop release identify this exact commit. Required claims, the complete local suite, production web build, Rust claims, desktop packaging, release provenance, live privacy/browser checks, accessibility baseline, and live rate limiting passed. See `.factory/verification-12.md` for commands and evidence.
-
-The verifier did not modify product source. The only environment setup was the README-documented Tauri/Linux prerequisite install before Rust and desktop build checks. Desktop artifacts remain unsigned; operator signing certificates are still the only stated follow-up.
-
----
-
-# Worklog Bridge — repair 12 handoff
-
-## Release candidate
-
-The repair is released only from the immutable `v0.1.13` tag. This handoff is part of that tagged source so a later documentation-only commit cannot become the nominated desktop candidate. The tag, GitHub Release `target_commitish`, `latest.json`, every artifact attestation, the Download page, and the deployed `/api/health` build identity must resolve to that one tag commit.
-
-## Fixed findings from independent verification 11
-
-- **Critical release provenance:** verifier 11 correctly rejected candidate `6bb3669a456dec38d89faf3b7354e5ba07f743ac` because the deployed API, `v0.1.11`, its manifests, and the Download page identified predecessor `f0e8f881e89886ef2d7a7298a680925b1170f6a1`. Repair 12 creates a new `0.1.13` desktop release from the exact tagged repair source, and deployment sets `WORKLOG_BUILD_COMMIT` to that source commit.
-- **Sitemap completeness:** `/app` is now listed in `public/sitemap.xml`. Private `/approve#…` packet URLs remain excluded.
-- **Exact regressions:** `@regression:verification-11 rejects the exact live and release predecessor for its nominated candidate` prevents the documented `f0e8f88`/`6bb3669` identity mismatch. `@regression:verification-11-sitemap-lists-every-public-route-but-not-private-approval-links` locks the full public sitemap order and excludes approval links.
-- **Visible build identity:** the footer now receives the version from Vite's package build input instead of a hand-written value. `@regression:release-footer-version-is-derived-from-the-versioned-package-build` verifies the web footer, Tauri bundle, and health endpoint share the package version.
-
-## Local verification
-
-```text
-npm ci                                                     PASS; 0 vulnerabilities
-npm --prefix api ci                                        PASS; 0 vulnerabilities
-npm test                                                   PASS; 21 Node/script + 29 Chromium tests
-cargo test --manifest-path src-tauri/Cargo.toml            PASS; 2 Rust claim tests
-npm run build                                              PASS; dist/site
-CI=1 npm run build:desktop                                 PASS; DEB, RPM, AppImage
-/opt/fleet/lib/verify-url.sh local production preview      PASS; 200, title/lang/H1/main/alt/labels, no load errors
-git diff --check                                           PASS
-```
-
-The fresh worker initially lacked the documented Linux Tauri libraries. After running the README command (`file`, WebKitGTK, appindicator, librsvg, `patchelf`, and `rpm`), both Rust claims and the optimized desktop bundle passed without code changes.
-
-Current production build budget evidence:
-
-- JavaScript: 13,860 bytes gzip for the main chunk plus 1,010 bytes gzip core chunk.
-- CSS: 4,769 bytes gzip.
-- Linux desktop artifacts: `Worklog Bridge_0.1.13_amd64.deb` (1,674,888 bytes), `Worklog Bridge-0.1.13-1.x86_64.rpm` (1,676,446 bytes), and `Worklog Bridge_0.1.13_amd64.AppImage` (76,462,584 bytes).
-- The complete Chromium suite covers desktop and 390 px mobile layout, keyboard shortcuts and dialog Escape/focus restoration, visible skip link, reduced motion, offline reload/update, local-demo request isolation, receipt privacy payloads, no analytics, and serious/critical Axe checks across all routes.
-- The standalone Axe CLI was attempted against the local preview but the worker lacks a system Chrome binary. The project’s pinned Playwright 1.58.2 Chromium Axe integration ran instead and passed zero serious or critical violations on every route.
-
-## Release and deployment verification
-
-After the tag-triggered GitHub Actions matrix completes, run:
-
-```text
-npm run verify:release -- --tag v0.1.13 --expected-commit "$(git rev-parse v0.1.13^{})"
-npm run verify:live -- --expected-commit "$(git rev-parse v0.1.13^{})"
-```
-
-These checks require and verify the tag, GitHub Release `target_commitish`, `latest.json`, every manifest file entry, download-page source label, checksum-verified Linux DEB, and deployed API identity to use exactly the same immutable commit.
-
-## Known gaps / operator action
-
-Desktop packages are intentionally unsigned. macOS notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No product behavior is blocked by this.
+Desktop releases remain unsigned previews. Signed/notarized macOS bundles need
+`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`,
+`APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Signed Windows packages need
+`WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. A manual workflow run with
+`sign_release` is required once those certificates are available.

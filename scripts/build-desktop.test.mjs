@@ -9,6 +9,21 @@ test("@regression:ci-one-desktop-build normalises CI=1 before invoking Tauri", a
   assert.match(source, /patchGtkPlugin/);
   assert.match(source, /APPIMAGE_EXTRACT_AND_RUN/);
   assert.match(source, /shell: process\.platform === "win32"/);
+  assert.match(source, /\["tauri", "build", "--features", "desktop"/);
+});
+
+test("@regression:verification-14 native claims compile without Tauri platform libraries", async () => {
+  const [cargo, lib, main] = await Promise.all([
+    readFile(new URL("../src-tauri/Cargo.toml", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/main.rs", import.meta.url), "utf8")
+  ]);
+  assert.match(cargo, /\[features\][\s\S]*desktop = \["dep:tauri", "dep:tauri-build"\]/);
+  assert.match(cargo, /tauri = \{ version = "2", optional = true, features = \[\] \}/);
+  assert.match(cargo, /tauri-build = \{ version = "2", optional = true, features = \[\] \}/);
+  assert.match(await readFile(new URL("../src-tauri/build.rs", import.meta.url), "utf8"), /#\[cfg\(feature = "desktop"\)\]/);
+  assert.match(lib, /#\[cfg\(feature = "desktop"\)\]\n#\[tauri::command\]/);
+  assert.match(main, /#\[cfg\(not\(feature = "desktop"\)\)\]/);
 });
 
 test("@regression:appimage-linuxdeploy-plugin adds the required type probe to a partially patched cache", () => {

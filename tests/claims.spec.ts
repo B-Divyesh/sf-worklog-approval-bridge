@@ -416,6 +416,16 @@ test("@regression:landing-keeps-privacy-offline-and-price-facts-in-the-first-des
   }
 });
 
+test("@regression:verification-14 landing task copy keeps the 16px mobile baseline", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  for (const locator of [page.locator(".after-click"), page.locator(".facts li")]) {
+    const sizes = await locator.evaluateAll(nodes => nodes.map(node => getComputedStyle(node).fontSize));
+    expect(sizes).not.toHaveLength(0);
+    expect(sizes.every(size => Number.parseFloat(size) >= 16)).toBe(true);
+  }
+});
+
 test("@regression:negative hourly rate stays invalid and never reaches an approval packet", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   await page.goto("/demo");

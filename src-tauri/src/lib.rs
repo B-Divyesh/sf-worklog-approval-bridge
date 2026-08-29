@@ -3,14 +3,17 @@ use std::path::Path;
 use std::process::Command;
 
 #[derive(Serialize)]
-struct GitCommit {
+pub struct GitCommit {
     hash: String,
     date: String,
     title: String,
 }
 
-#[tauri::command]
-fn collect_git(path: String, week: String, next_week: String) -> Result<Vec<GitCommit>, String> {
+fn collect_git_impl(
+    path: String,
+    week: String,
+    next_week: String,
+) -> Result<Vec<GitCommit>, String> {
     let repo = Path::new(&path);
     if !repo.is_dir() {
         return Err("That repository folder does not exist.".into());
@@ -50,6 +53,21 @@ fn collect_git(path: String, week: String, next_week: String) -> Result<Vec<GitC
     Ok(commits)
 }
 
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn collect_git(path: String, week: String, next_week: String) -> Result<Vec<GitCommit>, String> {
+    collect_git_impl(path, week, next_week)
+}
+
+#[cfg(not(feature = "desktop"))]
+pub fn collect_git(
+    path: String,
+    week: String,
+    next_week: String,
+) -> Result<Vec<GitCommit>, String> {
+    collect_git_impl(path, week, next_week)
+}
+
 fn is_iso_day(value: &str) -> bool {
     value.len() == 10
         && value.as_bytes().get(4) == Some(&b'-')
@@ -60,6 +78,7 @@ fn is_iso_day(value: &str) -> bool {
             .all(|(index, byte)| index == 4 || index == 7 || byte.is_ascii_digit())
 }
 
+#[cfg(feature = "desktop")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
