@@ -42,7 +42,7 @@ Every finding from review rounds 1 and 2 was rechecked. Evidence paths below are
 | F-1-33 | Kept “packet digest” replaced by the specific SHA-256 worklog identifier. | README copy audit; `@claim:worklog-details-local` |
 | F-1-34 | Kept the pricing label factual: “Monthly plan.” | `.factory/copy-audit.md` |
 | F-2-1 | Demo links now include `?demo=1`. Demo acceptance and receipts use `demo:worklog-bridge:receipts`, never call `/api/approvals`, survive reload, clear on reset, and leave real data untouched. | `@claim:local-demo`; live `npm run verify:live`; `/tmp/worklog-polish-2/live-demo/` |
-| F-2-2 | History state now records scroll and focused-element index. Back/Forward restore both; new routes focus the h1 at the top. | `back and forward restore route scroll and focus` |
+| F-2-2 | History state records scroll and focused-element index. A restoration guard prevents focus events from overwriting saved positions. | `back and forward restore route scroll and focus`, 10 consecutive passes |
 | F-2-3 | Added signing behavior to the claim registry and a dedicated source/workflow/README test. | `@claim:release-signing-mode`; `.factory/claims.json` |
 | F-2-4 | Added route-specific description, Open Graph description, canonical URL, and title updates for Demo, Worklog, Download, Privacy, Terms, and 404. | `routes set specific metadata and the 404 uses plain recovery copy`; live verifier JSON under `/tmp/worklog-polish-2/live-*` |
 | F-2-5 | Standardized the editable unit as **entry** and the finished artifact as **worklog**. | `.factory/copy-audit.md` terminology table; source/README search |

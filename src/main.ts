@@ -648,7 +648,10 @@ function focusableElements() {
   return [...document.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex="0"]')];
 }
 
+let restoringHistory = false;
+
 function saveHistoryPosition() {
+  if (restoringHistory) return;
   const focusIndex = focusableElements().indexOf(document.activeElement as HTMLElement);
   history.replaceState({ ...(history.state || {}), scrollX, scrollY, focusIndex }, "");
 }
@@ -686,6 +689,7 @@ function render(transition: RouteTransition = false) {
     const status = document.querySelector<HTMLElement>("#route-status");
     if (status) status.textContent = heading?.textContent || document.title;
     requestAnimationFrame(() => {
+      restoringHistory = true;
       if (transition === "push") {
         heading?.focus({ preventScroll: true });
         restoreScroll(0, 0);
@@ -694,6 +698,8 @@ function render(transition: RouteTransition = false) {
         (target || heading)?.focus({ preventScroll: true });
         restoreScroll(transition.scrollX || 0, transition.scrollY || 0);
       }
+      restoringHistory = false;
+      saveHistoryPosition();
     });
   }
 }
