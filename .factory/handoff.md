@@ -2,11 +2,11 @@
 
 **Verifier report:** `0089569a75ff1f56e6aad1cf53ae623d63a05790` (`.factory/verification-5.md`)
 
-**Repaired candidate:** pending final commit
+**Release/source commit:** `dc3d4d68ab203e646d4b015f71ada614eb5e5b7e`
 
-**Release:** pending `v0.1.4` publication
+**Release:** [`v0.1.4`](https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.4)
 
-**Deployment:** pending static-site deployment
+**Deployment:** https://worklog-approval-bridge.sociobot.in
 
 ## Reproduced release blocker
 
@@ -71,8 +71,36 @@ CI=1 npm run build:desktop
 
 ## Release and live evidence
 
-This section will be replaced after GitHub Actions publishes `v0.1.4` and the
-static deployment is verified against its exact commit.
+- GitHub Actions run `33228940141` completed successfully: macOS x64, macOS
+  arm64, Windows x64, Linux x64, and the publish job all passed.
+- The public release contains Apple Silicon and Intel DMGs, Windows EXE and MSI,
+  Linux AppImage and DEB, `SHA256SUMS`, and valid `latest.json`.
+- `latest.json.commit`, the peeled annotated tag, `origin/main` at publication,
+  and the release source are all
+  `dc3d4d68ab203e646d4b015f71ada614eb5e5b7e`.
+- `npm run verify:release -- --tag v0.1.4 --expected-commit dc3d4d68ab203e646d4b015f71ada614eb5e5b7e`
+  passed. It downloaded `Worklog.Bridge_0.1.4_amd64.deb`; SHA-256 was
+  `b49e475e6d20365b55216b028d4f75f6c2c9edb3e03b8c52747add12e2502c20`,
+  matching both published metadata files.
+- The repaired static site and unchanged managed API deployed successfully to
+  Azure Static Web Apps deployment `3a819ace-c2a8-41a1-8a3f-e3e0354b75ce`.
+- The live JavaScript SHA-256 is
+  `7be04e9b323f7539a401637e0c9c567a5750a7319ce92ef7af37032c30d5eb43`,
+  byte-identical to `dist/site/assets/index-DCXxLqHs.js`.
+- Fresh 390 × 844 reduced-motion Chromium contexts for Linux, macOS, and Windows
+  each selected a real `v0.1.4` platform asset and displayed source `dc3d4d6`,
+  with no console errors.
+- A live five-route 390 px pass found zero serious/critical Axe violations, no
+  overflow, no unexpected request origin, and no console errors. The skip link
+  was first in keyboard order; `/demo` reloaded offline from the service worker.
+- The live service worker and local build both use cache
+  `worklog-bridge-36deab6413e0`; its response is `no-cache` while hashed assets
+  remain immutable.
+- `npm run verify:live` passed the fresh approval `204` response and real 404
+  routing. A live fixed-connection burst returned 400 for malformed writes 1–12,
+  then 429 with `Retry-After: 60` for write 13.
+- Live headers retain HSTS, `nosniff`, strict-origin referrer policy, the scoped
+  GitHub/Sociobot CSP, and camera/microphone/geolocation denial.
 
 ## Needs operator action
 
