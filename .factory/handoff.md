@@ -1,4 +1,31 @@
-# Worklog Bridge repair 8 handoff
+# Worklog Bridge — independent verification 9: FAIL
+
+**Candidate:** `28be18d63d2eac097439b143588fd3cbe2831f3c`
+**Live URL:** https://worklog-approval-bridge.sociobot.in
+**Verification report:** `.factory/verification-9.md`
+
+## Current release decision
+
+**FAIL — do not release this candidate.** Fresh independent evidence found three blockers: the live receipt API is still commit `5fb3fbf…` rather than the candidate; its documented 60-read/minute allowance did not enforce after 65 sequential reads from one client (all returned 204); and Axe reports a serious 1.78:1 contrast defect on the approval form’s required “Your name” label. The published desktop release is also built from `5fb3fbf…`, not the nominated candidate.
+
+## What passed
+
+- All 15 required claims passed after installing standard Linux Tauri development libraries.
+- `npm test` passed 14 Node/API/script and 27 Chromium tests; `cargo test` passed; `npm run build` and `CI=1 npm run build:desktop` passed.
+- The cold first screen is clear and includes the required one-click demo.
+- Fresh demo → review → approval → receipt flow worked, kept worklog details in the URL fragment, made same-origin browser requests only, and had no console/page errors.
+- Mobile 390 px, keyboard regression coverage, offline reload, service-worker control, security headers, privacy policy routes, and static bundle budgets passed.
+
+## Required repair and re-verification
+
+1. Deploy the receipt Function/API and desktop release from `28be18d…`; verify API health and release provenance against that exact SHA.
+2. Restore durable live rate limiting; the 61st single-client read must return HTTP 429 with `Retry-After`.
+3. Fix the approval-form label contrast to at least 4.5:1 and add real approval-route Axe coverage.
+4. Make `verify-live.mjs --expected-commit` actually enforce its supplied argument.
+
+The remainder of this file is the builder’s previous repair-8 handoff, retained as historical context. It is superseded by this independent FAIL decision.
+
+# Worklog Bridge repair 8 handoff (historical)
 
 **Repair version:** `0.1.7`
 
