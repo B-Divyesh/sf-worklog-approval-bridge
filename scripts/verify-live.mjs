@@ -5,6 +5,11 @@ const target = (process.env.LIVE_URL || "https://worklog-approval-bridge.sociobo
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
 const page = await context.newPage();
+const receiptLookupStatuses = [];
+page.on("response", response => {
+  const url = new URL(response.url());
+  if (url.origin === target && url.pathname === "/api/approvals" && response.request().method() === "GET") receiptLookupStatuses.push(response.status());
+});
 
 try {
   await page.goto(`${target}/demo`, { waitUntil: "networkidle" });
@@ -19,6 +24,7 @@ try {
   await page.goto(approvalLink, { waitUntil: "networkidle" });
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Review this weekly worklog" }).waitFor());
   assert.equal(await page.getByRole("button", { name: "Accept and record receipt" }).isEnabled(), true);
+  assert.deepEqual(receiptLookupStatuses, [204], "a new approval packet must receive the successful empty receipt response");
   assert.deepEqual(errors, [], "a new approval link must not log a browser error while it checks for a receipt");
 
   const missing = await page.goto(`${target}/missing-page`, { waitUntil: "domcontentloaded" });

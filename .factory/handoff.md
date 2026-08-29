@@ -80,10 +80,11 @@ npm run verify:live
 ```
 
 It passed against `https://worklog-approval-bridge.sociobot.in`: the script
-created a unique sample approval packet, confirmed its initial receipt check
-emitted no browser error, and verified `/missing-page` returns HTTP 404 while
-rendering the designed return-home page. Direct live checks also returned 200
-for `/approve` and 404 for `/missing-page`.
+created a unique sample approval packet, observed its initial receipt lookup
+return `204`, confirmed it emitted no browser error, and verified
+`/missing-page` returns HTTP 404 while rendering the designed return-home
+page. Direct live checks also returned 200 for `/approve` and 404 for
+`/missing-page`.
 
 ## Known gaps / operator action
 
