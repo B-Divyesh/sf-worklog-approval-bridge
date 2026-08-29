@@ -28,7 +28,7 @@ test("@claim:release-provenance binds every required desktop platform to the tag
     }
     const manifest = await createReleaseManifest(directory, "v0.1.4", repairedCommit, "B-Divyesh/sf-worklog-approval-bridge");
     const sums = await readFile(join(directory, "SHA256SUMS"), "utf8");
-    const release = { tag_name: "v0.1.4", assets: [...manifest.files.map(file => ({ name: file.name })), { name: "latest.json" }, { name: "SHA256SUMS" }] };
+    const release = { tag_name: "v0.1.4", target_commitish: repairedCommit, assets: [...manifest.files.map(file => ({ name: file.name })), { name: "latest.json" }, { name: "SHA256SUMS" }] };
     validateRelease(release, manifest, sums, repairedCommit, repairedCommit);
     const staleFileManifest = structuredClone(manifest);
     staleFileManifest.files[0].commit = staleCommit;
@@ -75,7 +75,7 @@ test("regression: one stale matrix artifact blocks the whole release", async () 
 test("regression: stale desktop release cannot represent a repaired candidate", () => {
   const staleManifest = { version: "0.1.3", tag: "v0.1.3", commit: staleCommit, files: [] };
   assert.throws(
-    () => validateRelease({ tag_name: "v0.1.3", assets: [] }, staleManifest, "", staleCommit, repairedCommit),
+    () => validateRelease({ tag_name: "v0.1.3", target_commitish: staleCommit, assets: [] }, staleManifest, "", staleCommit, repairedCommit),
     /latest release is not built from the expected repaired commit/
   );
 });
@@ -87,7 +87,7 @@ test("@regression:verification-10 rejects the exact live and release predecessor
   );
   const staleManifest = { version: "0.1.9", tag: "v0.1.9", commit: verificationTenPredecessor, files: [] };
   assert.throws(
-    () => validateRelease({ tag_name: "v0.1.9", assets: [] }, staleManifest, "", verificationTenPredecessor, verificationTenCandidate),
+    () => validateRelease({ tag_name: "v0.1.9", target_commitish: verificationTenPredecessor, assets: [] }, staleManifest, "", verificationTenPredecessor, verificationTenCandidate),
     /latest release is not built from the expected repaired commit/
   );
 });

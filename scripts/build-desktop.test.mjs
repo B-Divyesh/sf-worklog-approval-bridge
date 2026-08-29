@@ -34,7 +34,7 @@ test("@regression:appimage-linuxdeploy-ci-installs-file-command", async () => {
   assert.match(workflow, /source_commit:\s*\n\s*description: Full immutable source commit to package and release\s*\n\s*required: true/);
   assert.match(workflow, /inputs\.source_commit \|\| github\.sha/);
   assert.match(workflow, /build-provenance\.mjs/);
-  assert.match(workflow, /target_commitish:/);
+  assert.match(workflow, /target_commitish:\s*\$\{\{ steps\.source\.outputs\.commit \}\}/);
 });
 
 test("@regression:versioned-service-worker derives a release-specific cache name", async () => {

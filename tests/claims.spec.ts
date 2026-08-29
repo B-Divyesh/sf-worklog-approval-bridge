@@ -424,12 +424,15 @@ test("@regression:approval-route-has-no-serious-or-critical-axe-violations", asy
 test("download selects an asset from an immutable release commit", async ({ page }) => {
   const commit = "1234567890abcdef1234567890abcdef12345678";
   const githubRequests: string[] = [];
+  const releaseUrl = "https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest";
+  await page.addInitScript(() => localStorage.removeItem("worklog-bridge:release-v4"));
   await page.route(/^https:\/\/api\.github\.com\/repos\/B-Divyesh\/sf-worklog-approval-bridge\//, async route => {
     const url = route.request().url();
     githubRequests.push(url);
     if (url.endsWith("/releases/latest")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
         tag_name: "v0.1.5",
+        target_commitish: commit,
         html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.5",
         assets: [
           { name: "Worklog.Bridge_0.1.5_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.5/Worklog.Bridge_0.1.5_amd64.AppImage" },
@@ -439,21 +442,34 @@ test("download selects an asset from an immutable release commit", async ({ page
       }) });
       return;
     }
-    if (url.endsWith("/git/ref/tags/v0.1.5")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ object: { type: "commit", sha: commit } }) });
-      return;
-    }
     await route.abort();
   });
   await page.goto("/download");
-  await expect.poll(() => githubRequests).toHaveLength(2);
   const download = page.locator("#download-box a.button");
   await expect(download).toHaveAttribute("href", /\/releases\/download\/v0\.1\.5\/Worklog\.Bridge_0\.1\.5_(amd64\.AppImage|x64\.(dmg|msi))$/);
   await expect(page.locator(".release-source")).toContainText("1234567");
+  expect(githubRequests).toEqual([releaseUrl]);
   const allReleaseFiles = page.getByRole("link", { name: /See every release file/ });
   const box = await allReleaseFiles.boundingBox();
   expect(box?.width || 0).toBeGreaterThanOrEqual(44);
   expect(box?.height || 0).toBeGreaterThanOrEqual(44);
+});
+
+test("download rejects a release without an immutable source commit", async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem("worklog-bridge:release-v4"));
+  await page.route(/^https:\/\/api\.github\.com\/repos\/B-Divyesh\/sf-worklog-approval-bridge\//, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      tag_name: "v0.1.5",
+      target_commitish: "main",
+      html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.5",
+      assets: [{ name: "Worklog.Bridge_0.1.5_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.5/Worklog.Bridge_0.1.5_amd64.AppImage" }]
+    })
+  }));
+  await page.goto("/download");
+  await expect(page.getByRole("heading", { name: "Downloads are being published" })).toBeVisible();
+  await expect(page.locator("#download-box a.button.cyan")).toHaveCount(0);
 });
 
 test("app supports keyboard shortcuts", async ({ page }) => {

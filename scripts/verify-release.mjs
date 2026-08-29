@@ -7,6 +7,8 @@ const requiredPlatforms = ["macos-arm64", "macos-x64", "windows-x64", "linux-x64
 
 export function validateRelease(release, manifest, sumsText, tagCommit, expectedCommit) {
   assert.equal(release.tag_name, manifest.tag, "latest.json tag must match the GitHub release");
+  assert.match(release.target_commitish, /^[a-f0-9]{40}$/i, "GitHub release must record a full immutable source commit");
+  assert.equal(release.target_commitish.toLowerCase(), tagCommit.toLowerCase(), "GitHub release target commit and immutable tag must identify the same source commit");
   assert.equal(manifest.version, manifest.tag.slice(1), "manifest version must match its tag");
   assert.match(manifest.commit, /^[a-f0-9]{40}$/i, "latest.json must record the full source commit");
   assert.equal(manifest.commit.toLowerCase(), tagCommit.toLowerCase(), "release tag and latest.json must identify the same source commit");
