@@ -66,12 +66,15 @@ test("@regression:approval-api-returns-429-and-retry-after-on-the-61st-sequentia
   store.findByDigest = async () => null;
   const request = {
     method: "GET",
-    headers: new Headers({ "x-forwarded-for": "203.0.113.61" }),
     params: {},
     query: new URLSearchParams({ packetDigest: "a".repeat(64) })
   };
   const responses = [];
   for (let index = 0; index <= READ_LIMIT; index += 1) {
+    request.headers = new Headers({
+      "x-azure-clientip": "203.0.113.61",
+      "x-forwarded-for": `203.0.113.61:${44000 + index}`
+    });
     responses.push(await handleApprovalRequest(request, async () => store, Date.parse("2026-08-28T12:00:00.000Z")));
   }
   assert.deepEqual(responses.slice(0, READ_LIMIT).map(response => response.status), Array(READ_LIMIT).fill(204));
@@ -92,7 +95,7 @@ test("@regression:public-api-health-identity exposes only a safe version and dep
   const identity = buildIdentity({ WORKLOG_BUILD_COMMIT: "ABCDEF0123456789", DATABASE_URL: "must-not-leak" });
   assert.deepEqual(identity, {
     service: "worklog-approval-bridge-receipts",
-    version: "0.1.8",
+    version: "0.1.9",
     commit: "abcdef0123456789"
   });
   assert.equal(buildIdentity({ WORKLOG_BUILD_COMMIT: "not-a-commit" }).commit, "unavailable");

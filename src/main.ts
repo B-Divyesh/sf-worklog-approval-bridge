@@ -80,7 +80,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.8 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected work traces into a client-ready weekly record.</p><p class="build-id">v0.1.9 · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }

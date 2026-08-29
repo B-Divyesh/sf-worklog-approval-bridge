@@ -17,8 +17,12 @@ function noContent(status) {
 export async function handleApprovalRequest(request, getStore, now = Date.now()) {
   try {
     const store = await getStore();
+    // Azure Static Web Apps supplies x-azure-clientip without a connection
+    // port. x-forwarded-for may include a new source port per request, which
+    // would otherwise create a new anonymous rate bucket for one client.
+    const client = request.headers.get("x-azure-clientip") || request.headers.get("x-forwarded-for") || "unknown";
     const limit = await consumeRateLimit(store, {
-      client: request.headers.get("x-forwarded-for") || "unknown",
+      client,
       method: request.method,
       now
     });
