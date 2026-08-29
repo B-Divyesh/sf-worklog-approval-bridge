@@ -1,12 +1,14 @@
-# Worklog Bridge
+# Worklog Bridge — unsigned desktop preview
+
+The whole product is a preview while its macOS and Windows packages remain unsigned. Those systems may show a trust warning.
 
 Turn Git and calendar activity into a client-ready worklog.
 
 Worklog Bridge is for freelance developers and small consultancies that rebuild billable work each week. The desktop app reads commit dates, subjects, and hashes from a repository you choose for one Monday-to-Sunday week. Pro adds selected ICS calendar imports and saved approval history. You can rewrite, time, remove, and mark each entry ready before sharing.
 
-The free editor exports CSV. It creates a private approval link with the worklog after the `#`. Browsers do not send that part of the link to the server. A client can accept a worklog once and download a server-attested receipt. The receipt service receives only a SHA-256 worklog identifier and the supplied name. It never receives entries or repository content. Saved work remains available offline after the first visit. The demo sends worklog data only to this site. The product does not request camera, microphone, or screen access.
+The free editor exports CSV. It creates a private approval link with the worklog after the `#`. Browsers do not send that part of the link to the server. A client can accept a worklog once and download a receipt signed by the receipt service. The receipt identifies the accepted worklog. The receipt service receives only a SHA-256 worklog identifier and the supplied name. It never receives entries or repository content. Saved work remains available offline after the first visit. Demo acceptance stays in demo storage and never calls the approval API. The product does not request camera, microphone, or screen access.
 
-Try the isolated sample at `/demo` or <https://worklog-approval-bridge.sociobot.in/demo>. It uses `demo:worklog-bridge:project` and never reads the real workspace key. In the installed app, select **Load sample project** on the empty first-run screen.
+Try the isolated sample at `/demo`, `/?demo=1`, or <https://worklog-approval-bridge.sociobot.in/?demo=1>. It uses `demo:` storage keys and never reads the real workspace key. Reset removes sample edits and receipts. In the installed app, select **Load sample project** on the empty first-run screen.
 
 ## Run locally
 
@@ -44,7 +46,7 @@ Playwright 1.58.2 uses the browser path supplied by the factory worker. The clai
 2. Choose **Load sample project** to try it safely, or choose a local Git repository.
 3. Select matching weekly commits. Only hash, date, and subject enter the draft.
 4. Add manual entries or use Pro to select matching-week events from an ICS file.
-5. Rewrite each line, set its minutes, and mark it ready.
+5. Rewrite each entry, set its minutes, and mark it ready.
 6. Export CSV or copy the approval link.
 7. Ask the client to review, accept once, and download the receipt.
 
@@ -58,6 +60,7 @@ Pro costs $12 per user each month. It adds ICS import and saved approval history
 
 - Vanilla TypeScript and Vite power the interface.
 - Tauri 2 and a small Rust command read Git metadata on the selected path.
+- The installed-app frontend stores imported and edited worklogs in local WebView storage.
 - Local storage is split between real and demo namespaces.
 - Approval payloads use URL fragments, which browsers do not send in HTTP requests.
 - The same-origin receipt API stores only a worklog identifier, name, server time, receipt ID, and attestation.
@@ -78,7 +81,7 @@ The anonymous receipt health endpoint is `/api/health`. It returns only service 
 After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
 
 ```sh
-npm run verify:release -- --tag v0.1.18 --expected-commit "$(git rev-parse v0.1.18^{})"
+npm run verify:release -- --tag v0.1.19 --expected-commit "$(git rev-parse v0.1.19^{})"
 ```
 
 ## License

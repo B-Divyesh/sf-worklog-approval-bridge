@@ -14,6 +14,7 @@ const SITE = "https://worklog-approval-bridge.sociobot.in";
 const BILLING = `https://api.sociobot.in/api/v1/products/${PRODUCT}`;
 const REPO = "B-Divyesh/sf-worklog-approval-bridge";
 const DEMO_KEY = "demo:worklog-bridge:project";
+const DEMO_RECEIPTS_KEY = "demo:worklog-bridge:receipts";
 const REAL_KEY = "worklog-bridge:project";
 const LICENSE_KEY = `sb_license:${PRODUCT}`;
 const LICENSE_CACHE = `${LICENSE_KEY}:verdict`;
@@ -66,7 +67,7 @@ function routeLink(path: string, label: string, className = "") {
 }
 
 function header(active = "") {
-  return `<header class="site-header">
+  return `<div class="preview-banner" role="note">Unsigned desktop preview · macOS and Windows may show a trust warning.</div><header class="site-header">
     <div class="header-inner">
       ${routeLink("/", `<span class="wordmark-mark" aria-hidden="true"></span><span>Worklog Bridge</span>`, "wordmark")}
       <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav"><span aria-hidden="true">☰</span><span class="sr-only">Open menu</span></button>
@@ -82,7 +83,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready weekly record.</p><p class="build-id">v${__WORKLOG_VERSION__} · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+    <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready worklog.</p><p class="build-id">Unsigned desktop preview · v${__WORKLOG_VERSION__} · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -95,7 +96,7 @@ function landing() {
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
         <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Nothing is saved to your real data.</p></div>
-        <ul class="facts"><li>Worklog details stay on this device</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
+        <ul class="facts"><li>Worklogs are stored on this device until you share a private link</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
         <picture><source srcset="/assets/night-market-bridge-768.webp 768w, /assets/night-market-bridge-1280.webp 1280w" type="image/webp"><img src="/assets/night-market-bridge-1280.webp" width="1280" height="853" alt="Paper work tickets move along a rail toward an approval stamp in a night market stall." fetchpriority="high" decoding="async"></picture>
@@ -112,7 +113,7 @@ function landing() {
     </div></section>
     <section class="steps-section" aria-labelledby="steps-title"><div class="shell"><p class="eyebrow">How it works</p><h2 id="steps-title">Create and approve a worklog in three steps</h2><div class="steps">
       <article class="step"><h3>Select sources</h3><p>Point the desktop app at a Git repository. Pro users can also import an ICS calendar file.</p></article>
-      <article class="step"><h3>Review each line</h3><p>Set time, rewrite technical notes, and remove anything the client should not see.</p></article>
+      <article class="step"><h3>Review each entry</h3><p>Set time, rewrite technical notes, and remove anything the client should not see.</p></article>
       <article class="step"><h3>Send for approval</h3><p>Copy a private link. The client can accept it once and download a receipt signed by the receipt service.</p></article>
     </div></div></section>
     <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">What Worklog Bridge collects</p><h2 id="privacy-title">Only selected commits and calendar events enter the worklog</h2><p class="lede">The app reads commit details and imported calendar fields. You review every shared word.</p><p>Acceptance sends only the worklog identifier, supplied name, and server time. The worklog stays in the private link.</p></div><div><h3>What Worklog Bridge does not collect</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
@@ -143,7 +144,7 @@ function appPage() {
       <section class="work-panel" aria-labelledby="entries-title">
         <div class="work-toolbar"><div><h2 id="entries-title">Entries</h2><span>${readyCount} of ${filtered.length} ready</span></div><div class="filter-group"><label class="sr-only" for="entry-filter">Filter entries</label><input id="entry-filter" type="search" placeholder="Filter entries · press /"><button id="add-entry" class="secondary" type="button">Add entry</button></div></div>
         <ul class="entry-list" id="entry-list">${renderEntries(filtered)}</ul>
-        <div class="review-bar"><div><p>Review every line before you create the approval link.</p><div class="status-line" id="app-status" aria-live="polite"></div></div><div class="review-actions"><button id="export-csv" class="secondary" type="button">Export CSV</button><button id="create-link" class="mint" type="button" ${filtered.length ? "" : "disabled"}>Copy approval link</button></div></div>
+        <div class="review-bar"><div><p>Review every entry before you create the approval link.</p><div class="status-line" id="app-status" aria-live="polite"></div></div><div class="review-actions"><button id="export-csv" class="secondary" type="button">Export CSV</button><button id="create-link" class="mint" type="button" ${filtered.length ? "" : "disabled"}>Copy approval link</button></div></div>
       </section>
     </div>
   </div></main>${footer()}`;
@@ -163,7 +164,7 @@ function legalPage(kind: "privacy" | "terms") {
   const privacy = kind === "privacy";
   document.title = `${privacy ? "Privacy" : "Terms"} — Worklog Bridge`;
   return `${header(kind)}<main id="main" class="legal"><article class="narrow"><p class="eyebrow">Last updated 28 August 2026</p><h1 tabindex="-1">${privacy ? "Privacy without surveillance" : "Terms for Worklog Bridge"}</h1>${privacy ? `
-    <p class="lede">Worklog Bridge keeps project data in the app or browser storage you control.</p>
+    <p class="lede">Worklog Bridge stores worklog data on this device until you share a private link.</p>
     <h2>What stays on your device</h2><p>Client names, work entries, repository paths, rates, and imported events stay in local storage. The installed app reads selected Git commit details on your device.</p>
     <h2>What a shared link contains</h2><p>An approval link stores the visible worklog after the #. Browsers do not send that part of the link to our server. Anyone with the link can read its entries, so send it only to the intended client.</p>
     <h2>What acceptance records</h2><p>When a client accepts, the receipt service stores only the worklog identifier, their supplied name, a server timestamp, and a signature. It never receives the worklog entries or repository content.</p>
@@ -196,12 +197,15 @@ function approvalPage() {
   const packet = decodePacket();
   if (!packet) return `${header()}<main id="main" class="not-found"><div class="narrow"><p class="eyebrow">Approval link error</p><h1 tabindex="-1">This worklog link is incomplete</h1><p class="lede">The private part of the link is missing or damaged. Ask the sender to create a new approval link.</p>${routeLink("/", "Return home", "button secondary")}</div></main>${footer()}`;
   const total = packet.entries.reduce((sum, item) => sum + item.duration, 0);
-  return `${header()}<main id="main" class="approval-page"><div class="narrow"><p class="eyebrow">Client review · worklog ${esc(packet.digest.slice(0, 10))}</p><h1 tabindex="-1">Review this weekly worklog</h1><p class="lede">Check each entry before you accept the record.</p><article class="approval-sheet"><header><h2>${esc(packet.client || "Client worklog")}</h2><p>Week of ${esc(packet.week)} · ${hours(total)} · ${money(total / 60 * packet.rate, packet.currency)}</p></header><ul class="entry-list">${packet.entries.map(entry => `<li class="entry-row"><span class="entry-date">${esc(entry.date)}</span><span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span><span class="entry-duration">${hours(entry.duration)}</span></li>`).join("")}</ul><form class="approval-form" id="approval-form"><h2>Accept this worklog</h2><p>The receipt service records your name, this worklog identifier, and its server time. It never receives these entries.</p><div class="field"><label for="approver">Your name</label><input id="approver" name="approver" autocomplete="name" required></div><label><input type="checkbox" name="confirmed" required> I reviewed these entries and accept this worklog.</label><div class="modal-actions"><button class="mint" type="submit">Accept and record receipt</button></div><div id="receipt-area" aria-live="polite"></div></form></article></div></main>${footer()}`;
+  const receiptCopy = isDemo()
+    ? "This sample receipt stays in demo storage. It never contacts the approval service."
+    : "The receipt service records your name, this worklog identifier, and its server time. It never receives these entries.";
+  return `${demoBanner()}${header()}<main id="main" class="approval-page"><div class="narrow"><p class="eyebrow">Client review · worklog ${esc(packet.digest.slice(0, 10))}</p><h1 tabindex="-1">Review this weekly worklog</h1><p class="lede">Check each entry before you accept the record.</p><article class="approval-sheet"><header><h2>${esc(packet.client || "Client worklog")}</h2><p>Week of ${esc(packet.week)} · ${hours(total)} · ${money(total / 60 * packet.rate, packet.currency)}</p></header><ul class="entry-list">${packet.entries.map(entry => `<li class="entry-row"><span class="entry-date">${esc(entry.date)}</span><span class="entry-title"><strong>${esc(entry.title)}</strong><small>${esc(entry.detail)}</small></span><span class="entry-duration">${hours(entry.duration)}</span></li>`).join("")}</ul><form class="approval-form" id="approval-form"><h2>Accept this worklog</h2><p>${receiptCopy}</p><div class="field"><label for="approver">Your name</label><input id="approver" name="approver" autocomplete="name" required></div><label><input type="checkbox" name="confirmed" required> I reviewed these entries and accept this worklog.</label><div class="modal-actions"><button class="mint" type="submit">${isDemo() ? "Create demo receipt" : "Accept and record receipt"}</button></div><div id="receipt-area" aria-live="polite"></div></form></article></div></main>${footer()}`;
 }
 
 function notFound() {
   document.title = "Page not found — Worklog Bridge";
-  return `${header()}<main id="main" class="not-found"><div class="narrow"><p class="eyebrow">The receipt rail ends here</p><h1 tabindex="-1">This page is not on the worklog</h1><p class="lede">The address may be old or mistyped.</p>${routeLink("/", "Return home", "button cyan")}</div></main>${footer()}`;
+  return `${header()}<main id="main" class="not-found"><div class="narrow"><h1 tabindex="-1">Page not found</h1><p class="lede">The address may be old or mistyped.</p>${routeLink("/", "Return home", "button cyan")}</div></main>${footer()}`;
 }
 
 function cachedLicenseVerdict(): LicenseVerdict | null {
@@ -261,17 +265,27 @@ function currentRoute() {
 }
 
 function navigate(path: string) {
-  history.pushState({}, "", path);
-  render(true);
+  saveHistoryPosition();
+  history.pushState({ scrollX: 0, scrollY: 0, focusIndex: -1 }, "", path);
+  render("push");
 }
 
 function bindGlobal() {
   document.querySelectorAll<HTMLAnchorElement>("a[data-route]").forEach(link => link.addEventListener("click", event => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || link.target) return;
     event.preventDefault();
-    if (isDemo() && new URL(link.href).pathname === "/app") localStorage.removeItem(DEMO_KEY);
+    if (isDemo() && new URL(link.href).pathname === "/app") {
+      localStorage.removeItem(DEMO_KEY);
+      localStorage.removeItem(DEMO_RECEIPTS_KEY);
+    }
     navigate(new URL(link.href).pathname + new URL(link.href).search);
   }));
+  document.querySelector("#reset-demo")?.addEventListener("click", () => {
+    localStorage.setItem(DEMO_KEY, JSON.stringify(sampleProject()));
+    localStorage.removeItem(DEMO_RECEIPTS_KEY);
+    if (location.pathname === "/approve") navigate("/demo");
+    else render();
+  });
   const menu = document.querySelector<HTMLButtonElement>(".menu-button");
   menu?.addEventListener("click", () => {
     const nav = document.querySelector(".main-nav");
@@ -366,7 +380,7 @@ async function createApprovalLink(project: Project) {
   const bytes = new TextEncoder().encode(JSON.stringify(packet));
   let binary = ""; bytes.forEach(byte => binary += String.fromCharCode(byte));
   const shareBase = ["localhost", "127.0.0.1"].includes(location.hostname) ? location.origin : SITE;
-  return `${shareBase}/approve#${btoa(binary)}`;
+  return `${shareBase}/approve${isDemo() ? "?demo=1" : ""}#${btoa(binary)}`;
 }
 
 async function sha256(value: string) {
@@ -400,7 +414,6 @@ function bindApp() {
     saveProject(next); render();
   });
   persistField("client", "client"); persistField("week", "week"); persistField("rate", "rate");
-  document.querySelector("#reset-demo")?.addEventListener("click", () => { localStorage.setItem(DEMO_KEY, JSON.stringify(sampleProject())); render(); });
   document.querySelector("[data-load-sample]")?.addEventListener("click", () => navigate("/demo"));
   document.querySelector("#add-entry")?.addEventListener("click", () => openEntryModal());
   document.querySelector("[data-empty-add]")?.addEventListener("click", () => openEntryModal());
@@ -535,7 +548,15 @@ async function bindApproval() {
       formNode.innerHTML = `<h2>This worklog was changed</h2><p class="error">The packet digest does not match its entries. Ask the sender for a new approval link.</p>`;
       return;
     }
-    try {
+    if (isDemo()) {
+      const receipt = demoReceipt(initialPacket.digest);
+      if (receipt) {
+        showReceipt(receipt, area!, true);
+        if (submit) submit.disabled = true;
+        [...formNode.querySelectorAll<HTMLInputElement>("input")].forEach(input => input.disabled = true);
+        return;
+      }
+    } else try {
       const response = await fetch(`${APPROVALS_API}?packetDigest=${encodeURIComponent(initialPacket.digest)}`, { cache: "no-store" });
       if (response.status === 200) {
         const result = await response.json() as { receipt: ApprovalReceipt; valid: boolean };
@@ -559,21 +580,38 @@ async function bindApproval() {
     const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
     button.disabled = true; button.textContent = "Recording acceptance…";
     try {
-      const response = await fetch(APPROVALS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packetDigest: packet.digest, approver }) });
-      const result = await response.json() as { receipt?: ApprovalReceipt; error?: string };
-      if (!response.ok && response.status !== 409) throw new Error(result.error || "The approval record could not be saved.");
-      if (!result.receipt) throw new Error("The approval service returned an incomplete receipt.");
-      showReceipt(result.receipt, area!);
+      let receipt: ApprovalReceipt;
+      if (isDemo()) {
+        receipt = { version: 2, receiptId: `demo-${uid()}`, packetDigest: packet.digest, approver, acceptedAt: new Date().toISOString(), attestation: "demo-only-local-receipt" };
+        const receipts = demoReceipts();
+        receipts[packet.digest] = receipt;
+        localStorage.setItem(DEMO_RECEIPTS_KEY, JSON.stringify(receipts));
+      } else {
+        const response = await fetch(APPROVALS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packetDigest: packet.digest, approver }) });
+        const result = await response.json() as { receipt?: ApprovalReceipt; error?: string };
+        if (!response.ok && response.status !== 409) throw new Error(result.error || "The approval record could not be saved.");
+        if (!result.receipt) throw new Error("The approval service returned an incomplete receipt.");
+        receipt = result.receipt;
+      }
+      showReceipt(receipt, area!, isDemo());
       [...form.querySelectorAll<HTMLInputElement>("input")].forEach(input => input.disabled = true);
     } catch (error) {
-      button.disabled = false; button.textContent = "Accept and record receipt";
+      button.disabled = false; button.textContent = isDemo() ? "Create demo receipt" : "Accept and record receipt";
       if (area) area.innerHTML = `<p class="error">${esc(error instanceof Error ? error.message : "The approval record could not be saved.")} Check your connection and try again.</p>`;
     }
   });
 }
 
-function showReceipt(receipt: ApprovalReceipt, area: HTMLElement) {
-  area.innerHTML = `<div class="receipt"><strong>Acceptance recorded</strong><p>${esc(receipt.approver)} accepted this packet at ${esc(new Date(receipt.acceptedAt).toLocaleString())}.</p><p>This packet can be accepted only once. Receipt ID: <code>${esc(receipt.receiptId)}</code></p><p>Server attestation: <code>${esc(receipt.attestation)}</code></p><p><button type="button" id="download-receipt" class="secondary">Download receipt</button></p></div>`;
+function demoReceipts(): Record<string, ApprovalReceipt> {
+  try { return JSON.parse(localStorage.getItem(DEMO_RECEIPTS_KEY) || "{}"); } catch { return {}; }
+}
+
+function demoReceipt(digest: string) {
+  return demoReceipts()[digest];
+}
+
+function showReceipt(receipt: ApprovalReceipt, area: HTMLElement, demo = false) {
+  area.innerHTML = `<div class="receipt"><strong>${demo ? "Demo receipt created" : "Acceptance recorded"}</strong><p>${esc(receipt.approver)} accepted this worklog at ${esc(new Date(receipt.acceptedAt).toLocaleString())}.</p><p>This worklog can be accepted only once. Receipt ID: <code>${esc(receipt.receiptId)}</code></p><p>${demo ? "Demo marker" : "Server attestation"}: <code>${esc(receipt.attestation)}</code></p><p><button type="button" id="download-receipt" class="secondary">Download receipt</button></p></div>`;
   document.querySelector("#download-receipt")?.addEventListener("click", () => downloadBlob(`worklog-receipt-${receipt.packetDigest.slice(0, 10)}.json`, JSON.stringify(receipt, null, 2), "application/json"));
 }
 
@@ -604,22 +642,66 @@ async function bindDownloads() {
   }
 }
 
-function render(moveFocus = false) {
+type RouteTransition = false | "push" | { scrollX?: number; scrollY?: number; focusIndex?: number };
+
+function focusableElements() {
+  return [...document.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex="0"]')];
+}
+
+function saveHistoryPosition() {
+  const focusIndex = focusableElements().indexOf(document.activeElement as HTMLElement);
+  history.replaceState({ ...(history.state || {}), scrollX, scrollY, focusIndex }, "");
+}
+
+function restoreScroll(x: number, y: number) {
+  const behavior = document.documentElement.style.scrollBehavior;
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(x, y);
+  document.documentElement.style.scrollBehavior = behavior;
+}
+
+const routeDescriptions: Record<string, string> = {
+  "/": "Turn selected Git and calendar activity into a weekly worklog, then send a private approval link.",
+  "/demo": "Try a six-entry Worklog Bridge sample without changing your real worklog data.",
+  "/app": "Review worklog entries, export CSV, and create a private client approval link.",
+  "/privacy": "How Worklog Bridge stores worklogs, checks licenses, and records acceptance.",
+  "/terms": "The terms for using Worklog Bridge, approval receipts, and Pro subscriptions.",
+  "/download": "Download the unsigned Worklog Bridge desktop preview for macOS, Windows, or Linux.",
+  "/approve": "Review and accept a weekly worklog, then download its receipt."
+};
+
+function render(transition: RouteTransition = false) {
   app.innerHTML = currentRoute(); bindGlobal();
+  const metadataPath = isDemo() && location.pathname !== "/approve" ? "/demo" : location.pathname;
+  const description = routeDescriptions[metadataPath] || "The page you requested was not found. Return to Worklog Bridge.";
   const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-  if (canonical) canonical.href = `${SITE}${location.pathname === "/" ? "/" : location.pathname}`;
+  if (canonical) canonical.href = `${SITE}${metadataPath === "/" ? "/" : metadataPath}`;
   document.querySelectorAll<HTMLMetaElement>('meta[property="og:title"], meta[name="twitter:title"]').forEach(meta => meta.content = document.title);
+  document.querySelectorAll<HTMLMetaElement>('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]').forEach(meta => meta.content = description);
   if (location.pathname === "/app" || location.pathname === "/demo") bindApp(); else document.onkeydown = null;
   if (location.pathname === "/approve") void bindApproval();
   if (location.pathname === "/download") void bindDownloads();
-  if (moveFocus) {
-    const heading = document.querySelector<HTMLElement>("h1"); heading?.focus();
-    const status = document.querySelector<HTMLElement>("#route-status"); if (status) status.textContent = heading?.textContent || document.title;
-    scrollTo(0, 0);
+  if (transition) {
+    const heading = document.querySelector<HTMLElement>("h1");
+    const status = document.querySelector<HTMLElement>("#route-status");
+    if (status) status.textContent = heading?.textContent || document.title;
+    requestAnimationFrame(() => {
+      if (transition === "push") {
+        heading?.focus({ preventScroll: true });
+        restoreScroll(0, 0);
+      } else {
+        const target = focusableElements()[transition.focusIndex ?? -1];
+        (target || heading)?.focus({ preventScroll: true });
+        restoreScroll(transition.scrollX || 0, transition.scrollY || 0);
+      }
+    });
   }
 }
 
-window.addEventListener("popstate", () => render(true));
+history.scrollRestoration = "manual";
+window.addEventListener("popstate", event => render(event.state || { scrollX: 0, scrollY: 0, focusIndex: -1 }));
+window.addEventListener("scroll", saveHistoryPosition, { passive: true });
+document.addEventListener("focusin", saveHistoryPosition);
 window.addEventListener("online", () => setStatus("You are back online."));
 window.addEventListener("offline", () => setStatus("You are offline. Saved work remains available."));
 void verifyLicense().finally(() => render());

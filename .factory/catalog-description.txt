@@ -1,1 +1,1 @@
-Turn Git and calendar activity into a client-ready worklog.
+Turn selected Git and calendar activity into a client-ready worklog.

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { signingMode, signingModeMessage, signingSecrets } from "./signing-mode.mjs";
 
-test("@regression:verification-13 release signing has an explicit unsigned fallback and rejects partial credentials", async () => {
+test("@claim:release-signing-mode keeps unsigned previews explicit and rejects partial signing credentials", async () => {
   const macosCredentials = Object.fromEntries(signingSecrets.macos.map(name => [name, "configured"]));
   const windowsCredentials = Object.fromEntries(signingSecrets.windows.map(name => [name, "configured"]));
   assert.deepEqual(signingMode("macos", macosCredentials), { enabled: false, missing: [] }, "ambient secrets must not sign a tag release");
@@ -14,7 +14,11 @@ test("@regression:verification-13 release signing has an explicit unsigned fallb
   assert.throws(() => signingMode("macos", { APPLE_CERTIFICATE: "configured" }, true), /signing was requested but is partly configured.*APPLE_CERTIFICATE_PASSWORD/);
   assert.throws(() => signingMode("windows", { WINDOWS_CERT_PFX: "configured" }, true), /signing was requested but is partly configured.*WINDOWS_CERT_PASSWORD/);
 
-  const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+  const [workflow, main, readme] = await Promise.all([
+    readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8"),
+    readFile(new URL("../src/main.ts", import.meta.url), "utf8"),
+    readFile(new URL("../README.md", import.meta.url), "utf8")
+  ]);
   assert.match(workflow, /sign_release:[\s\S]*type: boolean[\s\S]*default: false/);
   assert.match(workflow, /id: macos-signing[\s\S]*node scripts\/signing-mode\.mjs macos/);
   assert.match(workflow, /if: startsWith\(matrix\.os, 'macos'\) && steps\.macos-signing\.outputs\.enabled == 'true'/);
@@ -26,6 +30,8 @@ test("@regression:verification-13 release signing has an explicit unsigned fallb
 
   assert.match(signingModeMessage("macos", signingMode("macos", macosCredentials), false), /optional and was not requested.*unsigned preview/i);
   assert.match(signingModeMessage("windows", signingMode("windows", windowsCredentials, true), true), /was requested and every required credential is present/i);
+  assert.match(main, /Unsigned desktop preview · macOS and Windows may show a trust warning\./);
+  assert.match(readme, /whole product is a preview.*macOS and Windows packages remain unsigned/i);
 });
 
 test("@regression:verification-13 documents every optional signing secret and unsigned release behavior", async () => {

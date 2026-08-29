@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
+import { readFile } from "node:fs/promises";
 
 type Receipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
 
@@ -61,30 +62,54 @@ test("@regression:csv-export neutralises spreadsheet formulas", async ({ page })
   expect(body).toContain(`"'=HYPERLINK(""https://example.invalid"",""open"")"`);
 });
 
-test("@claim:local-demo sends no worklog data to another origin", async ({ page, context }) => {
+test("@claim:local-demo isolates editing, acceptance, receipt download, reset, and exit from real data and the production API", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
-  const origins = new Set<string>();
-  page.on("request", request => origins.add(new URL(request.url()).origin));
+  const requests: Array<{ method: string; path: string }> = [];
+  page.on("request", request => requests.push({ method: request.method(), path: new URL(request.url()).pathname }));
   await page.goto("/app");
   await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Real Client", week: "2026-08-24", rate: 80, currency: "USD", entries: [], sources: [] })));
   await page.goto("/demo");
   await expect(page.getByLabel("Client")).toHaveValue("Northstar Health");
-  await page.getByRole("link", { name: "Start for real" }).click();
-  await expect(page.getByLabel("Client")).toHaveValue("Real Client");
-  await page.goto("/demo");
   await page.getByRole("button", { name: "Edit Investigated slow dashboard queries" }).click();
   await page.getByLabel("Client-ready summary").fill("Investigated dashboard query delay");
   await page.getByRole("button", { name: "Save entry" }).click();
   await page.getByRole("button", { name: "Copy approval link" }).click();
   await expect(page.getByText("Copied the approval link. Send it only to the client.")).toBeVisible();
-  expect([...origins]).toEqual(["http://127.0.0.1:4173"]);
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toContain("/approve?demo=1#");
+  await page.goto(link);
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+  await expect(page.getByText("This sample receipt stays in demo storage. It never contacts the approval service.")).toBeVisible();
+  await page.getByLabel("Your name").fill("Demo Reviewer");
+  await page.getByLabel("I reviewed these entries and accept this worklog.").check();
+  await page.getByRole("button", { name: "Create demo receipt" }).click();
+  await expect(page.getByText("Demo receipt created")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Demo receipt created")).toBeVisible();
+  const receiptDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download receipt" }).click();
+  const receiptStream = await (await receiptDownload).createReadStream();
+  let receiptBody = ""; for await (const chunk of receiptStream!) receiptBody += chunk.toString();
+  expect(JSON.parse(receiptBody).attestation).toBe("demo-only-local-receipt");
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page.getByText("Investigated slow dashboard queries")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("demo:worklog-bridge:receipts"))).toBeNull();
+  await page.getByRole("link", { name: "Start for real" }).click();
+  await expect(page.getByLabel("Client")).toHaveValue("Real Client");
+  const keys = await page.evaluate(() => Object.keys(localStorage).sort());
+  expect(keys.filter(key => key.startsWith("demo:"))).toEqual([]);
+  expect(requests.some(request => request.path.startsWith("/api/approvals"))).toBe(false);
+  expect(requests.every(request => request.method === "GET")).toBe(true);
 });
 
 test("@claim:worklog-details-local submits only digest and acceptance metadata", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   const observed = { bodies: [] as unknown[] };
   await mockApprovalService(page, observed);
-  await page.goto("/demo");
+  await page.goto("/app");
+  await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Local details client", week: "2026-08-24", rate: 80, currency: "USD", sources: [], entries: [{ id: "local-entry", date: "2026-08-25", title: "Fixed patient search filters", detail: "Private worklog detail", source: "Manual", duration: 60, ready: true }] })));
+  await page.reload();
   await page.getByRole("button", { name: "Copy approval link" }).click();
   await page.goto(await page.evaluate(() => navigator.clipboard.readText()));
   await page.getByLabel("Your name").fill("Mira Chen");
@@ -98,7 +123,9 @@ test("@claim:worklog-details-local submits only digest and acceptance metadata",
 test("@claim:approval-receipt records one durable, verifiable acceptance", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   await mockApprovalService(page);
-  await page.goto("/demo");
+  await page.goto("/app");
+  await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Receipt client", week: "2026-08-24", rate: 80, currency: "USD", sources: [], entries: [{ id: "receipt-entry", date: "2026-08-25", title: "Prepared receipt test", detail: "Ready for client review", source: "Manual", duration: 60, ready: true }] })));
+  await page.reload();
   await page.getByRole("button", { name: "Copy approval link" }).click();
   const link = await page.evaluate(() => navigator.clipboard.readText());
   await page.goto(link);
@@ -141,8 +168,10 @@ test("@regression:new-approval-link has no console error before its first accept
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   const observed = { bodies: [] as unknown[], lookupStatuses: [] as number[] };
   await mockApprovalService(page, observed);
-  await page.goto("/demo");
-  await page.getByRole("button", { name: "Edit Investigated slow dashboard queries" }).click();
+  await page.goto("/app");
+  await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "New approval client", week: "2026-08-24", rate: 80, currency: "USD", sources: [], entries: [{ id: "new-link", date: "2026-08-25", title: "Initial approval item", detail: "Ready for review", source: "Manual", duration: 60, ready: true }] })));
+  await page.reload();
+  await page.getByRole("button", { name: "Edit Initial approval item" }).click();
   await page.getByLabel("Client-ready summary").fill(`New approval packet ${Date.now()}`);
   await page.getByRole("button", { name: "Save entry" }).click();
   await page.getByRole("button", { name: "Copy approval link" }).click();
@@ -307,14 +336,23 @@ test("@claim:sample-counts match the sample data", async ({ page }) => {
   await expect(page.locator("[data-entry-id]").filter({ hasText: "Calendar" })).toHaveCount(2);
 });
 
-test("@claim:pro-price shows the monthly price and keeps licensed approval history", async ({ page, context }) => {
+test("@claim:pro-price verifies the hosted monthly charge and keeps licensed approval history", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
-  await page.route("https://api.sociobot.in/**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) }));
+  const checkoutRequests: string[] = [];
+  await page.route("https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout", route => {
+    checkoutRequests.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Sociobot checkout</title><main><h1>Worklog Bridge Pro</h1><p>$12.00 / Month</p></main>" });
+  });
   await page.goto("/#pricing");
   await expect(page.locator(".price")).toContainText("$12 / user / month");
   await expect(page.getByText("ICS calendar import")).toBeVisible();
   await expect(page.getByText("Saved approval history", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Start Pro subscription" })).toHaveAttribute("href", "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout");
+  await page.getByRole("link", { name: "Start Pro subscription" }).click();
+  await expect(page.getByRole("heading", { name: "Worklog Bridge Pro" })).toBeVisible();
+  await expect(page.getByText("$12.00 / Month")).toBeVisible();
+  expect(checkoutRequests).toEqual(["https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout"]);
+  await page.route("https://api.sociobot.in/api/v1/products/worklog-approval-bridge/verify**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) }));
   await page.goto("/app?license=licensed-test-token");
   await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Pro history client", week: "2026-08-24", rate: 100, currency: "USD", sources: [], entries: [{ id: "history-entry", date: "2026-08-25", title: "Prepared approval history", detail: "A saved Pro history test.", source: "Manual", duration: 60, ready: true }] })));
   await page.reload();
@@ -323,15 +361,61 @@ test("@claim:pro-price shows the monthly price and keeps licensed approval histo
   await expect(page.getByText("Pro history client")).toBeVisible();
 });
 
-test("@claim:no-analytics sends no analytics or advertising request during the sample flow", async ({ page, context }) => {
+test("@claim:no-analytics sends no analytics or advertising request through sample approval and receipt download", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   const requests: string[] = [];
   page.on("request", request => requests.push(new URL(request.url()).pathname));
   await page.goto("/demo");
   await page.getByRole("button", { name: "Export CSV" }).click();
   await page.getByRole("button", { name: "Copy approval link" }).click();
-  expect(requests.every(path => path === "/demo" || path === "/favicon.svg" || path === "/service-worker.js" || path.startsWith("/src/") || path.startsWith("/@") || path.startsWith("/node_modules/") || path.startsWith("/assets/"))).toBe(true);
+  await page.goto(await page.evaluate(() => navigator.clipboard.readText()));
+  await page.getByLabel("Your name").fill("Analytics Audit");
+  await page.getByLabel("I reviewed these entries and accept this worklog.").check();
+  await page.getByRole("button", { name: "Create demo receipt" }).click();
+  await page.reload();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download receipt" }).click();
+  await downloadPromise;
+  const allowed = (path: string) => ["/demo", "/approve", "/favicon.svg", "/service-worker.js"].includes(path) || path.startsWith("/src/") || path.startsWith("/@") || path.startsWith("/node_modules/") || path.startsWith("/assets/");
+  expect(requests.every(allowed)).toBe(true);
+  expect(requests.some(path => path.startsWith("/api/"))).toBe(false);
   expect(requests.some(path => /analytics|advertis|collect|events|telemetry/i.test(path))).toBe(false);
+});
+
+test("@claim:installed-app-locality keeps import, edit, export, and sharing in the packaged app frontend", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
+  const tauri = JSON.parse(await readFile(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"));
+  expect(tauri.app.windows[0].url).toBe("/app");
+  const requests: string[] = [];
+  page.on("request", request => requests.push(request.url()));
+  await page.goto("/app");
+  await page.evaluate(() => {
+    localStorage.setItem("sb_license:worklog-approval-bridge", "packaged-app-fixture");
+    localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" }));
+  });
+  await page.reload();
+  await page.locator("#ics-file").setInputFiles({ name: "desktop-import.ics", mimeType: "text/calendar", buffer: Buffer.from("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART:20260825T100000Z\r\nDTEND:20260825T110000Z\r\nSUMMARY:Desktop client review\r\nDESCRIPTION:Imported on device\r\nEND:VEVENT\r\nEND:VCALENDAR") });
+  await page.getByRole("button", { name: "Add selected entries" }).click();
+  await page.getByRole("button", { name: "Edit Desktop client review" }).click();
+  await page.getByLabel("Client-ready summary").fill("Edited desktop client review");
+  await page.getByLabel("Ready to share").check();
+  await page.getByRole("button", { name: "Save entry" }).click();
+  const csvPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  const stream = await (await csvPromise).createReadStream();
+  let csv = ""; for await (const chunk of stream!) csv += chunk.toString();
+  expect(csv).toContain("Edited desktop client review");
+  await page.locator("#client").fill("Desktop privacy client");
+  await page.locator("#client").press("Tab");
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toContain("/approve#");
+  expect(link).not.toContain("demo=1");
+  const storage = await page.evaluate(() => ({ real: localStorage.getItem("worklog-bridge:project"), demo: localStorage.getItem("demo:worklog-bridge:project") }));
+  expect(storage.real).toContain("Edited desktop client review");
+  expect(storage.demo).toBeNull();
+  expect(requests.every(url => new URL(url).origin === "http://127.0.0.1:4173")).toBe(true);
+  expect(requests.some(url => new URL(url).pathname.startsWith("/api/"))).toBe(false);
 });
 
 test("@claim:entry-review saves edits, time, readiness, removal, and the resulting export", async ({ page }) => {
@@ -394,6 +478,49 @@ test("landing and routes meet the semantic and serious accessibility baseline", 
   }
 });
 
+test("routes set specific metadata and the 404 uses plain recovery copy", async ({ page }) => {
+  const routes = [
+    ["/demo", "Demo — Worklog Bridge", "Try a six-entry Worklog Bridge sample"],
+    ["/app", "Worklog — Worklog Bridge", "Review worklog entries"],
+    ["/privacy", "Privacy — Worklog Bridge", "How Worklog Bridge stores worklogs"],
+    ["/terms", "Terms — Worklog Bridge", "The terms for using Worklog Bridge"],
+    ["/download", "Download — Worklog Bridge", "Download the unsigned Worklog Bridge desktop preview"]
+  ];
+  for (const [route, title, description] of routes) {
+    await page.goto(route);
+    await expect(page).toHaveTitle(title);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", new RegExp(`^${description}`));
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", new RegExp(`^${description}`));
+  }
+  await page.goto("/not-a-real-page");
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Return home" })).toHaveAttribute("href", "/");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "The page you requested was not found. Return to Worklog Bridge.");
+});
+
+test("back and forward restore route scroll and focus", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    scrollTo(0, 1100);
+  });
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(900);
+  const expectedScroll = await page.evaluate(() => scrollY);
+  const privacyLink = page.locator('header a[href="/privacy"]');
+  await privacyLink.evaluate((link: HTMLElement) => link.focus({ preventScroll: true }));
+  await privacyLink.press("Enter");
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { name: "Privacy without surveillance" })).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(expectedScroll);
+  await expect(page.locator('header a[href="/privacy"]')).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { name: "Privacy without surveillance" })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+});
+
 test("mobile demo keeps its primary workflow visible", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/demo");
@@ -402,17 +529,19 @@ test("mobile demo keeps its primary workflow visible", async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
-test("@regression:landing-keeps-privacy-offline-and-price-facts-in-the-first-desktop-viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
-  for (const fact of [
-    "Worklog details stay on this device",
-    "Saved work stays available offline after the first visit",
-    "Free editor and exports · Pro is $12 per user each month"
-  ]) {
-    const box = await page.getByText(fact, { exact: true }).boundingBox();
-    expect(box, fact).not.toBeNull();
-    expect((box?.y || 0) + (box?.height || 0), fact).toBeLessThanOrEqual(900);
+test("@regression:landing-keeps-privacy-offline-and-price-facts-in-the-first-viewport", async ({ page }) => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    for (const fact of [
+      "Worklogs are stored on this device until you share a private link",
+      "Saved work stays available offline after the first visit",
+      "Free editor and exports · Pro is $12 per user each month"
+    ]) {
+      const box = await page.getByText(fact, { exact: true }).boundingBox();
+      expect(box, fact).not.toBeNull();
+      expect((box?.y || 0) + (box?.height || 0), `${viewport.width}px: ${fact}`).toBeLessThanOrEqual(viewport.height);
+    }
   }
 });
 
@@ -595,6 +724,16 @@ test("routes load without browser console errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
   page.on("pageerror", error => errors.push(error.message));
+  await page.route("https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      tag_name: "v0.1.18",
+      target_commitish: "1234567890abcdef1234567890abcdef12345678",
+      html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.1.18",
+      assets: [{ name: "Worklog.Bridge_0.1.18_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.1.18/Worklog.Bridge_0.1.18_amd64.AppImage" }]
+    })
+  }));
   for (const route of ["/", "/demo", "/privacy", "/terms", "/download", "/missing-page"]) {
     await page.goto(route);
     await page.waitForLoadState("networkidle");

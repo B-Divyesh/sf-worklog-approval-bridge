@@ -4,8 +4,9 @@
 - First action: “Try it with sample data” on the landing page.
 - Desktop first run: open `/app` and select “Load sample project”. It opens the same isolated sample in one action.
 - Sample: Northstar Health week of 24 August 2026, with four Git entries and two calendar entries. Five entries are ready and one needs review. Imported Git and calendar sources are filtered to the selected Monday-to-Sunday week and shown for selection before they enter a worklog.
-- Reset: use “Reset demo” in the persistent amber banner.
+- Approval: sample links retain `?demo=1` and the persistent banner. Acceptance creates a local `demo:worklog-bridge:receipts` record and never calls `/api/approvals`.
+- Reset: use “Reset demo” in the persistent amber banner. It restores the six entries and deletes every sample receipt.
 - Leave: use “Start for real”. Demo records are discarded from the active view and never copied into real storage.
-- Storage: the demo uses only `localStorage` key `demo:worklog-bridge:project`. Real mode uses `worklog-bridge:project`; demo code does not read or write that key.
-- Network: the bundled sample needs no network. Approval details stay after the `#` in the link. Client acceptance sends only the worklog identifier and supplied name to the same-origin receipt API; no worklog entries are sent.
+- Storage: the demo uses only `demo:worklog-bridge:project` and `demo:worklog-bridge:receipts`. Real mode uses `worklog-bridge:project`; demo code does not read or write that key.
+- Network: the bundled sample and demo approval need no API. Approval details stay after the `#` in the link. Real acceptance sends only the worklog identifier and supplied name to the same-origin receipt API.
 - Test entry point: Playwright opens `/demo` in a fresh browser context.
