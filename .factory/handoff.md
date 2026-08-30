@@ -1,14 +1,50 @@
-# Worklog Bridge handoff
+# Worklog Bridge repair handoff
 
-## Current release candidate
+## Outcome
 
-M2 adds Sociobot Entra accounts, durable opted-in worklog copies, pilot
-Sociobot/Dodo billing wiring, rate-limited Axum APIs, SQLite migrations, and
-a production container. The local-first editor and one-click `/demo` remain
-public and isolated. Full M2 evidence is in `.factory/handoff-m2.md`; M1's
-adversarial review remains in `.factory/review-4.md`.
+The Milestone 2 container now serves the Vite frontend from its real
+`dist/site/assets` directory. The live shell, all four emitted JavaScript and
+CSS chunks, known SPA routes, and `/health` work together. The existing Tauri
+desktop app, local/demo storage separation, Sociobot CIAM account backup,
+SQLite APIs, approval receipts, and Sociobot billing integration remain in
+place.
 
-## Verify
+The repair also fixes a second integration fault found by the live workflow:
+Axum could not extract `Path<Option<String>>` on `/api/approvals`, so a new
+approval lookup returned 500. Separate handlers now cover collection and
+receipt-ID routes.
+
+## Reproduction and root cause
+
+On 2026-08-30 at 04:02 UTC, the deployed
+`bbff110af6ade67b23a2aea181aeab107e96661e` container returned 200 HTML from
+`/`, but both referenced files failed:
+
+- `/assets/index-D1wU5F8Q.js` — 404, `text/plain; charset=utf-8`
+- `/assets/index-DPr_pJGE.css` — 404, `text/plain; charset=utf-8`
+
+The Axum wildcard for `/assets/{*path}` yields only the part after `/assets/`.
+The handler joined that value directly to `/app/dist/site`, looking for the
+files beside `index.html` instead of below `/app/dist/site/assets`. With
+`X-Content-Type-Options: nosniff`, the browser correctly refused the 404
+bodies and never rendered the app.
+
+## Changes and regression coverage
+
+- The asset handler keeps the `assets/` directory, lets `ServeFile` assign the
+  extension MIME, and adds one-year immutable caching to successful assets.
+- `regression_hashed_frontend_assets_keep_directory_mime_and_bytes` builds a
+  temporary Vite-shaped directory and checks status, MIME, body, caching, the
+  `/privacy` SPA shell, and `/health` JSON through the real Axum router.
+- `verify-live.mjs` recursively follows every hashed JS/CSS reference,
+  including lazy imports, and rejects missing, empty, or wrongly typed assets.
+- `regression_unaccepted_approval_lookup_is_a_successful_empty_response`
+  proves `/api/approvals?packetDigest=…` returns the intended 204 instead of an
+  extractor error.
+
+## Verification evidence
+
+Clean dependency setup and the original build gates:
 
 ```sh
 npm ci
@@ -18,39 +54,83 @@ npm run build
 CI=1 npm run build:desktop
 ```
 
-Open `/demo` in a fresh browser profile for the six-entry sample. The demo
-banner has **Reset demo** and **Start for real**. It keeps data only in the
-`demo:worklog-bridge:` namespace and never triggers account or billing calls.
+Results: zero npm audit findings; 29 Node/API/workflow tests, 6 Axum tests,
+and 38 Chromium tests passed. The browser suite covers desktop and 390 px
+mobile layouts, keyboard shortcuts, dialog focus, Axe serious/critical scans,
+offline reload and service-worker update behavior, request privacy, demo
+isolation, account boundaries, and license behavior. The desktop command
+produced Linux DEB, RPM, and AppImage bundles after installing the README's
+documented system packages.
 
-For the service, use `npm run build:server`, then run the generated binary
-with `PORT=8080`. It needs no other environment variables and persists its
-first-boot secret and SQLite database under `/data` when that mount exists.
+Additional checks passed:
 
-## Deployment status
+```sh
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features -- -D warnings
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+npm run build:server
+```
 
-The M2 image was built successfully in ACR, but M2 has not been deployed to
-`https://worklog-approval-bridge.sociobot.in`: the required Container App,
-durable `/data` mount, hostname mapping, pilot billing product, and confirmed
-CIAM callback registration are not available to this worker. Those exact
-operator actions and their evidence are listed in `.factory/handoff-m2.md`.
+A release-mode local service passed the complete `verify:live` flow. It found
+all four assets (`index-D1wU5F8Q.js`, `index-DPr_pJGE.css`,
+`index-DilQieBS.js`, and `core-DhEqZVGG.js`), then passed the isolated demo,
+real approval lookup, SPA routing, and health identity checks.
 
-## Known limitations
+The final custom-domain gate is:
 
-The desktop release remains an unsigned preview on macOS and Windows. The
-site and README disclose that those systems may show a trust warning. Linux
-release assets are checksummed. Platform signing remains an owner-held
-operational step.
+```sh
+npm run verify:live -- --expected-commit "$(git rev-parse HEAD)"
+```
 
-## Release-signing disclosure
+It passed against `https://worklog-approval-bridge.sociobot.in`. Each of the
+four hashed assets returned 200, its JavaScript or CSS MIME, non-empty bytes,
+and `Cache-Control: public, max-age=31536000, immutable`. `/health` returned
+version `0.2.0` and the full final commit. The demo and live approval lookup
+also passed without console errors.
 
-Signing secrets are optional. Tag-triggered releases always build an unsigned
-preview, even when signing secrets are present. A manual release with
-`sign_release` set to `false` also builds an unsigned preview. Set
-`sign_release` to `true` only when all platform secrets are available. When
-signing is requested, a partly configured secret set fails before packaging
-instead of silently producing an unsigned file.
+`/opt/fleet/lib/verify-url.sh` passed `/`, `/demo`, `/app`, `/privacy`,
+`/terms`, and `/download`: each returned 200 with a route title, `lang=en`, one
+`h1`, a main landmark, complete image alternatives and button names, and no
+console errors. Evidence is under `/tmp/worklog-repair-evidence-15713a3/`.
+Mobile Lighthouse scored performance 100, accessibility 100, best practices
+100, and SEO 100 (FCP 1.2 s, LCP 1.5 s, CLS 0, TBT 0 ms). Initial JavaScript
+is 16.96 KB gzip, CSS is 4.99 KB gzip, and the lazy MSAL chunk is 74.15 KB
+gzip.
 
-macOS signing and notarization use `APPLE_CERTIFICATE`,
-`APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
-`APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses
+## Build and deployment
+
+The production image was rebuilt from the final committed tree with all three
+identity arguments set to the full commit:
+
+```sh
+commit="$(git rev-parse HEAD)"
+az acr build --registry sociobotregistry \
+  --image "sf-worklog-approval-bridge:${commit:0:12}" \
+  --build-arg BUILD_SHA="$commit" \
+  --build-arg GIT_SHA="$commit" \
+  --build-arg SOURCE_COMMIT="$commit" .
+az containerapp update --resource-group sociobot \
+  --name sf-worklog-approval-bridge \
+  --image "sociobotregistry.azurecr.io/sf-worklog-approval-bridge:${commit:0:12}"
+```
+
+The existing Container App, custom domain, ingress, CIAM defaults, SQLite
+schema, billing endpoints, and desktop release configuration were not
+replaced or narrowed. The repair commits and this handoff are pushed to
+`origin/main`.
+
+## Known gap and operator action
+
+The factory-created Container App currently has no Azure Files volume in its
+deployment template. The service writes SQLite and its receipt-signing secret
+under `/data`, but that directory is revision-local until the factory mounts
+durable storage. Repository policy forbids provisioning infrastructure from
+this repair. Before relying on cross-revision account backups or receipts, the
+operator must attach a dedicated read-write Azure Files volume at `/data` and
+then repeat a write, revision restart, and read test.
+
+The desktop release remains an unsigned preview. macOS signing needs
+`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`,
+`APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing needs
 `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`.
