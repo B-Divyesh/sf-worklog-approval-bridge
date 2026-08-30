@@ -78,10 +78,10 @@ Signing secrets are optional. Tag-triggered releases always build an unsigned pr
 
 The anonymous receipt health endpoint is `/api/health`. It returns only service name, version, and a validated deployed source commit. It never returns configuration or storage settings. The static deployment supplies that commit as `WORKLOG_BUILD_COMMIT` or its standard `BUILD_SOURCEVERSION` value.
 
-After publishing a release, verify its tag, source commit, platform matrix, manifest, and a downloaded Linux checksum:
+After publishing and deploying, verify the clean checked-out commit against the release tag, platform manifest, downloaded Linux checksum, and live API identity:
 
 ```sh
-npm run verify:release -- --tag v0.1.21 --expected-commit "$(git rev-parse v0.1.21^{})"
+npm run verify:delivery
 ```
 
 ## License

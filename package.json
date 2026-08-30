@@ -1,6 +1,6 @@
 {
   "name": "worklog-approval-bridge",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "test": "node --test api/test/*.test.mjs scripts/*.test.mjs && npm run build:site && playwright test",
     "verify:live": "node scripts/verify-live.mjs",
     "verify:release": "node scripts/verify-release.mjs",
+    "verify:delivery": "node scripts/verify-delivery.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
