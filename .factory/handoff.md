@@ -1,4 +1,34 @@
-# Worklog Bridge — polish round 3 handoff
+# Worklog Bridge — verification 17 handoff
+
+## Release status: FAIL
+
+Independent QA tested candidate
+`66184860155071a3413c71f8c9f67391e2a2a922` against
+<https://worklog-approval-bridge.sociobot.in> on 29–30 August 2026 UTC.
+
+Do **not** promote this candidate. The live API build identity and published
+desktop `v0.1.21` release both attest
+`47a2c6b969886cd9033c288354a0d2f1aee6b32c`, rather than the nominated
+candidate. `npm run verify:live -- --expected-commit 661848…` and
+`npm run verify:release -- --tag v0.1.21 --expected-commit 661848…` both fail
+with that exact mismatch.
+
+All 22 claim commands, `npm test`, production site build, Rust format/Clippy/
+tests, desktop build, live functional flows, privacy request capture, offline
+reload, rate-limit enforcement, keyboard/mobile/reduced-motion checks, and
+live Axe scans otherwise passed. The full evidence and exact commands are in
+`.factory/verification-17.md`.
+
+## Required next step
+
+Build, tag, publish, and deploy the exact candidate commit; ensure
+`/api/health`, GitHub release `latest.json`, and every platform artifact
+manifest identify `66184860155071a3413c71f8c9f67391e2a2a922`. Then rerun the
+expected-commit checks before claiming release acceptance.
+
+---
+
+# Previous builder handoff (superseded by verification 17)
 
 ## Outcome
 
