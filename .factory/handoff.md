@@ -1,64 +1,46 @@
-# Worklog Bridge — independent verification 18 handoff
+# Worklog Bridge — adversarial review 4 handoff
 
 ## Outcome
 
-**PASS.** Candidate `aedc0f453580967435089a3dd79f6ffe7e124115` is live at
-<https://worklog-approval-bridge.sociobot.in>, and release `v0.1.22`, its
-desktop manifest, and `/api/health` all attest that exact commit. The stale
-deployment/release failure from verification 17 is resolved.
+This review records the deployed release at commit
+`aedc0f453580967435089a3dd79f6ffe7e124115` and repository documentation
+commit `2a0747eb382726c7eb9b1173b7ece3e9bd13f99b`. No product code changed.
+The live review, source review, and clean-clone claim matrix are recorded in
+`.factory/review-4.md`.
 
-The full evidence and defect list are in
-[`.factory/verification-18.md`](verification-18.md).
-
-## Verification summary
-
-- All 22 exact commands in `.factory/claims.json`: PASS.
-- `npm test`: PASS — 29 Node/API/workflow and 37 Chromium tests.
-- `npm run build`: PASS; `dist/site` produced.
-- Rust format, full-feature Clippy with warnings denied, and native tests: PASS.
-- `CI=1 npm run build:desktop`: PASS; AppImage, DEB, and RPM produced and the
-  binary survived an eight-second Xvfb smoke run.
-- `npm run verify:delivery`: PASS for the clean candidate, `v0.1.22`, published
-  desktop checksums, and live API identity.
-- Cold first read and one-click sample demo: PASS at desktop and 390 px.
-- Live demo and real approval flows, invalid input recovery, CSV/receipt
-  downloads, persistence, privacy payload boundary, and offline reload: PASS.
-- Live limits: 60 reads/minute then 429, 12 writes/minute then 429, and 30
-  Sociobot license checks then 429; each rejection included `Retry-After`.
-- Five concurrent acceptances produced one immutable receipt (one 201, four
-  409s) and a valid persisted lookup.
-- Axe serious/critical findings: zero across six routes at desktop and mobile.
-  Keyboard focus, touch targets, reduced motion, console/page errors, headers,
-  caching, service-worker update, and route 404 behavior: PASS.
-- Mobile Lighthouse: 99 performance, 100 accessibility, 100 best practices,
-  100 SEO; LCP 1.205 s, CLS 0, TBT 92 ms.
-- The live one-line Linux installer checksum-verified and installed the
-  published AppImage in an isolated directory. It ran successfully with the
-  AppImage extract fallback required by this container’s lack of FUSE.
-
-## How to reproduce
+## How to verify
 
 ```sh
 npm ci
 npm --prefix api ci
 npm test
 npm run build
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml
-CI=1 npm run build:desktop
-npm run verify:delivery
+for test in $(jq -r '.[].test' .factory/claims.json); do eval "$test"; done
+npm run verify:live -- --expected-commit aedc0f453580967435089a3dd79f6ffe7e124115
 ```
 
-Linux desktop builds require the packages listed in README, including
-WebKitGTK 4.1, AppIndicator, librsvg, `file`, `patchelf`, and `rpm`.
+Open `https://worklog-approval-bridge.sociobot.in/demo` in a fresh browser
+profile for the six-entry sample. The demo banner supplies **Reset demo** and
+**Start for real**. The demo uses only the `demo:worklog-bridge:` storage
+namespace.
 
-## Known gaps and next steps
+## Release-signing disclosure
 
-- Low documentation drift only: `.factory/copy-audit.md` names footer version
-  `v0.1.20`; refresh that transcription to `v0.1.22` on the next docs pass.
-- Published macOS and Windows packages remain intentionally unsigned and are
-  clearly labelled previews. Signing still requires the owner-held secrets
-  documented in README.
-- No release-blocking product gap remains. No product code was changed during
-  this verification.
+Signing secrets are optional. Tag-triggered releases always build an unsigned
+preview, even when signing secrets are present. A manual release with
+`sign_release` set to `false` also builds an unsigned preview. Set
+`sign_release` to `true` only when all platform signing secrets are available.
+When signing is requested, a partly configured secret set fails before
+packaging instead of silently producing an unsigned file.
+
+macOS signing and notarization use `APPLE_CERTIFICATE`,
+`APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
+`APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses
+`WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`.
+
+## Known product limitations
+
+The desktop release remains an unsigned preview on macOS and Windows. The
+site and README disclose that those systems may show a trust warning. Linux
+release assets are checksummed. Signing remains the next operational release
+step; it requires the owner-held credentials listed above.
