@@ -32,10 +32,12 @@ The obsolete pilot product now returns 404.
   receipt-signing secret is reused.
 - The first `/data` deployment reproduced a SQLite migration lock on Azure
   Files. The production pool now uses one connection, rollback-journal mode,
-  and a 30-second busy timeout. Startup removes only a zero-byte database and
-  its interrupted journal before retrying migration; non-empty databases are
-  never touched. A regression recreates that exact failed-bootstrap state and
-  checks recovery, the journal mode, and serialized connection behavior.
+  a 30-second busy timeout, and SQLite's lockless Unix VFS. This is safe because
+  the deployment is pinned to one process and one replica. Startup removes only
+  a zero-byte database and its interrupted journal before retrying migration;
+  non-empty databases are never touched. A regression recreates that exact
+  failed-bootstrap state and checks recovery, VFS availability, journal mode,
+  and serialized connection behavior.
 - Both health routes have exact-field M2 tests. Live verification requires
   `/health` and `/api/health` to agree on service, version, and full commit,
   then checks every protected account/worklog/billing route for the bearer

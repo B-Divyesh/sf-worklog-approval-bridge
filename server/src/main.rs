@@ -950,10 +950,16 @@ async fn database(config: &Config) -> Result<SqlitePool, Box<dyn std::error::Err
             warn!(database = %path.display(), "removed an incomplete empty SQLite bootstrap");
         }
     }
-    let options = SqliteConnectOptions::from_str(&config.database_url)?
+    let mut options = SqliteConnectOptions::from_str(&config.database_url)?
         .foreign_keys(true)
         .journal_mode(SqliteJournalMode::Delete)
         .busy_timeout(Duration::from_secs(30));
+    if !config.database_url.contains(":memory:") {
+        // Azure Files does not provide SQLite-compatible POSIX byte-range
+        // locking. The deployment is pinned to one replica and this process
+        // uses one connection, so SQLite's lockless Unix VFS is safe here.
+        options = options.vfs("unix-none");
+    }
     let pool = SqlitePoolOptions::new()
         // Azure Files is the durable volume in production. One connection
         // avoids competing SQLite locks inside a single-replica service.
@@ -1565,7 +1571,7 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
     }
 
     #[tokio::test]
-    async fn regression_durable_sqlite_serializes_connections_and_uses_delete_journal() {
+    async fn regression_durable_sqlite_uses_lockless_vfs_and_serializes_connections() {
         let directory = TempDir::new().unwrap();
         let database_path = directory.path().join("durable.sqlite3");
         tokio::fs::write(&database_path, []).await.unwrap();

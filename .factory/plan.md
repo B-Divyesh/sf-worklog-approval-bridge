@@ -122,6 +122,6 @@ data controls, not a later premium feature.
 | --- | --- |
 | The shared CIAM SPA redirect is not registered. | `az ad app show` was denied for the worker identity on 2026-08-30. An operator must register/confirm `https://worklog-approval-bridge.sociobot.in/auth/callback`, then complete a real sign-in. |
 | The shared checkout can fail independently. | Keep checkout verification strict and product behavior fail-soft. Repair 18 observed a 303 hosted redirect after verification 19 recorded an environment-gated HTTP 500. |
-| SQLite must survive revisions. | Deploy only `sf-worklog-approval-bridge`, mount its factory-managed durable share at `/data`, pin one replica, serialize the pool with rollback-journal mode, and verify the generated secret is reused after restart. |
+| SQLite must survive revisions. | Deploy only `sf-worklog-approval-bridge`, mount its factory-managed durable share at `/data`, pin one replica, use one lockless-VFS connection with rollback journaling, and verify the generated secret is reused after restart. |
 | Users do not want cloud copies of worklogs. | Make backup explicit, preserve local-first editing, and measure only opt-in support feedback (no product analytics). |
 | SQLite reaches its single-service limit. | Keep all queries tenant-indexed and migrate to PostgreSQL before adding teams in M3 if operational load requires it. |
