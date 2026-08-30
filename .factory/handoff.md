@@ -5,7 +5,7 @@
 Repair 18 resolves every release blocker in independent verification 19. The
 M2 Axum service, public health identity, authenticated account/worklog routes,
 both rate-limit families, checkout handoff, and exact claim coverage are live
-in the product-scoped container deployment. The release version is `0.2.1`.
+in the product-scoped container deployment. The release version is `0.2.2`.
 
 ## Reproduced findings
 
@@ -42,6 +42,8 @@ The obsolete pilot product now returns 404.
   `/health` and `/api/health` to agree on service, version, and full commit,
   then checks every protected account/worklog/billing route for the bearer
   challenge.
+- Every response preserves the previously verified HSTS policy; the health
+  regression requires `max-age=31536000; includeSubDomains`.
 - Exact regression fixtures reject verification 19's stale receipt-only health
   body and the observed checkout HTTP 500. The direct live checkout assertion
   remains strict. The product-owned `/checkout` route fails soft with a retry
@@ -79,7 +81,7 @@ Exact results:
 - Every one of the 27 commands in `.factory/claims.json` passed separately.
 - Both `cargo fmt --check` commands and both `cargo clippy ... -D warnings`
   commands passed. The Tauri crate passed 2 tests.
-- The release Axum build passed. Tauri produced the v0.2.1 DEB, RPM, and
+- The release Axum build passed. Tauri produced the v0.2.2 DEB, RPM, and
   AppImage packages.
 - The factory URL verifier passed `/`, `/demo`, `/app`, `/checkout`,
   `/privacy`, `/terms`, and `/download` at 1366 px and 390 px. Every route had
@@ -105,7 +107,7 @@ Live evidence from the final runtime build:
 - Exactly one revision is active and healthy, with one replica and the `data`
   volume mounted at `/data`. Its image tag derives from the pushed source SHA.
 - `/health` and `/api/health` return the same exact full pushed commit,
-  `worklog-approval-bridge`, and version `0.2.1`.
+  `worklog-approval-bridge`, and version `0.2.2`.
 - The repository's strict `verify:live` command passes the production checkout,
   both health routes, four protected M2 routes, four frontend assets, isolated
   demo, real approval lookup, and genuine 404 behavior.

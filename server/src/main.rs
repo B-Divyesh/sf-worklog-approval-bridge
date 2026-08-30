@@ -494,6 +494,10 @@ async fn security_headers(request: Request, next: Next) -> Response {
         "permissions-policy",
         HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
     );
+    headers.insert(
+        header::STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+    );
     headers.insert("content-security-policy", HeaderValue::from_static("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://sociobotcustomers.ciamlogin.com https://api.sociobot.in https://api.github.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.sociobot.in; frame-ancestors 'none'"));
     response
 }
@@ -1622,6 +1626,14 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
                 .await
                 .unwrap();
             assert_eq!(response.status(), StatusCode::OK, "{path}");
+            assert_eq!(
+                response
+                    .headers()
+                    .get(header::STRICT_TRANSPORT_SECURITY)
+                    .unwrap(),
+                "max-age=31536000; includeSubDomains",
+                "{path}"
+            );
             let body = response_json(response).await;
             assert_eq!(
                 body,
