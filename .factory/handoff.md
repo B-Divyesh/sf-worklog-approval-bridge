@@ -12,7 +12,9 @@ place.
 The repair also fixes a second integration fault found by the live workflow:
 Axum could not extract `Path<Option<String>>` on `/api/approvals`, so a new
 approval lookup returned 500. Separate handlers now cover collection and
-receipt-ID routes.
+receipt-ID routes. The same end-to-end pass showed that Rust's default
+snake_case receipt fields did not match the existing camelCase frontend API;
+the server now preserves the established receipt schema.
 
 ## Reproduction and root cause
 
@@ -40,7 +42,8 @@ bodies and never rendered the app.
   including lazy imports, and rejects missing, empty, or wrongly typed assets.
 - `regression_unaccepted_approval_lookup_is_a_successful_empty_response`
   proves `/api/approvals?packetDigest=…` returns the intended 204 instead of an
-  extractor error.
+  extractor error, then creates and retrieves a signed receipt using the
+  frontend's camelCase field names.
 
 ## Verification evidence
 
@@ -83,11 +86,16 @@ The final custom-domain gate is:
 npm run verify:live -- --expected-commit "$(git rev-parse HEAD)"
 ```
 
-It passed against `https://worklog-approval-bridge.sociobot.in`. Each of the
-four hashed assets returned 200, its JavaScript or CSS MIME, non-empty bytes,
-and `Cache-Control: public, max-age=31536000, immutable`. `/health` returned
-version `0.2.0` and the full final commit. The demo and live approval lookup
-also passed without console errors.
+The app-owned checks passed against
+`https://worklog-approval-bridge.sociobot.in`. Each of the four hashed assets
+returned 200, its JavaScript or CSS MIME, non-empty bytes, and `Cache-Control:
+public, max-age=31536000, immutable`. `/health` returned version `0.2.0` and
+the full final commit. The demo, live approval creation/reload, and CIAM
+authorization redirect also passed without console errors. At handoff, the
+external Sociobot checkout endpoint returns HTTP 500 on both production and
+pilot hosts; it had returned the required hosted-checkout 303 earlier in this
+repair. That upstream response is the only failing assertion in the combined
+`verify:live` command.
 
 `/opt/fleet/lib/verify-url.sh` passed `/`, `/demo`, `/app`, `/privacy`,
 `/terms`, and `/download`: each returned 200 with a route title, `lang=en`, one
@@ -134,3 +142,9 @@ The desktop release remains an unsigned preview. macOS signing needs
 `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`,
 `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing needs
 `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`.
+
+Signing secrets are optional. Tag-triggered releases always build an unsigned
+preview, even when signing secrets are present. A manual release with
+`sign_release` set to `false` also builds an unsigned preview. Set
+`sign_release` to `true` only after all platform secrets are installed; a
+partly configured signing request fails before packaging.
