@@ -934,13 +934,21 @@ async fn serve_named(static_dir: &FilePath, name: &str) -> Response {
 }
 
 async fn database(config: &Config) -> Result<SqlitePool, Box<dyn std::error::Error>> {
-    if let Some(path) = config
+    let database_path = config
         .database_url
         .strip_prefix("sqlite://")
         .and_then(|value| value.split('?').next())
-        .and_then(|value| FilePath::new(value).parent())
-    {
+        .map(PathBuf::from);
+    if let Some(path) = database_path.as_deref().and_then(FilePath::parent) {
         tokio::fs::create_dir_all(path).await?;
+    }
+    if let Some(path) = database_path.as_deref() {
+        if matches!(tokio::fs::metadata(path).await, Ok(metadata) if metadata.len() == 0) {
+            let journal = PathBuf::from(format!("{}-journal", path.display()));
+            let _ = tokio::fs::remove_file(&journal).await;
+            tokio::fs::remove_file(path).await?;
+            warn!(database = %path.display(), "removed an incomplete empty SQLite bootstrap");
+        }
     }
     let options = SqliteConnectOptions::from_str(&config.database_url)?
         .foreign_keys(true)
@@ -1559,6 +1567,14 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
     #[tokio::test]
     async fn regression_durable_sqlite_serializes_connections_and_uses_delete_journal() {
         let directory = TempDir::new().unwrap();
+        let database_path = directory.path().join("durable.sqlite3");
+        tokio::fs::write(&database_path, []).await.unwrap();
+        tokio::fs::write(
+            directory.path().join("durable.sqlite3-journal"),
+            b"interrupted bootstrap",
+        )
+        .await
+        .unwrap();
         let mut config = Config::from_env();
         config.database_url = format!(
             "sqlite://{}/durable.sqlite3?mode=rwc",
@@ -1571,6 +1587,12 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
             .await
             .unwrap();
         assert_eq!(journal.to_ascii_lowercase(), "delete");
+        assert!(tokio::fs::metadata(&database_path).await.unwrap().len() > 0);
+        assert!(
+            tokio::fs::metadata(directory.path().join("durable.sqlite3-journal"))
+                .await
+                .is_err()
+        );
 
         let held = pool.acquire().await.unwrap();
         assert!(
