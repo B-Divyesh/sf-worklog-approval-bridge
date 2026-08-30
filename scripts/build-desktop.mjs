@@ -12,11 +12,20 @@ if (process.platform === "linux") process.env.APPIMAGE_EXTRACT_AND_RUN ||= "1";
 // linuxdeploy binary. The old plugin lacks the required API type probe and
 // makes AppImage packaging exit 127 before it touches application code.
 const gtkPlugin = `${homedir()}/.cache/tauri/linuxdeploy-plugin-gtk.sh`;
-try {
-  const source = await readFile(gtkPlugin, "utf8");
-  const patched = patchGtkPlugin(source);
-  if (patched !== source) await writeFile(gtkPlugin, patched);
-} catch { /* The plugin is downloaded by Tauri during its first Linux bundle. */ }
+async function patchCachedGtkPlugin() {
+  try {
+    const source = await readFile(gtkPlugin, "utf8");
+    const patched = patchGtkPlugin(source);
+    if (patched === source) return false;
+    await writeFile(gtkPlugin, patched);
+    return true;
+  } catch {
+    // The plugin is downloaded by Tauri during its first Linux bundle.
+    return false;
+  }
+}
+
+await patchCachedGtkPlugin();
 
 const command = process.platform === "win32" ? "npx.cmd" : "npx";
 // Windows cannot directly spawn a .cmd shim with Node's default CreateProcess
@@ -25,7 +34,21 @@ const command = process.platform === "win32" ? "npx.cmd" : "npx";
 // Tauri's native runtime is intentionally opt-in so the registered Rust
 // claims can run in a clean, non-desktop worker. Every installable bundle
 // explicitly restores it here.
-const child = spawn(command, ["tauri", "build", "--features", "desktop", ...process.argv.slice(2)], {
-  stdio: "inherit", env: process.env, shell: process.platform === "win32"
-});
-child.on("exit", code => process.exit(code ?? 1));
+function runBuild() {
+  return new Promise(resolve => {
+    const child = spawn(command, ["tauri", "build", "--features", "desktop", ...process.argv.slice(2)], {
+      stdio: "inherit", env: process.env, shell: process.platform === "win32"
+    });
+    child.once("error", () => resolve(1));
+    child.once("exit", code => resolve(code ?? 1));
+  });
+}
+
+let exitCode = await runBuild();
+// On a fresh cache, Tauri downloads the legacy GTK plugin after the first
+// patch attempt. Patch it and retry once so an AppImage build works in a
+// clean clone as well as an already-warmed runner.
+if (exitCode !== 0 && process.platform === "linux" && await patchCachedGtkPlugin()) {
+  exitCode = await runBuild();
+}
+process.exit(exitCode);

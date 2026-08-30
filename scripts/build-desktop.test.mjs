@@ -7,6 +7,8 @@ test("@regression:ci-one-desktop-build normalises CI=1 before invoking Tauri", a
   const source = await readFile(new URL("./build-desktop.mjs", import.meta.url), "utf8");
   assert.match(source, /process\.env\.CI === "1"\) process\.env\.CI = "true"/);
   assert.match(source, /patchGtkPlugin/);
+  assert.match(source, /await patchCachedGtkPlugin\(\)/);
+  assert.match(source, /exitCode !== 0 && process\.platform === "linux"/);
   assert.match(source, /APPIMAGE_EXTRACT_AND_RUN/);
   assert.match(source, /shell: process\.platform === "win32"/);
   assert.match(source, /\["tauri", "build", "--features", "desktop"/);
