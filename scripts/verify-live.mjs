@@ -5,6 +5,35 @@ import { assertDeployedCommit, liveVerificationOptions } from "./verify-live-opt
 const billingCheckout = "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout";
 const { target, expectedCommit } = liveVerificationOptions(process.argv.slice(2));
 
+async function verifyFrontendAssets() {
+  const root = await fetch(`${target}/`);
+  assert.equal(root.status, 200, "the live root must return the frontend shell");
+  assert.match(root.headers.get("content-type") || "", /^text\/html\b/i, "the live root must be HTML");
+  const pending = [...new Set((await root.text()).match(/\/assets\/[A-Za-z0-9._-]+\.(?:js|css)\b/g) || [])];
+  const checked = new Set();
+
+  while (pending.length) {
+    const path = pending.shift();
+    if (checked.has(path)) continue;
+    checked.add(path);
+    const response = await fetch(new URL(path, target));
+    assert.equal(response.status, 200, `${path} must be served from the container's built assets directory`);
+    const contentType = response.headers.get("content-type") || "";
+    if (path.endsWith(".css")) assert.match(contentType, /^text\/css\b/i, `${path} must use a CSS MIME type`);
+    else assert.match(contentType, /^(?:text|application)\/javascript\b/i, `${path} must use a JavaScript MIME type`);
+    const body = await response.text();
+    assert.ok(body.length > 0, `${path} must not be empty`);
+    for (const match of body.matchAll(/(?:\/assets\/|\.\/)[A-Za-z0-9._-]+\.(?:js|css)\b/g)) {
+      const nested = new URL(match[0], new URL(path, target)).pathname;
+      if (!checked.has(nested)) pending.push(nested);
+    }
+  }
+
+  assert.ok([...checked].some(path => path.endsWith(".js")), "the live shell must reference JavaScript");
+  assert.ok([...checked].some(path => path.endsWith(".css")), "the live shell must reference CSS");
+  return [...checked].sort();
+}
+
 const checkout = await fetch(billingCheckout, { redirect: "manual" });
 assert.equal(checkout.status, 303, "the advertised Pro checkout must redirect to hosted checkout, not return 404");
 assert.match(checkout.headers.get("location") || "", /^https:\/\/checkout\.dodopayments\.com\//, "checkout redirect must use the hosted Dodo checkout");
@@ -13,10 +42,11 @@ const health = await fetch(`${target}/api/health`, { headers: { Accept: "applica
 assert.equal(health.status, 200, "the receipt API must expose a public health/build identity");
 const healthBody = await health.json();
 assert.equal(healthBody.status, "ok");
-assert.equal(healthBody.build?.service, "worklog-approval-bridge-receipts");
+assert.equal(healthBody.build?.service, "worklog-approval-bridge");
 assert.match(healthBody.build?.version || "", /^\d+\.\d+\.\d+$/);
 assert.match(healthBody.build?.commit || "", /^[a-f0-9]{7,64}$/);
 assertDeployedCommit(healthBody.build.commit, expectedCommit);
+const frontendAssets = await verifyFrontendAssets();
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
@@ -69,7 +99,7 @@ try {
   const missing = await page.goto(`${target}/missing-page`, { waitUntil: "domcontentloaded" });
   assert.equal(missing?.status(), 404, "unknown live routes must retain HTTP 404");
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Page not found" }).waitFor());
-  console.log(`Live checkout, API identity, isolated demo, real approval lookup, and routing passed for ${target}`);
+  console.log(`Live checkout, API identity, ${frontendAssets.length} frontend assets, isolated demo, real approval lookup, and routing passed for ${target}`);
 } finally {
   await browser.close();
 }

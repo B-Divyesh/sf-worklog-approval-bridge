@@ -463,7 +463,16 @@ fn percent_decode(value: &str) -> Result<String, ()> {
 async fn spa(State(state): State<AppState>) -> Response { serve_named(&state.config.static_dir, "index.html").await }
 async fn asset(State(state): State<AppState>, Path(path): Path<String>) -> Response {
     if !safe_relative(&path) { return not_found(State(state)).await; }
-    serve_named(&state.config.static_dir, &path).await
+    // Axum's catch-all extractor removes the matched `/assets/` route prefix.
+    // Keep that directory when resolving Vite's root-relative hashed URLs.
+    let mut response = serve_named(&state.config.static_dir, &format!("assets/{path}")).await;
+    if response.status().is_success() {
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+    response
 }
 async fn root_file(State(state): State<AppState>, uri: Uri) -> Response {
     let name = uri.path().trim_start_matches('/');
@@ -555,6 +564,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use axum::http::Request;
+    use http_body_util::BodyExt;
+    use tempfile::TempDir;
 
     async fn test_pool() -> SqlitePool {
         let pool = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
@@ -576,6 +587,13 @@ mod tests {
         });
         let http = Client::builder().timeout(Duration::from_millis(100)).build().unwrap();
         AppState { pool, auth: AuthService::new(config.clone(), http.clone()), config, http, signing_secret: Arc::new("test-secret".to_owned()) }
+    }
+
+    async fn test_state_with_static_dir(static_dir: PathBuf) -> AppState {
+        let mut state = test_state().await;
+        Arc::make_mut(&mut state.config).static_dir = static_dir;
+        state.auth.config = state.config.clone();
+        state
     }
 
     fn sample_worklog(client: &str) -> WorklogPayload {
@@ -636,5 +654,35 @@ mod tests {
         assert!(generated);
         assert!(!generated_again);
         assert_eq!(first, second);
+    }
+
+    #[tokio::test]
+    async fn regression_hashed_frontend_assets_keep_directory_mime_and_bytes() {
+        let static_root = TempDir::new().unwrap();
+        tokio::fs::create_dir(static_root.path().join("assets")).await.unwrap();
+        tokio::fs::write(static_root.path().join("index.html"), "<!doctype html><main><h1>Worklog Bridge</h1></main>").await.unwrap();
+        tokio::fs::write(static_root.path().join("assets/index-AB12cd34.css"), "body{color:#fff}").await.unwrap();
+        tokio::fs::write(static_root.path().join("assets/index-EF56gh78.js"), "document.documentElement.dataset.ready='true';").await.unwrap();
+        let router = app(test_state_with_static_dir(static_root.path().to_path_buf()).await);
+
+        for (path, expected_type, expected_body) in [
+            ("/assets/index-AB12cd34.css", "text/css", "body{color:#fff}"),
+            ("/assets/index-EF56gh78.js", "javascript", "document.documentElement.dataset.ready='true';"),
+        ] {
+            let response = router.clone().oneshot(Request::builder().uri(path).body(Body::empty()).unwrap()).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK, "{path} must resolve below dist/site/assets");
+            assert!(response.headers().get(header::CONTENT_TYPE).unwrap().to_str().unwrap().contains(expected_type));
+            assert_eq!(response.headers().get(header::CACHE_CONTROL).unwrap(), "public, max-age=31536000, immutable");
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            assert_eq!(body, expected_body);
+        }
+
+        let spa = router.clone().oneshot(Request::builder().uri("/privacy").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(spa.status(), StatusCode::OK, "the known-route SPA fallback must remain available");
+        assert!(spa.headers().get(header::CONTENT_TYPE).unwrap().to_str().unwrap().starts_with("text/html"));
+
+        let health = router.oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(health.status(), StatusCode::OK, "the container health route must remain available");
+        assert!(health.headers().get(header::CONTENT_TYPE).unwrap().to_str().unwrap().starts_with("application/json"));
     }
 }
