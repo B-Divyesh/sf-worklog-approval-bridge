@@ -91,16 +91,15 @@ The app-owned checks passed against
 returned 200, its JavaScript or CSS MIME, non-empty bytes, and `Cache-Control:
 public, max-age=31536000, immutable`. `/health` returned version `0.2.0` and
 the full final commit. The demo, live approval creation/reload, and CIAM
-authorization redirect also passed without console errors. At handoff, the
-external Sociobot checkout endpoint returns HTTP 500 on both production and
-pilot hosts; it had returned the required hosted-checkout 303 earlier in this
-repair. That upstream response is the only failing assertion in the combined
-`verify:live` command.
+authorization redirect also passed without console errors. The Sociobot
+checkout returned the required 303 redirect to the hosted Dodo checkout, so
+the complete `verify:live` command passed.
 
 `/opt/fleet/lib/verify-url.sh` passed `/`, `/demo`, `/app`, `/privacy`,
 `/terms`, and `/download`: each returned 200 with a route title, `lang=en`, one
 `h1`, a main landmark, complete image alternatives and button names, and no
-console errors. Evidence is under `/tmp/worklog-repair-evidence-15713a3/`.
+console errors. Final evidence is under
+`/tmp/worklog-repair-evidence-dec73d3/`.
 Mobile Lighthouse scored performance 100, accessibility 100, best practices
 100, and SEO 100 (FCP 1.2 s, LCP 1.5 s, CLS 0, TBT 0 ms). Initial JavaScript
 is 16.96 KB gzip, CSS is 4.99 KB gzip, and the lazy MSAL chunk is 74.15 KB
