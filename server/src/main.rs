@@ -251,6 +251,7 @@ struct ApprovalInput {
 }
 
 #[derive(Serialize, FromRow)]
+#[serde(rename_all = "camelCase")]
 struct ApprovalReceipt {
     version: i64,
     #[sqlx(rename = "receipt_id")]
@@ -696,10 +697,34 @@ mod tests {
 
     #[tokio::test]
     async fn regression_unaccepted_approval_lookup_is_a_successful_empty_response() {
-        let response = app(test_state().await)
+        let router = app(test_state().await);
+        let digest = "a".repeat(64);
+        let response = router.clone()
             .oneshot(Request::builder().uri(format!("/api/approvals?packetDigest={}", "a".repeat(64))).body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+        let created = router.clone()
+            .oneshot(Request::builder().method(Method::POST).uri("/api/approvals").header(header::CONTENT_TYPE, "application/json").body(Body::from(format!(r#"{{"packetDigest":"{digest}","approver":"Repair verifier"}}"#))).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(created.status(), StatusCode::CREATED);
+        let body = created.into_body().collect().await.unwrap().to_bytes();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["receipt"]["packetDigest"], digest);
+        assert!(payload["receipt"]["receiptId"].is_string());
+        assert!(payload["receipt"]["acceptedAt"].is_string());
+        assert!(payload["receipt"].get("packet_digest").is_none());
+
+        let lookup = router
+            .oneshot(Request::builder().uri(format!("/api/approvals?packetDigest={digest}")).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(lookup.status(), StatusCode::OK);
+        let body = lookup.into_body().collect().await.unwrap().to_bytes();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["receipt"]["packetDigest"], digest);
+        assert_eq!(payload["valid"], true);
     }
 }
