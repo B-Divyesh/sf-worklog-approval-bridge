@@ -73,7 +73,7 @@ CSV export, local approval link, durable receipt service, free/Pro boundary,
 download flow, legal pages, accessibility, and release preview. See
 `.factory/handoff.md`, review records, and the existing claim registry.
 
-### M2 — accounts, persistence, and subscription wiring — in progress
+### M2 — accounts, persistence, and subscription wiring — implementation complete; launch blocked
 
 Routes and screens:
 
@@ -97,6 +97,14 @@ is exceeded, CIAM is configured with PKCE and backend JWT validation, hosted
 pilot checkout is wired, no demo data can reach a real account, and all M1 and
 M2 tests/builds pass.
 
+Implementation and verification completed on 2026-08-30. The remaining
+launch work is external configuration, not a product stub: the pilot billing
+catalogue has no `worklog-approval-bridge` product (its checkout returns
+HTTP 404), the shared Entra app's callback registration could not be read with
+the available Azure identity, and no Container App target with durable `/data`
+storage is provisioned for this product. These blockers and the built image
+are recorded in `.factory/handoff-m2.md`.
+
 ### M3 — team and approval workflows — planned
 
 Add shared client workspaces, a second reviewer role, receipt search, and
@@ -104,14 +112,17 @@ worklog templates. Keep individual source selection and redaction local.
 
 ### M4 — operations and data control — planned
 
-Add account export/delete, support-safe admin tools, retention cleanup,
-backups, transactional status email opt-in, and operational dashboards.
+Add support-safe admin tools, retention cleanup, managed backups,
+transactional status email opt-in, and operational dashboards. Account
+export/delete shipped early in M2 because persistence makes them necessary
+data controls, not a later premium feature.
 
 ## Risks and experiments
 
 | Risk | Experiment that retires it |
 | --- | --- |
-| The shared CIAM SPA redirect is not registered. | Deploy `/auth/callback`, complete a real CIAM sign-in, and record the result in the M2 handoff. |
-| The pilot product is not registered at the live test gateway. | Open the hosted pilot checkout and verify the returned token against the gateway. |
+| The shared CIAM SPA redirect is not registered. | `az ad app show` was denied for the worker identity on 2026-08-30. An operator must register/confirm `https://worklog-approval-bridge.sociobot.in/auth/callback`, then complete a real sign-in. |
+| The pilot product is not registered at the live test gateway. | Observed 2026-08-30: pilot checkout returns HTTP 404 `enabled factory product` and its product list lacks this slug. Register the test product, open hosted checkout, and verify its returned token. |
+| A durable Container App target has not been provisioned. | Create the named app with a persistent mount at `/data`, deploy the M2 image, then cold-check `/health`, `/demo`, callback, and checkout at the production URL. |
 | Users do not want cloud copies of worklogs. | Make backup explicit, preserve local-first editing, and measure only opt-in support feedback (no product analytics). |
 | SQLite reaches its single-service limit. | Keep all queries tenant-indexed and migrate to PostgreSQL before adding teams in M3 if operational load requires it. |
