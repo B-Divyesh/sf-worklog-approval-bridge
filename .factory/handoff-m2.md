@@ -60,6 +60,11 @@ final browser run passed all 38 tests. The site build's initial application
 JavaScript is 17.97 KB gzip; MSAL is a 74.15 KB gzip lazy chunk and is not
 loaded by the public/demo route.
 
+The final committed tree was cloned into a new temporary directory, then
+installed with `npm ci` and `npm --prefix api ci`. That clean clone passed its
+full test suite, Tauri Rust claims, site build, and every distinct command in
+`.factory/claims.json`, including all browser demo claims.
+
 The release service was also cold-started with only `PORT` set. It generated
 its SQLite secret/store, fetched the CIAM discovery document and JWKS, served
 `/health`, and returned `429` plus `Retry-After` after the configured
