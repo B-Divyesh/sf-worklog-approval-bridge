@@ -4,8 +4,8 @@
 
 Repair 18 resolves every release blocker in independent verification 19. The
 M2 Axum service, public health identity, authenticated account/worklog routes,
-both rate-limit families, checkout handoff, and exact claim coverage are ready
-for the product-scoped container deployment. The release version is `0.2.1`.
+both rate-limit families, checkout handoff, and exact claim coverage are live
+in the product-scoped container deployment. The release version is `0.2.1`.
 
 ## Reproduced findings
 
@@ -98,12 +98,31 @@ The work order deployment uses only the existing Container App
 `sf-worklog-approval-bridge`, the repository `Dockerfile`, port 8080, one
 replica, and `deploy.data_dir=/data`. The factory deploy command builds the
 committed source with its full SHA, mounts the product's durable share at
-`/data`, and maps only the product hostname. Live verification requires both
-health routes to return the same full commit and M2 service identity, all four
-protected API probes to return 401 plus `WWW-Authenticate: Bearer`, both API
-families to enforce 429 plus `Retry-After`, and the shared checkout to return a
-303 hosted redirect. No unrelated app, database, key vault, or Sociobot
-production resource is read or modified.
+`/data`, and maps only the product hostname.
+
+Live evidence from the final runtime build:
+
+- Exactly one revision is active and healthy, with one replica and the `data`
+  volume mounted at `/data`. Its image tag derives from the pushed source SHA.
+- `/health` and `/api/health` return the same exact full pushed commit,
+  `worklog-approval-bridge`, and version `0.2.1`.
+- The repository's strict `verify:live` command passes the production checkout,
+  both health routes, four protected M2 routes, four frontend assets, isolated
+  demo, real approval lookup, and genuine 404 behavior.
+- Account DELETE requests 1–12 returned 401 and request 13 returned 429 with
+  `Retry-After`. Approval POST requests 1–12 returned 422 and request 13
+  returned 429 with `Retry-After`.
+- Live sign-in redirects to `sociobotcustomers.ciamlogin.com` with the required
+  tenant and client IDs, callback URI, `openid profile email offline_access`
+  scopes, and PKCE `S256`.
+- After a controlled restart of that exact revision, health returned the same
+  commit and startup logged `generated_receipt_signing_secret:false` against
+  `sqlite:///data/worklog-bridge.sqlite3?mode=rwc`. The persisted database was
+  73,728 bytes.
+- The shared production checkout returned 303 to the hosted Dodo checkout.
+
+No unrelated app, database, key vault, or Sociobot production resource was
+read or modified.
 
 ## Known limits
 

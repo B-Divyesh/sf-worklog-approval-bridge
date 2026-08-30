@@ -73,7 +73,7 @@ CSV export, local approval link, durable receipt service, free/Pro boundary,
 download flow, legal pages, accessibility, and release preview. See
 `.factory/handoff.md`, review records, and the existing claim registry.
 
-### M2 — accounts, persistence, and subscription wiring — repair complete; deployment verification pending
+### M2 — accounts, persistence, and subscription wiring — complete
 
 Routes and screens:
 
@@ -100,9 +100,9 @@ M2 tests/builds pass.
 Implementation and repair verification completed on 2026-08-30. Repair 18
 adds authenticated public-route coverage, exact M2 health checks, both API
 families' rate-limit checks, and zero-config persistence coverage. The
-production checkout currently redirects to hosted checkout. The final deployment gate is
-the product-scoped Container App with its durable `/data` mount; exact evidence
-is recorded in `.factory/handoff.md`.
+production checkout currently redirects to hosted checkout. The product-scoped
+Container App is live with its durable `/data` mount; exact evidence is recorded
+in `.factory/handoff.md`.
 
 ### M3 — team and approval workflows — planned
 
