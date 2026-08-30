@@ -31,9 +31,10 @@ client-IP rate limits with `429` and `Retry-After`.
   billing path and uses only its `demo:` storage namespace.
 - Multi-stage non-root Docker image, static SPA routing, health identity,
   security headers, SQLite-backed rate limiter, and first-boot secret
-  generation. The remote image build succeeded as
-  `sociobotregistry.azurecr.io/worklog-approval-bridge:010ba0a`, digest
-  `sha256:83d16f9d8f6bcd29dc1497529255e5b2129a9e12afe32e2d33400ce09bc41e8c`.
+  generation. The final pushed source was built remotely as
+  `sociobotregistry.azurecr.io/worklog-approval-bridge:83ec855`, digest
+  `sha256:96ba9c137a25aba488b47dad2ab7a8be7c10cdb6f4d76fec76fe35a28497e67c`
+  (ACR run `ch1er`).
 - Clean-cache desktop packaging repair: the build script patches a freshly
   downloaded legacy GTK linuxdeploy plugin and retries once. Linux Debian,
   RPM, and AppImage bundles build successfully.
@@ -75,7 +76,9 @@ allowance. Azure Container Registry task `ch1dw` completed successfully.
 M2 is **not deployed to the live product URL**. I did not invent a Container
 App or DNS target: Azure has no provisioned `worklog-approval-bridge` app or
 durable `/data` mount. Therefore a cold live check would only test the prior
-M1 static release, not this M2 service.
+M1 static release, not this M2 service. The final read-only check confirmed
+that the live root returns the prior static HTML and `/health` is rewritten to
+that HTML rather than returning the M2 health JSON.
 
 Before deployment, an operator needs to:
 
