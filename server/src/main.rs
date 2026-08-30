@@ -25,7 +25,7 @@ use reqwest::{redirect::Policy, Client, Url};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
     FromRow, SqlitePool,
 };
 use tower::ServiceExt;
@@ -942,9 +942,14 @@ async fn database(config: &Config) -> Result<SqlitePool, Box<dyn std::error::Err
     {
         tokio::fs::create_dir_all(path).await?;
     }
-    let options = SqliteConnectOptions::from_str(&config.database_url)?.foreign_keys(true);
+    let options = SqliteConnectOptions::from_str(&config.database_url)?
+        .foreign_keys(true)
+        .journal_mode(SqliteJournalMode::Delete)
+        .busy_timeout(Duration::from_secs(30));
     let pool = SqlitePoolOptions::new()
-        .max_connections(8)
+        // Azure Files is the durable volume in production. One connection
+        // avoids competing SQLite locks inside a single-replica service.
+        .max_connections(1)
         .connect_with(options)
         .await?;
     sqlx::migrate!("./migrations").run(&pool).await?;
@@ -1549,6 +1554,34 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
         assert!(generated);
         assert!(!generated_again);
         assert_eq!(first, second);
+    }
+
+    #[tokio::test]
+    async fn regression_durable_sqlite_serializes_connections_and_uses_delete_journal() {
+        let directory = TempDir::new().unwrap();
+        let mut config = Config::from_env();
+        config.database_url = format!(
+            "sqlite://{}/durable.sqlite3?mode=rwc",
+            directory.path().display()
+        );
+        let pool = database(&config).await.unwrap();
+
+        let journal = sqlx::query_scalar::<_, String>("PRAGMA journal_mode")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(journal.to_ascii_lowercase(), "delete");
+
+        let held = pool.acquire().await.unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(50), pool.acquire())
+                .await
+                .is_err()
+        );
+        drop(held);
+        assert!(tokio::time::timeout(Duration::from_secs(1), pool.acquire())
+            .await
+            .is_ok());
     }
 
     #[tokio::test]

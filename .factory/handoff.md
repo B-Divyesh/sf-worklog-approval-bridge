@@ -30,6 +30,10 @@ The obsolete pilot product now returns 404.
 - The zero-config claim launches the compiled server twice with only `PATH` and
   `PORT`, checks `/health`, verifies SQLite creation, and proves the generated
   receipt-signing secret is reused.
+- The first `/data` deployment reproduced a SQLite migration lock on Azure
+  Files. The production pool now uses one connection, rollback-journal mode,
+  and a 30-second busy timeout. A regression checks the journal and serialized
+  connection behavior through the real database initializer.
 - Both health routes have exact-field M2 tests. Live verification requires
   `/health` and `/api/health` to agree on service, version, and full commit,
   then checks every protected account/worklog/billing route for the bearer
@@ -64,7 +68,7 @@ Exact results:
 
 - `npm ci`: 39 packages and zero audit findings. `npm --prefix api ci`: 28
   packages and zero audit findings.
-- `npm test`: 32 Node tests, 8 Axum tests, and 39 Chromium tests passed.
+- `npm test`: 32 Node tests, 9 Axum tests, and 39 Chromium tests passed.
   Browser coverage includes desktop and 390 px mobile, keyboard navigation,
   focus management, Axe serious/critical checks, privacy request recording,
   offline reload/update, response policy, routing, and console errors.
