@@ -1,0 +1,57 @@
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  oid TEXT PRIMARY KEY NOT NULL,
+  display_name TEXT,
+  email TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS worklogs (
+  id TEXT PRIMARY KEY NOT NULL,
+  owner_oid TEXT NOT NULL REFERENCES users(oid) ON DELETE CASCADE,
+  client TEXT NOT NULL,
+  week TEXT NOT NULL,
+  rate REAL NOT NULL,
+  currency TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(owner_oid)
+);
+
+CREATE INDEX IF NOT EXISTS worklogs_owner_updated_idx ON worklogs(owner_oid, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS licenses (
+  owner_oid TEXT PRIMARY KEY NOT NULL REFERENCES users(oid) ON DELETE CASCADE,
+  license_hash TEXT NOT NULL,
+  valid INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  expires_at TEXT,
+  checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS approval_receipts (
+  packet_digest TEXT PRIMARY KEY NOT NULL,
+  receipt_id TEXT UNIQUE NOT NULL,
+  approver TEXT NOT NULL,
+  accepted_at TEXT NOT NULL,
+  attestation TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  client_key TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  window_start INTEGER NOT NULL,
+  count INTEGER NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(client_key, scope)
+);

@@ -9,7 +9,7 @@ test("@regression:static-routing serves only real SPA routes and preserves a gen
   assert.equal("navigationFallback" in config, false, "an SPA catch-all turns unknown live URLs into 200 responses");
   assert.deepEqual(config.responseOverrides?.["404"], { rewrite: "/404.html", statusCode: 404 });
   const rewrites = new Map(config.routes.filter(route => route.rewrite).map(route => [route.route, route.rewrite]));
-  for (const route of ["/demo", "/app", "/privacy", "/terms", "/download", "/approve"]) {
+  for (const route of ["/demo", "/app", "/auth/callback", "/privacy", "/terms", "/download", "/approve"]) {
     assert.equal(rewrites.get(route), "/index.html", `${route} must remain reloadable`);
   }
 });

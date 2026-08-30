@@ -1,4 +1,5 @@
 import "./style.css";
+import { AccountSession, accountSnapshot, restoreAccount, startSignIn, startSignOut } from "./account";
 
 type SourceKind = "Git" | "Calendar" | "Manual";
 type Entry = { id: string; date: string; title: string; detail: string; source: SourceKind; duration: number; ready: boolean };
@@ -11,7 +12,8 @@ declare const __WORKLOG_VERSION__: string;
 
 const PRODUCT = "worklog-approval-bridge";
 const SITE = "https://worklog-approval-bridge.sociobot.in";
-const BILLING = `https://api.sociobot.in/api/v1/products/${PRODUCT}`;
+const BILLING_API = import.meta.env.VITE_BILLING_API_BASE || "https://pilot-api.sociobot.in/api/v1";
+const BILLING = `${BILLING_API}/products/${PRODUCT}`;
 const REPO = "B-Divyesh/sf-worklog-approval-bridge";
 const DEMO_KEY = "demo:worklog-bridge:project";
 const DEMO_RECEIPTS_KEY = "demo:worklog-bridge:receipts";
@@ -22,6 +24,7 @@ const LICENSE_CACHE_MAX_AGE = 86_400_000;
 const PACKET_HISTORY = "worklog-bridge:packet-history";
 const APPROVALS_API = "/api/approvals";
 const app = document.querySelector<HTMLDivElement>("#app")!;
+let account: AccountSession | null = null;
 
 const uid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 const today = new Date();
@@ -66,6 +69,16 @@ function routeLink(path: string, label: string, className = "") {
   return `<a href="${path}" data-route class="${className}">${label}</a>`;
 }
 
+function checkoutUrl() {
+  return `${BILLING}/checkout${account?.email ? `?email=${encodeURIComponent(account.email)}` : ""}`;
+}
+
+function accountControl() {
+  if (isDemo()) return "";
+  if (account) return `<button class="account-control" type="button" data-account-sign-out>Sign out <span class="sr-only">${esc(account.name)}</span></button>`;
+  return `<button class="account-control" type="button" data-account-sign-in>Sign in</button>`;
+}
+
 function header(active = "") {
   return `<aside class="preview-banner" aria-label="Release status">Unsigned desktop preview · macOS and Windows may show a trust warning.</aside><header class="site-header">
     <div class="header-inner">
@@ -77,13 +90,14 @@ function header(active = "") {
         <a href="/#pricing">Pricing</a>
         ${routeLink("/privacy", "Privacy")}
       </nav>
+      ${accountControl()}
     </div>
   </header>`;
 }
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-    <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready worklog.</p><p class="build-id">Unsigned desktop preview · v${__WORKLOG_VERSION__} · build 2026.08.29 · Generated hero art disclosed in the design record.</p></div>
+      <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready worklog.</p><p class="build-id">Unsigned desktop preview · v${__WORKLOG_VERSION__} · build 2026.08.30 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -96,7 +110,7 @@ function landing() {
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
         <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Your real worklog stays unchanged.</p></div>
-        <ul class="facts"><li>Worklogs are stored on this device until you share a private link</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
+        <ul class="facts"><li>Worklogs stay local until you share or back up</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
         <picture><source srcset="/assets/night-market-bridge-768.webp 768w, /assets/night-market-bridge-1280.webp 1280w" type="image/webp"><img src="/assets/night-market-bridge-1280.webp" width="1280" height="853" alt="Paper work tickets move along a rail toward an approval stamp in a night market stall." fetchpriority="high" decoding="async"></picture>
@@ -116,13 +130,19 @@ function landing() {
       <article class="step"><h3>Review each entry</h3><p>Set time, rewrite technical notes, and remove anything the client should not see.</p></article>
       <article class="step"><h3>Send for approval</h3><p>Copy a private link. The client can accept it once and download a receipt signed by the receipt service.</p></article>
     </div></div></section>
-    <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">What Worklog Bridge collects</p><h2 id="privacy-title">Only selected commits and calendar events enter the worklog</h2><p class="lede">The app reads commit details and imported calendar fields. You review every shared word.</p><p>Acceptance sends only the worklog identifier, supplied name, and server time. The worklog stays in the private link.</p></div><div><h3>What Worklog Bridge does not collect</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
-    <section class="pricing-section" id="pricing" aria-labelledby="pricing-title"><div class="shell"><p class="eyebrow">Monthly plan</p><h2 id="pricing-title">Free editor and Pro calendar tools</h2><div class="price-board"><div class="price-copy"><h3>Worklog Bridge Pro</h3><p class="price">$12 <span>/ user / month</span></p><p>Keep the free editor and exports. Add calendar imports and saved approval history.</p></div><div class="price-actions"><ul class="check-list"><li>ICS calendar import</li><li>Saved approval history</li></ul><a class="button mint" href="${BILLING}/checkout">Start Pro subscription</a><p><small>Subscriptions open in Sociobot checkout.</small></p></div></div></div></section>
+    <section class="privacy-section" aria-labelledby="privacy-title"><div class="shell privacy-grid"><div><p class="eyebrow">What Worklog Bridge collects</p><h2 id="privacy-title">Only selected commits and calendar events enter the worklog</h2><p class="lede">The app reads commit details and imported calendar fields. You review every shared word.</p><p>Account backup sends the current worklog only after you choose it. Acceptance sends only the worklog identifier, supplied name, and server time.</p></div><div><h3>What Worklog Bridge does not collect</h3><ul class="not-list"><li>capture screens</li><li>record keystrokes</li><li>run a background timer</li><li>upload a repository</li></ul></div></div></section>
+    <section class="pricing-section" id="pricing" aria-labelledby="pricing-title"><div class="shell"><p class="eyebrow">Monthly plan</p><h2 id="pricing-title">Free editor and Pro calendar tools</h2><div class="price-board"><div class="price-copy"><h3>Worklog Bridge Pro</h3><p class="price">$12 <span>/ user / month</span></p><p>Keep the free editor and exports. Add calendar imports and saved approval history.</p></div><div class="price-actions"><ul class="check-list"><li>ICS calendar import</li><li>Saved approval history</li></ul><a class="button mint" href="${checkoutUrl()}">Start Pro subscription</a><p><small>Subscriptions open in Sociobot checkout.</small></p></div></div></div></section>
   </main>${footer()}`;
 }
 
 function demoBanner() {
   return isDemo() ? `<div class="demo-banner" role="status"><span>Demo — sample data, nothing is saved</span><button type="button" id="reset-demo">Reset demo</button>${routeLink("/app", "Start for real")}</div>` : "";
+}
+
+function accountPanel() {
+  if (isDemo()) return `<section class="panel-section account-ticket"><p class="panel-label">Account backup</p><p>Sample work stays in demo storage. It never starts sign-in, backup, or billing.</p></section>`;
+  if (!account) return `<section class="panel-section account-ticket"><p class="panel-label">Account backup</p><p>Sign in to save this worklog to your Sociobot account. Nothing is copied until you choose backup.</p><button class="secondary" type="button" data-account-sign-in>Sign in to back up work</button><div class="status-line" id="account-status" aria-live="polite"></div></section>`;
+  return `<section class="panel-section account-ticket"><p class="panel-label">Account backup</p><p>Signed in as <strong>${esc(account.name)}</strong>.</p><p>Choose when this browser copy is saved to your account.</p><div class="account-actions"><button class="cyan" type="button" id="sync-worklog">Back up this worklog</button><button class="secondary" type="button" id="load-worklog">Load saved worklog</button><button class="secondary" type="button" id="export-account">Download account copy</button><button class="secondary danger-button" type="button" id="delete-account">Delete account copy</button></div><div class="status-line" id="account-status" aria-live="polite"></div></section>`;
 }
 
 function appPage() {
@@ -138,6 +158,7 @@ function appPage() {
       <aside class="side-panel" aria-label="Worklog settings">
         <section class="panel-section"><p class="panel-label">Client and week</p><div class="field"><label for="client">Client</label><input id="client" value="${esc(project.client)}" placeholder="Client name"></div><div class="field"><label for="week">Week starts</label><input id="week" type="date" value="${esc(project.week)}"></div><div class="field"><label for="rate">Hourly rate</label><input id="rate" type="number" min="0" step="1" value="${project.rate}"></div><div class="status-line" id="project-status" aria-live="polite"></div></section>
         <section class="panel-section"><p class="panel-label">Selected sources</p><form id="git-form"><label class="field" for="git-path">Repository folder</label><div class="inline-form"><input id="git-path" name="path" placeholder="/path/to/repository" required><button type="submit" class="secondary">Read Git</button></div></form><div class="status-line" id="source-status" aria-live="polite"></div>${licenseNotice()}<ul class="source-list">${project.sources.length ? project.sources.map(source => `<li><span class="source-dot" aria-hidden="true"></span>${esc(source)}</li>`).join("") : "<li>No sources selected yet.</li>"}</ul><label class="sr-only" for="ics-file">Choose an ICS calendar file</label><input class="sr-only" id="ics-file" type="file" accept=".ics,text/calendar"><button id="import-calendar" class="secondary" type="button">Import calendar file${hasPro() || isDemo() ? "" : " · Pro"}</button></section>
+        ${accountPanel()}
         <section class="panel-section"><p class="panel-label">Privacy check</p><p>No file content is shared. Approval links include only the entries shown here.</p><a href="/privacy" data-route>Read the privacy policy</a></section>
         ${hasPro() ? `<section class="panel-section"><p class="panel-label">Saved approval history · Pro</p>${packetHistory.length ? `<ul class="source-list">${packetHistory.slice(0, 5).map(item => `<li><span class="source-dot" aria-hidden="true"></span><span>${esc(item.client || "Client worklog")}<small>${esc(item.week)} · ${esc(item.digest.slice(0, 10))}</small></span></li>`).join("")}</ul>` : `<p>No approval links saved yet. Created links will appear here.</p>`}</section>` : ""}
       </aside>
@@ -164,13 +185,14 @@ function legalPage(kind: "privacy" | "terms") {
   const privacy = kind === "privacy";
   document.title = `${privacy ? "Privacy" : "Terms"} — Worklog Bridge`;
   return `${header(kind)}<main id="main" class="legal"><article class="narrow"><p class="eyebrow">Last updated 28 August 2026</p><h1 tabindex="-1">${privacy ? "Privacy without surveillance" : "Terms for Worklog Bridge"}</h1>${privacy ? `
-    <p class="lede">Worklog Bridge stores worklog data on this device until you share a private link.</p>
+    <p class="lede">Worklog Bridge stores worklog data on this device until you share a private link or choose account backup.</p>
     <h2>What stays on your device</h2><p>Client names, work entries, repository paths, rates, and imported events stay in local storage. The installed app reads selected Git commit details on your device.</p>
+    <h2>Account backup</h2><p>If you sign in and select Back up this worklog, the service stores that worklog under your Sociobot account. It does not copy local worklogs automatically. You can download or delete the saved account copy from the app.</p>
     <h2>What a shared link contains</h2><p>An approval link stores the visible worklog after the #. Browsers do not send that part of the link to our server. Anyone with the link can read its entries, so send it only to the intended client.</p>
     <h2>What acceptance records</h2><p>When a client accepts, the receipt service stores only the worklog identifier, their supplied name, a server timestamp, and a signature. It never receives the worklog entries or repository content.</p>
-    <h2>License checks</h2><p>If you add a Pro license, the app sends that token to the Sociobot billing API. It stores the result for one day.</p>
+    <h2>License checks</h2><p>If you add a Pro license, the app sends that token to the Sociobot billing API. A signed-in check also stores a one-way token hash and its result for your account. The app stores the result for one day.</p>
     <h2>What we do not collect</h2><p>We do not collect screenshots, keystrokes, repository content, calendar accounts, analytics, or advertising identifiers.</p>
-    <h2>Delete your data</h2><p>Remove entries in the app or clear the site data in your browser. To remove desktop data, clear the app data folder before uninstalling.</p>
+    <h2>Delete your data</h2><p>Remove entries in the app or clear the site data in your browser. Delete account copy removes the worklog and license record saved for that account. To remove desktop data, clear the app data folder before uninstalling.</p>
     <h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p>` : `
     <p class="lede">These terms cover the Worklog Bridge website, app, and Pro subscription.</p>
     <h2>Use of the app</h2><p>You may use the app to prepare and share your own work records. You are responsible for checking entries before sharing them.</p>
@@ -183,6 +205,11 @@ function legalPage(kind: "privacy" | "terms") {
 function downloadPage() {
   document.title = "Download — Worklog Bridge";
   return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop preview</p><h1 tabindex="-1">Install Worklog Bridge preview</h1><p class="lede">Choose the preview app for your computer. Browser worklogs stay in this browser.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> Confirm you trust this preview before opening it.</div></div></main>${footer()}`;
+}
+
+function authCallbackPage() {
+  document.title = "Sign in — Worklog Bridge";
+  return `${header()}<main id="main" class="not-found"><div class="narrow"><h1 tabindex="-1">Completing sign-in</h1><p class="lede">Your Sociobot account is being checked. Keep this page open.</p></div></main>${footer()}`;
 }
 
 function decodePacket(): Packet | null {
@@ -227,7 +254,17 @@ function hasPro() {
 function licenseNotice() {
   const verdict = cachedLicenseVerdict();
   if (!localStorage.getItem(LICENSE_KEY) || hasPro() || !verdict || verdict.valid) return "";
-  return `<p class="notice license-notice">License no longer active. <a href="${BILLING}/checkout">Start Pro subscription</a>.</p>`;
+  return `<p class="notice license-notice">License no longer active. <a href="${checkoutUrl()}">Start Pro subscription</a>.</p>`;
+}
+
+async function checkLicenseToken(token: string) {
+  if (account && !isDemo()) {
+    const response = await accountRequest("/api/v1/billing/verify", { method: "POST", body: JSON.stringify({ license: token }) });
+    return response.json() as Promise<{ valid: boolean; reason?: string; expires_at?: string }>;
+  }
+  const response = await fetch(`${BILLING}/verify?license=${encodeURIComponent(token)}`);
+  if (!response.ok) throw new Error("The license could not be checked.");
+  return response.json() as Promise<{ valid: boolean; reason?: string; expires_at?: string }>;
 }
 
 async function verifyLicense() {
@@ -244,9 +281,7 @@ async function verifyLicense() {
   try { cached = JSON.parse(localStorage.getItem(LICENSE_CACHE) || "null"); } catch { /* verify below */ }
   if (cached && Date.now() - cached.checkedAt < LICENSE_CACHE_MAX_AGE) return;
   try {
-    const response = await fetch(`${BILLING}/verify?license=${encodeURIComponent(token)}`);
-    if (!response.ok) throw new Error("The license could not be checked.");
-    const result = await response.json() as { valid: boolean; reason?: string; expires_at?: string };
+    const result = await checkLicenseToken(token);
     const valid = result.valid === true && (!result.expires_at || Date.parse(result.expires_at) > Date.now());
     localStorage.setItem(LICENSE_CACHE, JSON.stringify({ valid, reason: result.reason, expiresAt: result.expires_at, checkedAt: Date.now() }));
   } catch { /* Offline use continues from the cached verdict. */ }
@@ -260,6 +295,7 @@ function currentRoute() {
   if (path === "/privacy") return legalPage("privacy");
   if (path === "/terms") return legalPage("terms");
   if (path === "/download") return downloadPage();
+  if (path === "/auth/callback") return authCallbackPage();
   if (path === "/approve") return approvalPage();
   return notFound();
 }
@@ -268,6 +304,92 @@ function navigate(path: string) {
   saveHistoryPosition();
   history.pushState({ scrollX: 0, scrollY: 0, focusIndex: -1 }, "", path);
   render("push");
+}
+
+async function signInFromControl() {
+  setStatus("Opening Sociobot sign-in…", false, "account-status");
+  try {
+    await startSignIn();
+  } catch {
+    setStatus("Sign-in could not start. Check your connection and try again.", true, "account-status");
+  }
+}
+
+async function signOutFromControl() {
+  try {
+    await startSignOut();
+  } catch {
+    account = null;
+    render();
+  }
+}
+
+async function accountRequest(path: string, init: RequestInit = {}) {
+  if (!account?.idToken) throw new Error("Sign in before you save a worklog.");
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${account.idToken}`);
+  if (init.body) headers.set("Content-Type", "application/json");
+  const response = await fetch(path, { ...init, headers, cache: "no-store" });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: "The account service could not complete that request." })) as { error?: string };
+    throw new Error(body.error || "The account service could not complete that request.");
+  }
+  return response;
+}
+
+async function backUpWorklog() {
+  if (isDemo()) return;
+  const status = "account-status";
+  setStatus("Saving this worklog to your account…", false, status);
+  try {
+    const response = await accountRequest("/api/v1/worklogs/current", { method: "PUT", body: JSON.stringify(loadProject()) });
+    const result = await response.json() as { updated_at?: string };
+    setStatus(`Saved to your account${result.updated_at ? ` at ${new Date(result.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}.`, false, status);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "The worklog could not be saved. Try again.", true, status);
+  }
+}
+
+async function loadSavedWorklog() {
+  if (isDemo()) return;
+  const status = "account-status";
+  setStatus("Loading the saved worklog…", false, status);
+  try {
+    const response = await accountRequest("/api/v1/worklogs/current");
+    const result = await response.json() as { worklog?: Project | null };
+    if (!result.worklog) { setStatus("There is no saved worklog for this account yet.", false, status); return; }
+    saveProject(result.worklog);
+    render();
+    setStatus("Loaded the worklog saved to this account.", false, status);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "The saved worklog could not be loaded. Try again.", true, status);
+  }
+}
+
+async function exportAccountWorklog() {
+  if (isDemo()) return;
+  const status = "account-status";
+  setStatus("Preparing the account copy…", false, status);
+  try {
+    const response = await accountRequest("/api/v1/account/export");
+    const content = await response.text();
+    downloadBlob("worklog-bridge-account-export.json", content, "application/json");
+    setStatus("Downloaded the worklog saved to this account.", false, status);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "The account copy could not be downloaded. Try again.", true, status);
+  }
+}
+
+async function deleteAccountCopy() {
+  if (isDemo() || !confirm("Delete the worklog and license record saved to this account? Your browser copy stays here.")) return;
+  const status = "account-status";
+  setStatus("Deleting the saved account copy…", false, status);
+  try {
+    await accountRequest("/api/v1/account", { method: "DELETE" });
+    setStatus("Deleted the saved account copy. Your browser worklog is unchanged.", false, status);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "The saved account copy could not be deleted. Try again.", true, status);
+  }
 }
 
 function bindGlobal() {
@@ -286,6 +408,8 @@ function bindGlobal() {
     if (location.pathname === "/approve") navigate("/demo");
     else render();
   });
+  document.querySelectorAll<HTMLElement>("[data-account-sign-in]").forEach(button => button.addEventListener("click", () => { void signInFromControl(); }));
+  document.querySelectorAll<HTMLElement>("[data-account-sign-out]").forEach(button => button.addEventListener("click", () => { void signOutFromControl(); }));
   const menu = document.querySelector<HTMLButtonElement>(".menu-button");
   menu?.addEventListener("click", () => {
     const nav = document.querySelector(".main-nav");
@@ -417,6 +541,10 @@ async function sha256(value: string) {
 
 function bindApp() {
   const project = loadProject();
+  document.querySelector<HTMLButtonElement>("#sync-worklog")?.addEventListener("click", () => { void backUpWorklog(); });
+  document.querySelector<HTMLButtonElement>("#load-worklog")?.addEventListener("click", () => { void loadSavedWorklog(); });
+  document.querySelector<HTMLButtonElement>("#export-account")?.addEventListener("click", () => { void exportAccountWorklog(); });
+  document.querySelector<HTMLButtonElement>("#delete-account")?.addEventListener("click", () => { void deleteAccountCopy(); });
   const persistField = (id: string, key: "client" | "week" | "rate") => document.querySelector<HTMLInputElement>(`#${id}`)?.addEventListener("change", event => {
     const input = event.target as HTMLInputElement;
     const next = loadProject();
@@ -538,7 +666,7 @@ function setStatus(message: string, error = false, id = "app-status") {
 function showLicenseModal() {
   const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const modal = document.createElement("div"); modal.className = "modal-backdrop";
-  modal.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="license-title"><h2 id="license-title">Add calendar imports</h2><p>Pro costs $12 per user each month. It adds ICS import and saved approval history.</p><a class="button mint" href="${BILLING}/checkout">Start Pro subscription</a><form id="license-form"><div class="field"><label for="license-token">Have a license? Paste it here</label><input id="license-token" name="token" required autocomplete="off"></div><div class="modal-actions"><button class="secondary" type="button" data-close>Cancel</button><button type="submit" class="cyan">Verify license</button></div><div class="status-line" id="license-status" aria-live="polite"></div></form><p><small>Verification sends only this token to the Sociobot billing API.</small></p></div>`;
+  modal.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="license-title"><h2 id="license-title">Add calendar imports</h2><p>Pro costs $12 per user each month. It adds ICS import and saved approval history.</p><a class="button mint" href="${checkoutUrl()}">Start Pro subscription</a><form id="license-form"><div class="field"><label for="license-token">Have a license? Paste it here</label><input id="license-token" name="token" required autocomplete="off"></div><div class="modal-actions"><button class="secondary" type="button" data-close>Cancel</button><button type="submit" class="cyan">Verify license</button></div><div class="status-line" id="license-status" aria-live="polite"></div></form><p><small>Verification sends only this token to the Sociobot billing API.</small></p></div>`;
   document.body.append(modal); const close = () => { modal.remove(); trigger?.focus(); };
   modal.querySelector("[data-close]")?.addEventListener("click", close);
   modal.addEventListener("click", event => { if (event.target === modal) close(); });
@@ -555,9 +683,7 @@ function showLicenseModal() {
     event.preventDefault(); const token = String(new FormData(event.currentTarget as HTMLFormElement).get("token") || "").trim();
     const node = modal.querySelector<HTMLElement>("#license-status")!; node.textContent = "Checking the license…";
     try {
-      const response = await fetch(`${BILLING}/verify?license=${encodeURIComponent(token)}`);
-      if (!response.ok) throw new Error("The license could not be checked. Try again online.");
-      const result = await response.json() as { valid: boolean; reason?: string; expires_at?: string };
+      const result = await checkLicenseToken(token);
       const valid = result.valid === true && (!result.expires_at || Date.parse(result.expires_at) > Date.now());
       localStorage.setItem(LICENSE_KEY, token);
       localStorage.setItem(LICENSE_CACHE, JSON.stringify({ valid, reason: result.reason, checkedAt: Date.now(), expiresAt: result.expires_at }));
@@ -703,6 +829,7 @@ const routeDescriptions: Record<string, string> = {
   "/privacy": "How Worklog Bridge stores worklogs, checks licenses, and records acceptance.",
   "/terms": "The terms for using Worklog Bridge, approval receipts, and Pro subscriptions.",
   "/download": "Download the unsigned Worklog Bridge desktop preview for macOS, Windows, or Linux.",
+  "/auth/callback": "Complete Sociobot account sign-in for Worklog Bridge.",
   "/approve": "Review and accept a weekly worklog, then download its receipt."
 };
 
@@ -743,5 +870,14 @@ window.addEventListener("scroll", saveHistoryPosition, { passive: true });
 document.addEventListener("focusin", saveHistoryPosition);
 window.addEventListener("online", () => setStatus("You are back online."));
 window.addEventListener("offline", () => setStatus("You are offline. Saved work remains available."));
-void verifyLicense().finally(() => render());
+void (async () => {
+  const expectedAccount = accountSnapshot();
+  try { account = await restoreAccount(); } catch { account = null; }
+  if (location.pathname === "/auth/callback") {
+    history.replaceState({}, "", "/app");
+    if (!account && expectedAccount) setTimeout(() => setStatus("Your account session ended. Sign in again to back up work.", true, "account-status"), 0);
+  }
+  await verifyLicense();
+  render();
+})();
 if ("serviceWorker" in navigator && !import.meta.env.DEV) window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js").catch(() => undefined));

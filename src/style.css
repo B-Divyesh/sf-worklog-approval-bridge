@@ -80,6 +80,8 @@ a:hover { color: var(--rice); }
 .main-nav a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 8px; color: var(--smoke); font-size: 14px; font-weight: 700; text-decoration: none; }
 .main-nav a[aria-current="page"], .main-nav a:hover { color: var(--rice); text-decoration: underline; text-decoration-color: var(--cyan); }
 .menu-button { display: none; }
+.account-control { min-height: 44px; padding-inline: 12px; color: var(--cyan); background: transparent; border-color: var(--line); box-shadow: none; font-size: 13px; }
+.account-control:hover { color: var(--rice); border-color: var(--cyan); box-shadow: none; }
 
 main { min-height: calc(100vh - 220px); }
 .shell { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
@@ -155,6 +157,12 @@ p { line-height: 1.58; }
 .panel-section { padding: 20px; border-bottom: 1px solid var(--line); }
 .panel-section:last-child { border-bottom: 0; }
 .panel-label { margin: 0 0 12px; color: var(--cyan); font: 800 11px var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+.account-ticket { border-left: 3px solid var(--cyan); }
+.account-ticket p { margin: 0 0 10px; color: var(--smoke); font-size: 14px; }
+.account-ticket p strong { color: var(--rice); }
+.account-actions { display: grid; gap: 8px; }
+.account-actions button { width: 100%; padding-inline: 10px; font-size: 13px; }
+.account-actions .danger-button { color: var(--chili); border-color: #87424a; }
 .field { margin-bottom: 16px; }
 .field label, label.field { display: block; color: var(--smoke); font-size: 13px; font-weight: 700; }
 input, textarea, select { width: 100%; min-height: 44px; margin-top: 7px; padding: 10px 12px; color: var(--rice); background: #0d1118; border: 1px solid #4b596d; border-radius: 4px; }
@@ -250,6 +258,7 @@ input::placeholder, textarea::placeholder { color: #768294; }
   .main-nav { position: absolute; left: 16px; right: 16px; top: 60px; display: none; padding: 12px; flex-direction: column; align-items: stretch; gap: 0; border: 1px solid var(--line); background: var(--paper); }
   .main-nav.open { display: flex; }
   .main-nav a { display: flex; min-height: 44px; align-items: center; padding: 8px 12px; }
+  .account-control { margin-left: auto; }
   .hero { padding-top: 48px; }
   h1 { font-size: clamp(2.75rem, 14vw, 4rem); }
   .hero-grid { gap: 40px; }

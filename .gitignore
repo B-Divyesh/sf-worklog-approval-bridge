@@ -3,6 +3,7 @@ dist/
 test-results/
 playwright-report/
 src-tauri/target/
+server/target/
 .DS_Store
 *.log
 graphify-out/

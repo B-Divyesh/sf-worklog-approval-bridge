@@ -10,7 +10,7 @@ Audited 29 August 2026 after polish round 2. Every landing-page sentence and mea
 | Try it with sample data | 5 | Pass |
 | A filled weekly worklog opens next. | 6 | Pass |
 | Your real worklog stays unchanged. | 5 | Pass |
-| Worklogs are stored on this device until you share a private link | 12 | Pass |
+| Worklogs stay local until you share or back up | 9 | Pass |
 | Saved work stays available offline after the first visit | 9 | Pass |
 | Free editor and exports · Pro is $12 per user each month | 11 | Pass |
 | Review selected Git commits and calendar events before sharing. | 9 | Pass |
@@ -37,8 +37,8 @@ Audited 29 August 2026 after polish round 2. Every landing-page sentence and mea
 | Only selected commits and calendar events enter the worklog | 9 | Pass |
 | The app reads commit details and imported calendar fields. | 9 | Pass |
 | You review every shared word. | 5 | Pass |
+| Account backup sends the current worklog only after you choose it. | 11 | Pass |
 | Acceptance sends only the worklog identifier, supplied name, and server time. | 11 | Pass |
-| The worklog stays in the private link. | 7 | Pass |
 | What Worklog Bridge does not collect | 6 | Pass |
 | capture screens | 2 | Pass |
 | record keystrokes | 2 | Pass |
@@ -55,7 +55,7 @@ Audited 29 August 2026 after polish round 2. Every landing-page sentence and mea
 | Start Pro subscription | 3 | Pass |
 | Subscriptions open in Sociobot checkout. | 5 | Pass |
 | Worklog Bridge turns selected Git and calendar activity into a client-ready worklog. | 12 | Pass |
-| Unsigned desktop preview · v0.1.20 · build 2026.08.29 | 7 | Pass |
+| Unsigned desktop preview · v0.2.0 · build 2026.08.30 | 7 | Pass |
 | Generated hero art disclosed in the design record. | 8 | Pass |
 
 Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Param Factory. Each names its destination.
@@ -70,5 +70,22 @@ Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Para
 | Client acceptance proof | receipt |
 | Paid level | Pro |
 | Isolated sample workspace | demo |
+
+## M2 account-copy checks
+
+| Product text | Words | Result |
+|---|---:|---|
+| Sign in to save this worklog to your Sociobot account. | 10 | Pass |
+| Nothing is copied until you choose backup. | 8 | Pass |
+| Choose when this browser copy is saved to your account. | 11 | Pass |
+| Back up this worklog | 5 | Pass |
+| Load saved worklog | 3 | Pass |
+| Download account copy | 3 | Pass |
+| Delete account copy | 3 | Pass |
+| Sample work stays in demo storage. | 6 | Pass |
+| It never starts sign-in, backup, or billing. | 8 | Pass |
+
+The M2 terms stay concrete: **worklog** is the saved record, **account copy**
+is the optional server copy, and **demo** remains the isolated sample.
 
 Catalog description: “Turn selected Git commits and calendar events into a client-ready worklog.” (11 words, 74 characters)

@@ -1,6 +1,6 @@
 {
   "name": "worklog-approval-bridge",
-  "version": "0.1.22",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,14 +8,16 @@
     "dev:tauri": "tauri dev",
     "build": "npm run build:site",
     "build:site": "tsc --noEmit && vite build && node scripts/postbuild.mjs",
+    "build:server": "cargo build --manifest-path server/Cargo.toml --release --locked",
     "build:desktop": "node scripts/build-desktop.mjs",
-    "test": "node --test api/test/*.test.mjs scripts/*.test.mjs && npm run build:site && playwright test",
+    "test": "node --test api/test/*.test.mjs scripts/*.test.mjs && cargo test --manifest-path server/Cargo.toml && npm run build:site && playwright test",
     "verify:live": "node scripts/verify-live.mjs",
     "verify:release": "node scripts/verify-release.mjs",
     "verify:delivery": "node scripts/verify-delivery.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@azure/msal-browser": "5.20.0",
     "@tauri-apps/api": "2.11.1"
   },
   "devDependencies": {

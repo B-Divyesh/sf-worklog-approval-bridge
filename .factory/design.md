@@ -43,6 +43,18 @@ Spacing follows an 8 px base with 4 px for tight metadata. Main sections use 64â
 - Destructive actions require a named confirmation or offer undo.
 - Keyboard shortcuts: `/` focuses filters, `n` starts an entry, and `e` exports.
 
+## M2 account and billing treatment
+
+Account backup is an optional **cyan source ticket** in the existing worklog
+side rail, not a separate profile dashboard. The signed-in state names the
+account in plain words, then gives four deliberate actions: back up, load,
+download, and delete the account copy. Mint marks the affirmative backup
+action; the delete action stays outlined with a named confirmation. On the
+sample route the same rail becomes a small explanatory ticket: it says the
+sample never starts sign-in, backup, or billing. This preserves the visual
+meaning of cyan as an explicitly selected source and makes the privacy
+boundary legible without extra product chrome.
+
 ## Motion policy
 
 The receipt rail advances once when a draft is created: source tickets slide 12 px toward review while the approval stamp fades in over 220 ms. Hover and focus transitions last 140 ms and change opacity or transform only. Nothing loops. With `prefers-reduced-motion: reduce`, transforms and smooth scrolling are removed and state changes are instant.

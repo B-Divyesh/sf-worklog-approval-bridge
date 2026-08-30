@@ -8,5 +8,6 @@
 - Reset: use “Reset demo” in the persistent amber banner. It restores the six entries and deletes every sample receipt.
 - Leave: use “Start for real”. Demo records are discarded from the active view and never copied into real storage.
 - Storage: the demo uses only `demo:worklog-bridge:project` and `demo:worklog-bridge:receipts`. Real mode uses `worklog-bridge:project`; demo code does not read or write that key.
+- Account boundary: `/demo` does not show sign-in or account backup controls. It does not load CIAM, call account APIs, or call the pilot billing gateway. Sample work cannot be copied into an account.
 - Network: the bundled sample and demo approval need no API. Approval details stay after the `#` in the link. Real acceptance sends only the worklog identifier and supplied name to the same-origin receipt API.
 - Test entry point: Playwright opens `/demo` in a fresh browser context.

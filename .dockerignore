@@ -1,0 +1,9 @@
+.git
+node_modules
+dist
+playwright-report
+test-results
+src-tauri/target
+server/target
+data
+api/node_modules
