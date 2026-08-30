@@ -12,7 +12,7 @@ declare const __WORKLOG_VERSION__: string;
 
 const PRODUCT = "worklog-approval-bridge";
 const SITE = "https://worklog-approval-bridge.sociobot.in";
-const BILLING_API = import.meta.env.VITE_BILLING_API_BASE || "https://pilot-api.sociobot.in/api/v1";
+const BILLING_API = import.meta.env.VITE_BILLING_API_BASE || "https://api.sociobot.in/api/v1";
 const BILLING = `${BILLING_API}/products/${PRODUCT}`;
 const REPO = "B-Divyesh/sf-worklog-approval-bridge";
 const DEMO_KEY = "demo:worklog-bridge:project";
@@ -70,7 +70,8 @@ function routeLink(path: string, label: string, className = "") {
 }
 
 function checkoutUrl() {
-  return `${BILLING}/checkout${account?.email ? `?email=${encodeURIComponent(account.email)}` : ""}`;
+  const origin = location.protocol === "http:" || location.protocol === "https:" ? location.origin : SITE;
+  return `${origin}/checkout${account?.email ? `?email=${encodeURIComponent(account.email)}` : ""}`;
 }
 
 function accountControl() {
@@ -207,6 +208,11 @@ function downloadPage() {
   return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop preview</p><h1 tabindex="-1">Install Worklog Bridge preview</h1><p class="lede">Choose the preview app for your computer. Browser worklogs stay in this browser.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> Confirm you trust this preview before opening it.</div></div></main>${footer()}`;
 }
 
+function checkoutPage() {
+  document.title = "Checkout — Worklog Bridge";
+  return `${header()}<main id="main" class="not-found"><div class="narrow"><p class="eyebrow">Pro subscription</p><h1 tabindex="-1">Open the secure checkout</h1><p class="lede">Worklog Bridge is checking the $12 monthly plan before opening Sociobot checkout.</p><div class="status-line" id="checkout-status" role="status" aria-live="polite">Checking checkout…</div><div class="hero-actions"><button class="mint" id="retry-checkout" type="button">Try checkout again</button>${routeLink("/app", "Keep using the free editor", "button secondary")}</div></div></main>${footer()}`;
+}
+
 function authCallbackPage() {
   document.title = "Sign in — Worklog Bridge";
   return `${header()}<main id="main" class="not-found"><div class="narrow"><h1 tabindex="-1">Completing sign-in</h1><p class="lede">Your Sociobot account is being checked. Keep this page open.</p></div></main>${footer()}`;
@@ -295,6 +301,7 @@ function currentRoute() {
   if (path === "/privacy") return legalPage("privacy");
   if (path === "/terms") return legalPage("terms");
   if (path === "/download") return downloadPage();
+  if (path === "/checkout") return checkoutPage();
   if (path === "/auth/callback") return authCallbackPage();
   if (path === "/approve") return approvalPage();
   return notFound();
@@ -335,6 +342,30 @@ async function accountRequest(path: string, init: RequestInit = {}) {
     throw new Error(body.error || "The account service could not complete that request.");
   }
   return response;
+}
+
+async function openCheckout() {
+  const status = document.querySelector<HTMLElement>("#checkout-status");
+  const retry = document.querySelector<HTMLButtonElement>("#retry-checkout");
+  if (!status || !retry) return;
+  status.textContent = "Checking checkout…";
+  status.classList.remove("error");
+  retry.disabled = true;
+  try {
+    const response = await fetch(`/api/v1/billing/checkout${location.search}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    });
+    const body = await response.json().catch(() => ({})) as { checkoutUrl?: string; error?: string };
+    if (!response.ok || !body.checkoutUrl) throw new Error(body.error || "Checkout is unavailable right now. Keep using the free editor and try again.");
+    const target = new URL(body.checkoutUrl);
+    if (target.protocol !== "https:" || target.hostname !== "checkout.dodopayments.com") throw new Error("Checkout returned an unsafe address. Try again later.");
+    location.assign(target.href);
+  } catch (error) {
+    status.textContent = error instanceof Error ? error.message : "Checkout is unavailable right now. Keep using the free editor and try again.";
+    status.classList.add("error");
+    retry.disabled = false;
+  }
 }
 
 async function backUpWorklog() {
@@ -829,6 +860,7 @@ const routeDescriptions: Record<string, string> = {
   "/privacy": "How Worklog Bridge stores worklogs, checks licenses, and records acceptance.",
   "/terms": "The terms for using Worklog Bridge, approval receipts, and Pro subscriptions.",
   "/download": "Download the unsigned Worklog Bridge desktop preview for macOS, Windows, or Linux.",
+  "/checkout": "Open Sociobot checkout for the Worklog Bridge Pro monthly subscription.",
   "/auth/callback": "Complete Sociobot account sign-in for Worklog Bridge.",
   "/approve": "Review and accept a weekly worklog, then download its receipt."
 };
@@ -844,6 +876,10 @@ function render(transition: RouteTransition = false) {
   if (location.pathname === "/app" || location.pathname === "/demo") bindApp(); else document.onkeydown = null;
   if (location.pathname === "/approve") void bindApproval();
   if (location.pathname === "/download") void bindDownloads();
+  if (location.pathname === "/checkout") {
+    document.querySelector<HTMLButtonElement>("#retry-checkout")?.addEventListener("click", () => { void openCheckout(); });
+    void openCheckout();
+  }
   if (transition) {
     const heading = document.querySelector<HTMLElement>("h1");
     const status = document.querySelector<HTMLElement>("#route-status");

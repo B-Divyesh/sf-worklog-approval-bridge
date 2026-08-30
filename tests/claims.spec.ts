@@ -110,7 +110,7 @@ test("@claim:account-demo-boundary keeps the sample out of sign-in, account back
   await expect(page.getByText("Sample work stays in demo storage. It never starts sign-in, backup, or billing.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toHaveCount(0);
   await page.getByRole("button", { name: "Export CSV" }).click();
-  expect(requests.some(url => /ciamlogin\.com|pilot-api\.sociobot\.in|\/api\/v1\//.test(url))).toBe(false);
+  expect(requests.some(url => /ciamlogin\.com|api\.sociobot\.in|\/api\/v1\//.test(url))).toBe(false);
   expect(await page.evaluate(() => sessionStorage.getItem("worklog-bridge:account"))).toBeNull();
 });
 
@@ -260,7 +260,7 @@ test("@claim:calendar-import imports selected ICS events from the chosen week", 
 
 test("@claim:license-unlock enables Pro only after a current valid verdict and only uses a fresh cache offline", async ({ page, context }) => {
   let verifyCalls = 0;
-  await page.route("https://pilot-api.sociobot.in/**", async route => {
+  await page.route("https://api.sociobot.in/**", async route => {
     verifyCalls++;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2026-09-28T00:00:00Z" }) });
   });
@@ -274,7 +274,7 @@ test("@claim:license-unlock enables Pro only after a current valid verdict and o
   await page.goto("/#pricing");
   await expect(page.locator(".price")).toContainText("$12 / user / month");
   await page.goto("/app");
-  await page.unroute("https://pilot-api.sociobot.in/**");
+  await page.unroute("https://api.sociobot.in/**");
   await context.setOffline(true);
   for (const verdict of [
     null,
@@ -295,7 +295,7 @@ test("@claim:license-unlock enables Pro only after a current valid verdict and o
   await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
   await context.setOffline(false);
   await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
-  await page.route("https://pilot-api.sociobot.in/**", async route => {
+  await page.route("https://api.sociobot.in/**", async route => {
     verifyCalls++;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
   });
@@ -349,7 +349,7 @@ test("@regression:license-verdict permits only fresh valid offline cache and ref
   await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
   await context.setOffline(false);
   let calls = 0;
-  await page.route("https://pilot-api.sociobot.in/**", async route => {
+  await page.route("https://api.sociobot.in/**", async route => {
     calls++;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
   });
@@ -372,26 +372,42 @@ test("@claim:sample-counts match the sample data", async ({ page }) => {
 test("@claim:pro-price verifies the hosted monthly charge and keeps licensed approval history", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
   const checkoutRequests: string[] = [];
-  await page.route("https://pilot-api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout", route => {
+  await page.route("**/api/v1/billing/checkout**", route => {
     checkoutRequests.push(route.request().url());
-    return route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Sociobot checkout</title><main><h1>Worklog Bridge Pro</h1><p>$12.00 / Month</p></main>" });
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ checkoutUrl: "https://checkout.dodopayments.com/session/price-fixture" }) });
   });
+  await page.route("https://checkout.dodopayments.com/session/price-fixture", route => route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Sociobot checkout</title><main><h1>Worklog Bridge Pro</h1><p>$12.00 / Month</p></main>" }));
   await page.goto("/#pricing");
   await expect(page.locator(".price")).toContainText("$12 / user / month");
   await expect(page.getByText("ICS calendar import")).toBeVisible();
   await expect(page.getByText("Saved approval history", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start Pro subscription" })).toHaveAttribute("href", "https://pilot-api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout");
+  await expect(page.getByRole("link", { name: "Start Pro subscription" })).toHaveAttribute("href", "http://127.0.0.1:4173/checkout");
   await page.getByRole("link", { name: "Start Pro subscription" }).click();
   await expect(page.getByRole("heading", { name: "Worklog Bridge Pro" })).toBeVisible();
   await expect(page.getByText("$12.00 / Month")).toBeVisible();
-  expect(checkoutRequests).toEqual(["https://pilot-api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout"]);
-  await page.route("https://pilot-api.sociobot.in/api/v1/products/worklog-approval-bridge/verify**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) }));
+  expect(checkoutRequests).toEqual(["http://127.0.0.1:4173/api/v1/billing/checkout"]);
+  await page.route("https://api.sociobot.in/api/v1/products/worklog-approval-bridge/verify**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) }));
   await page.goto("/app?license=licensed-test-token");
   await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Pro history client", week: "2026-08-24", rate: 100, currency: "USD", sources: [], entries: [{ id: "history-entry", date: "2026-08-25", title: "Prepared approval history", detail: "A saved Pro history test.", source: "Manual", duration: 60, ready: true }] })));
   await page.reload();
   await page.getByRole("button", { name: "Copy approval link" }).click();
   await page.reload();
   await expect(page.getByText("Pro history client")).toBeVisible();
+});
+
+test("@regression:checkout HTTP 500 keeps the free editor available with a retry", async ({ page }) => {
+  await page.route("**/api/v1/billing/checkout**", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ error: "Checkout is unavailable right now. Keep using the free editor and try again." })
+  }));
+  await page.goto("/#pricing");
+  await page.getByRole("link", { name: "Start Pro subscription" }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole("heading", { name: "Open the secure checkout" })).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText("Checkout is unavailable right now. Keep using the free editor and try again.");
+  await expect(page.getByRole("button", { name: "Try checkout again" })).toBeEnabled();
+  await expect(page.getByRole("link", { name: "Keep using the free editor" })).toHaveAttribute("href", "/app");
 });
 
 test("@claim:no-analytics sends no analytics or advertising request through sample approval and receipt download", async ({ page, context }) => {

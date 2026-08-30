@@ -1,6 +1,6 @@
 # Copy audit
 
-Audited 29 August 2026 after polish round 2. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears.
+Audited 30 August 2026 after repair 18. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears.
 
 | Landing text | Words | Result |
 |---|---:|---|
@@ -55,7 +55,7 @@ Audited 29 August 2026 after polish round 2. Every landing-page sentence and mea
 | Start Pro subscription | 3 | Pass |
 | Subscriptions open in Sociobot checkout. | 5 | Pass |
 | Worklog Bridge turns selected Git and calendar activity into a client-ready worklog. | 12 | Pass |
-| Unsigned desktop preview · v0.2.0 · build 2026.08.30 | 7 | Pass |
+| Unsigned desktop preview · v0.2.1 · build 2026.08.30 | 7 | Pass |
 | Generated hero art disclosed in the design record. | 8 | Pass |
 
 Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Param Factory. Each names its destination.
@@ -87,5 +87,18 @@ Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Para
 
 The M2 terms stay concrete: **worklog** is the saved record, **account copy**
 is the optional server copy, and **demo** remains the isolated sample.
+
+## Checkout failure copy
+
+| Product text | Words | Result |
+|---|---:|---|
+| Open the secure checkout | 4 | Pass |
+| Worklog Bridge is checking the $12 monthly plan before opening Sociobot checkout. | 12 | Pass |
+| Checking checkout… | 2 | Pass |
+| Try checkout again | 3 | Pass |
+| Keep using the free editor | 5 | Pass |
+| Checkout could not be reached. Keep using the free editor and try again. | 12 | Pass |
+| Checkout is unavailable right now. Keep using the free editor and try again. | 12 | Pass |
+| Checkout returned an unsafe address. Try again later. | 8 | Pass |
 
 Catalog description: “Turn selected Git commits and calendar events into a client-ready worklog.” (11 words, 74 characters)

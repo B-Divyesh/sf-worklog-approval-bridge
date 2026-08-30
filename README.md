@@ -62,7 +62,7 @@ Select **Sign in** in the app to use Sociobot CIAM. The sign-in return address i
 
 ## Pro license
 
-Pro costs $12 per user each month. It adds ICS import and saved approval history. This preview opens Sociobot's hosted pilot checkout. On return, `?license=<token>` is stored as `sb_license:worklog-approval-bridge`, removed from the address, and checked at most once per day. Users can also paste a license in the calendar import dialog. A signed-in check stores only a one-way token hash and its verdict for that account. Offline Pro access needs a valid license check saved less than 24 hours ago. A token alone never unlocks Pro.
+Pro costs $12 per user each month. It adds ICS import and saved approval history. The subscription opens Sociobot's hosted checkout. On return, `?license=<token>` is stored as `sb_license:worklog-approval-bridge`, removed from the address, and checked at most once per day. Users can also paste a license in the calendar import dialog. A signed-in check stores only a one-way token hash and its verdict for that account. Offline Pro access needs a valid license check saved less than 24 hours ago. A token alone never unlocks Pro.
 
 ## Privacy and architecture
 

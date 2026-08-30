@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
-import { assertDeployedCommit, liveVerificationOptions } from "./verify-live-options.mjs";
+import { assertCheckoutRedirect, assertM2Health, liveVerificationOptions } from "./verify-live-options.mjs";
 
 const billingCheckout = "https://api.sociobot.in/api/v1/products/worklog-approval-bridge/checkout";
 const { target, expectedCommit } = liveVerificationOptions(process.argv.slice(2));
@@ -35,17 +35,32 @@ async function verifyFrontendAssets() {
 }
 
 const checkout = await fetch(billingCheckout, { redirect: "manual" });
-assert.equal(checkout.status, 303, "the advertised Pro checkout must redirect to hosted checkout, not return 404");
-assert.match(checkout.headers.get("location") || "", /^https:\/\/checkout\.dodopayments\.com\//, "checkout redirect must use the hosted Dodo checkout");
+assertCheckoutRedirect(checkout.status, checkout.headers.get("location"));
 
-const health = await fetch(`${target}/api/health`, { headers: { Accept: "application/json" } });
-assert.equal(health.status, 200, "the receipt API must expose a public health/build identity");
-const healthBody = await health.json();
-assert.equal(healthBody.status, "ok");
-assert.equal(healthBody.build?.service, "worklog-approval-bridge");
-assert.match(healthBody.build?.version || "", /^\d+\.\d+\.\d+$/);
-assert.match(healthBody.build?.commit || "", /^[a-f0-9]{7,64}$/);
-assertDeployedCommit(healthBody.build.commit, expectedCommit);
+let healthBody;
+for (const path of ["/health", "/api/health"]) {
+  const health = await fetch(`${target}${path}`, { headers: { Accept: "application/json" } });
+  assert.equal(health.status, 200, `${path} must expose the M2 public health/build identity`);
+  const body = await health.json();
+  assertM2Health(body, expectedCommit);
+  healthBody ||= body;
+  assert.deepEqual(body, healthBody, "both public health routes must identify the same build");
+}
+
+for (const route of [
+  { path: "/api/v1/worklogs/current", method: "GET" },
+  { path: "/api/v1/account/export", method: "GET" },
+  { path: "/api/v1/account", method: "DELETE" },
+  { path: "/api/v1/billing/verify", method: "POST", body: JSON.stringify({ license: "live-route-boundary" }) }
+]) {
+  const response = await fetch(`${target}${route.path}`, {
+    method: route.method,
+    body: route.body,
+    headers: route.body ? { "Content-Type": "application/json" } : undefined
+  });
+  assert.equal(response.status, 401, `${route.method} ${route.path} must be the protected M2 route`);
+  assert.equal(response.headers.get("www-authenticate"), "Bearer", `${route.path} must advertise bearer authentication`);
+}
 const frontendAssets = await verifyFrontendAssets();
 
 const browser = await chromium.launch({ headless: true });
@@ -99,7 +114,7 @@ try {
   const missing = await page.goto(`${target}/missing-page`, { waitUntil: "domcontentloaded" });
   assert.equal(missing?.status(), 404, "unknown live routes must retain HTTP 404");
   await assert.doesNotReject(() => page.getByRole("heading", { name: "Page not found" }).waitFor());
-  console.log(`Live checkout, API identity, ${frontendAssets.length} frontend assets, isolated demo, real approval lookup, and routing passed for ${target}`);
+  console.log(`Live checkout, both health identities, protected M2 routes, ${frontendAssets.length} frontend assets, isolated demo, real approval lookup, and routing passed for ${target}`);
 } finally {
   await browser.close();
 }

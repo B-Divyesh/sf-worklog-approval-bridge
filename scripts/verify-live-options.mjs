@@ -20,3 +20,18 @@ export function liveVerificationOptions(argv = [], environment = process.env) {
 export function assertDeployedCommit(actualCommit, expectedCommit) {
   if (expectedCommit) assert.equal(actualCommit, expectedCommit, "deployed API commit differs from the nominated repair commit");
 }
+
+export function assertM2Health(body, expectedCommit) {
+  assert.deepEqual(Object.keys(body).sort(), ["build", "status"]);
+  assert.deepEqual(Object.keys(body.build || {}).sort(), ["commit", "service", "version"]);
+  assert.equal(body.status, "ok");
+  assert.equal(body.build.service, "worklog-approval-bridge", "the deployed service must be the M2 backend, not the receipt-only predecessor");
+  assert.match(body.build.version || "", /^\d+\.\d+\.\d+$/);
+  assert.match(body.build.commit || "", /^[a-f0-9]{7,64}$/);
+  assertDeployedCommit(body.build.commit, expectedCommit);
+}
+
+export function assertCheckoutRedirect(status, location) {
+  assert.equal(status, 303, `the advertised Pro checkout must redirect to hosted checkout; received HTTP ${status}`);
+  assert.match(location || "", /^https:\/\/checkout\.dodopayments\.com\//, "checkout redirect must use the hosted Dodo checkout");
+}

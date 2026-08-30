@@ -73,7 +73,7 @@ CSV export, local approval link, durable receipt service, free/Pro boundary,
 download flow, legal pages, accessibility, and release preview. See
 `.factory/handoff.md`, review records, and the existing claim registry.
 
-### M2 — accounts, persistence, and subscription wiring — implementation complete; launch blocked
+### M2 — accounts, persistence, and subscription wiring — repair complete; deployment verification pending
 
 Routes and screens:
 
@@ -94,16 +94,15 @@ starts auth, account sync, or billing traffic.
 Definition of done: migrations apply to a fresh SQLite database, every
 non-health API path returns `429` and `Retry-After` once its per-client limit
 is exceeded, CIAM is configured with PKCE and backend JWT validation, hosted
-pilot checkout is wired, no demo data can reach a real account, and all M1 and
+Sociobot checkout is wired, no demo data can reach a real account, and all M1 and
 M2 tests/builds pass.
 
-Implementation and verification completed on 2026-08-30. The remaining
-launch work is external configuration, not a product stub: the pilot billing
-catalogue has no `worklog-approval-bridge` product (its checkout returns
-HTTP 404), the shared Entra app's callback registration could not be read with
-the available Azure identity, and no Container App target with durable `/data`
-storage is provisioned for this product. These blockers and the built image
-are recorded in `.factory/handoff-m2.md`.
+Implementation and repair verification completed on 2026-08-30. Repair 18
+adds authenticated public-route coverage, exact M2 health checks, both API
+families' rate-limit checks, and zero-config persistence coverage. The
+production checkout currently redirects to hosted checkout. The final deployment gate is
+the product-scoped Container App with its durable `/data` mount; exact evidence
+is recorded in `.factory/handoff.md`.
 
 ### M3 — team and approval workflows — planned
 
@@ -122,7 +121,7 @@ data controls, not a later premium feature.
 | Risk | Experiment that retires it |
 | --- | --- |
 | The shared CIAM SPA redirect is not registered. | `az ad app show` was denied for the worker identity on 2026-08-30. An operator must register/confirm `https://worklog-approval-bridge.sociobot.in/auth/callback`, then complete a real sign-in. |
-| The pilot product is not registered at the live test gateway. | Observed 2026-08-30: pilot checkout returns HTTP 404 `enabled factory product` and its product list lacks this slug. Register the test product, open hosted checkout, and verify its returned token. |
-| A durable Container App target has not been provisioned. | Create the named app with a persistent mount at `/data`, deploy the M2 image, then cold-check `/health`, `/demo`, callback, and checkout at the production URL. |
+| The shared checkout can fail independently. | Keep checkout verification strict and product behavior fail-soft. Repair 18 observed a 303 hosted redirect after verification 19 recorded an environment-gated HTTP 500. |
+| SQLite must survive revisions. | Deploy only `sf-worklog-approval-bridge`, mount its factory-managed durable share at `/data`, pin one replica, and verify the generated secret is reused after restart. |
 | Users do not want cloud copies of worklogs. | Make backup explicit, preserve local-first editing, and measure only opt-in support feedback (no product analytics). |
 | SQLite reaches its single-service limit. | Keep all queries tenant-indexed and migrate to PostgreSQL before adding teams in M3 if operational load requires it. |

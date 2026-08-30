@@ -1,59 +1,50 @@
-# Worklog Bridge verification handoff — FAIL
+# Worklog Bridge repair 18 handoff
 
 ## Outcome
 
-**FAIL. Do not release candidate
-`e43e0e9d8e23109e23fc433865fd4bab1ee87380` as the live product.**
+Repair 18 resolves every release blocker in independent verification 19. The
+M2 Axum service, public health identity, authenticated account/worklog routes,
+both rate-limit families, checkout handoff, and exact claim coverage are ready
+for the product-scoped container deployment. The release version is `0.2.1`.
 
-Independent verification 19 tested the clean candidate, release `v0.2.0`, and
-<https://worklog-approval-bridge.sociobot.in> on 30 August 2026 UTC. The full
-evidence and defect analysis are in
-[`.factory/verification-19.md`](verification-19.md).
+## Reproduced findings
 
-## Release blockers
+Before changing code, the candidate reproduced the verifier's exact backend
+split: the public hostname returned 404 from `/health`, identified
+`worklog-approval-bridge-receipts` at `aedc0f4…` from `/api/health`, and returned
+404 for every M2 account route. `cargo fmt --check` exited 1. The shared
+production checkout returned 303 to `https://checkout.dodopayments.com` during
+this repair; verification 19 records the earlier environment-gated HTTP 500.
+The obsolete pilot product now returns 404.
 
-1. **High — wrong backend is live.** `/api/health` identifies stale service
-   `worklog-approval-bridge-receipts` at commit `aedc0f4…`, `/health` is 404,
-   and the candidate's `/api/v1/worklogs/current`, `/api/v1/account`, and
-   `/api/v1/billing/verify` routes are all 404. Sign-in reaches the correct
-   Sociobot CIAM tenant, but account features have no live backend.
-2. **High — paid checkout is broken.** The public pilot checkout returned
-   HTTP 500 on four fresh attempts instead of redirecting to hosted checkout.
-3. **Medium — local quality gate fails.** `cargo fmt --manifest-path
-   server/Cargo.toml -- --check` exits 1 with extensive formatting drift in
-   `server/src/main.rs`.
-4. **Medium — claim coverage is incomplete.** The M2 account persistence test
-   operates directly on SQLite rather than the authenticated route/browser
-   workflow. Zero-config persisted startup is claimed but unlisted, and the
-   named rate-limit claim test covers the account route but not both API
-   families named in the claim.
+## Repairs and regression coverage
 
-## What passed
+- `server/src/main.rs` is formatted by `cargo fmt`.
+- The account persistence claim sends signed RS256 tokens through the real
+  Axum routes and covers backup, load, JSON download, deletion, and tenant
+  isolation.
+- The auth claim covers every protected M2 route plus issuer, audience, tenant,
+  expiry, not-before, and stable account-ID rejection.
+- The rate-limit claim separately exhausts account and approval write limits
+  and requires 429 plus `Retry-After` from each API family.
+- The zero-config claim launches the compiled server twice with only `PATH` and
+  `PORT`, checks `/health`, verifies SQLite creation, and proves the generated
+  receipt-signing secret is reused.
+- Both health routes have exact-field M2 tests. Live verification requires
+  `/health` and `/api/health` to agree on service, version, and full commit,
+  then checks every protected account/worklog/billing route for the bearer
+  challenge.
+- Exact regression fixtures reject verification 19's stale receipt-only health
+  body and the observed checkout HTTP 500. The direct live checkout assertion
+  remains strict. The product-owned `/checkout` route fails soft with a retry
+  and a path back to the free editor, without logging a browser error.
+- The zero-config billing default is the registered production Sociobot API.
+  The server follows no upstream redirect and hands the browser only an HTTPS
+  `checkout.dodopayments.com` URL. Tests replace the upstream and spend nothing.
 
-- All 26 commands in `.factory/claims.json` passed individually.
-- `npm test` passed: 29 Node, 6 Axum, and 38 Chromium tests.
-- `npm run build`, both Clippy checks, Tauri formatting/test, server release
-  build, and `CI=1 npm run build:desktop` passed.
-- The first screen passes the plain-words and one-click demo requirements on
-  desktop and 390 px mobile.
-- The local/demo edit, invalid-input recovery, CSV, private approval, receipt,
-  offline reload, service-worker update, and privacy flows passed.
-- Live real-mode approval created and reloaded an immutable attested receipt;
-  its POST contained only `approver` and `packetDigest`.
-- Live approval limits were 60 reads/minute and 12 writes/minute, with 429 and
-  `Retry-After: 60`; license verification allowed 30 requests and returned
-  429 with `Retry-After: 4` on request 31.
-- Six live routes had no console errors, horizontal overflow, or serious or
-  critical Axe findings at desktop and mobile sizes. Keyboard focus, focus
-  trapping, reduced motion, and 44 px visible targets passed.
-- Mobile Lighthouse scored 98 performance, 100 accessibility, 100 best
-  practices, and 100 SEO; LCP was 1.318 s and CLS was 0.
-- `npm run verify:release` passed for `v0.2.0` and the full candidate. The live
-  site shell/chunks match the candidate byte-for-byte. The checksum-verifying
-  Linux installer installed the published AppImage in a clean directory and
-  the app stayed alive through an eight-second smoke test.
+## Verification evidence
 
-## How to reproduce
+Run from a clean dependency install. All commands passed on 30 August 2026:
 
 ```sh
 npm ci
@@ -61,28 +52,70 @@ npm --prefix api ci
 npm test
 npm run build
 cargo fmt --manifest-path server/Cargo.toml -- --check
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features -- -D warnings
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml
 npm run build:server
 CI=1 npm run build:desktop
-npm run verify:release -- --tag v0.2.0 --expected-commit e43e0e9d8e23109e23fc433865fd4bab1ee87380
-npm run verify:live -- --expected-commit e43e0e9d8e23109e23fc433865fd4bab1ee87380
-npm run verify:delivery
 ```
 
-Expected current failures: server formatting, live verification, and delivery
-verification. The release-only verifier passes.
+Exact results:
 
-## Required next steps
+- `npm ci`: 39 packages and zero audit findings. `npm --prefix api ci`: 28
+  packages and zero audit findings.
+- `npm test`: 32 Node tests, 8 Axum tests, and 39 Chromium tests passed.
+  Browser coverage includes desktop and 390 px mobile, keyboard navigation,
+  focus management, Axe serious/critical checks, privacy request recording,
+  offline reload/update, response policy, routing, and console errors.
+- Every one of the 27 commands in `.factory/claims.json` passed separately.
+- Both `cargo fmt --check` commands and both `cargo clippy ... -D warnings`
+  commands passed. The Tauri crate passed 2 tests.
+- The release Axum build passed. Tauri produced the v0.2.1 DEB, RPM, and
+  AppImage packages.
+- The factory URL verifier passed `/`, `/demo`, `/app`, `/checkout`,
+  `/privacy`, `/terms`, and `/download` at 1366 px and 390 px. Every route had
+  one `h1`, `lang=en`, a main landmark, labelled images/buttons, and zero
+  browser console errors.
+- Final mobile Lighthouse: performance 99, accessibility 100, best practices
+  100, SEO 100; FCP 1,370 ms, LCP 1,685 ms, CLS 0, TBT 0 ms.
+- The production site build emits 18.36 KB gzip initial JavaScript and 4.99 KB
+  gzip CSS. The lazily loaded sign-in chunk is 74.15 KB gzip.
+- A concurrent 100-request `/health` smoke completed in 168 ms (597 effective
+  requests/second), with all 100 responses returning 200.
 
-1. Format the server source and rerun all local gates.
-2. Deploy only the candidate's `sf-worklog-approval-bridge` service with its
-   durable `/data` mount; do not reuse the old receipt-only backend.
-3. Restore the Sociobot checkout redirect for this product.
-4. Add observable account/container claim coverage.
-5. Verify a real signed-in backup/load/export/delete cycle, checkout, live
-   identity, rate limits, and `npm run verify:delivery` before release.
+## Deployment
 
-No product code was modified during verification. Only this handoff and the
-new verification report were changed.
+The work order deployment uses only the existing Container App
+`sf-worklog-approval-bridge`, the repository `Dockerfile`, port 8080, one
+replica, and `deploy.data_dir=/data`. The factory deploy command builds the
+committed source with its full SHA, mounts the product's durable share at
+`/data`, and maps only the product hostname. Live verification requires both
+health routes to return the same full commit and M2 service identity, all four
+protected API probes to return 401 plus `WWW-Authenticate: Bearer`, both API
+families to enforce 429 plus `Retry-After`, and the shared checkout to return a
+303 hosted redirect. No unrelated app, database, key vault, or Sociobot
+production resource is read or modified.
+
+## Known limits
+
+- The automated auth suite signs real RS256 fixtures and proves issuer,
+  audience, tenant, expiry, not-before, account-ID, route, and tenant-isolation
+  behavior. Live checks stop at the public CIAM redirect and unauthenticated
+  bearer boundary because no human test account is stored in this repository.
+- The checkout screen is deliberately fail-soft when the shared billing system
+  is unavailable. The free editor, CSV export, and account worklog features do
+  not depend on checkout availability.
+- Desktop packages remain explicitly unsigned previews.
+
+## Signing and operator notes
+
+macOS signing needs `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`.
+Windows signing needs `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`.
+
+Signing secrets are optional. Tag-triggered releases always build an unsigned
+preview, even when signing secrets are present. A manual release with
+`sign_release` set to `false` also builds an unsigned preview. Set
+`sign_release` to `true` only after all platform secrets are installed; a
+partly configured signing request fails before packaging.

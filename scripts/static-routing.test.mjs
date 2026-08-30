@@ -9,7 +9,7 @@ test("@regression:static-routing serves only real SPA routes and preserves a gen
   assert.equal("navigationFallback" in config, false, "an SPA catch-all turns unknown live URLs into 200 responses");
   assert.deepEqual(config.responseOverrides?.["404"], { rewrite: "/404.html", statusCode: 404 });
   const rewrites = new Map(config.routes.filter(route => route.rewrite).map(route => [route.route, route.rewrite]));
-  for (const route of ["/demo", "/app", "/auth/callback", "/privacy", "/terms", "/download", "/approve"]) {
+  for (const route of ["/demo", "/app", "/auth/callback", "/privacy", "/terms", "/download", "/checkout", "/approve"]) {
     assert.equal(rewrites.get(route), "/index.html", `${route} must remain reloadable`);
   }
 });
@@ -18,7 +18,7 @@ test("@regression:verification-11-sitemap-lists-every-public-route-but-not-priva
   const sitemap = await readFile(new URL("../public/sitemap.xml", import.meta.url), "utf8");
   const listedPaths = [...sitemap.matchAll(/<loc>https:\/\/worklog-approval-bridge\.sociobot\.in([^<]+)<\/loc>/g)]
     .map(([, path]) => path);
-  assert.deepEqual(listedPaths, ["/", "/demo", "/app", "/privacy", "/terms", "/download"]);
+  assert.deepEqual(listedPaths, ["/", "/demo", "/app", "/privacy", "/terms", "/download", "/checkout"]);
   assert.equal(listedPaths.includes("/approve"), false, "approval packets are private fragment URLs and must not be indexed");
 });
 
