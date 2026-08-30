@@ -418,7 +418,7 @@ fn valid_receipt(receipt: &ApprovalReceipt, secret: &str) -> bool {
     sign_receipt(receipt, secret) == receipt.attestation
 }
 
-async fn get_approval(State(state): State<AppState>, _headers: HeaderMap, uri: Uri, Path(receipt_id): Path<Option<String>>) -> Result<Response, ApiError> {
+async fn find_approval(state: &AppState, uri: &Uri, receipt_id: Option<&str>) -> Result<Response, ApiError> {
     let query = uri.query().unwrap_or_default();
     let digest = query.split('&').find_map(|part| part.split_once('=').filter(|(key, _)| *key == "packetDigest").map(|(_, value)| value))
         .and_then(|value| percent_decode(value).ok()).unwrap_or_default().to_lowercase();
@@ -426,11 +426,19 @@ async fn get_approval(State(state): State<AppState>, _headers: HeaderMap, uri: U
     let receipt = sqlx::query_as::<_, ApprovalReceipt>("SELECT 2 AS version, receipt_id, packet_digest, approver, accepted_at, attestation FROM approval_receipts WHERE packet_digest = ?")
         .bind(&digest).fetch_optional(&state.pool).await?;
     match receipt {
-        Some(receipt) if receipt_id.as_deref().is_some_and(|id| id != receipt.receipt_id) => Err(ApiError { status: StatusCode::NOT_FOUND, message: "Receipt not found.".to_owned(), bearer: false }),
+        Some(receipt) if receipt_id.is_some_and(|id| id != receipt.receipt_id) => Err(ApiError { status: StatusCode::NOT_FOUND, message: "Receipt not found.".to_owned(), bearer: false }),
         Some(receipt) => Ok(Json(ApprovalLookup { valid: valid_receipt(&receipt, &state.signing_secret), receipt }).into_response()),
         None if receipt_id.is_some() => Err(ApiError { status: StatusCode::NOT_FOUND, message: "Receipt not found.".to_owned(), bearer: false }),
         None => Ok(StatusCode::NO_CONTENT.into_response()),
     }
+}
+
+async fn get_approval(State(state): State<AppState>, uri: Uri) -> Result<Response, ApiError> {
+    find_approval(&state, &uri, None).await
+}
+
+async fn get_approval_by_id(State(state): State<AppState>, uri: Uri, Path(receipt_id): Path<String>) -> Result<Response, ApiError> {
+    find_approval(&state, &uri, Some(&receipt_id)).await
 }
 
 async fn post_approval(State(state): State<AppState>, Json(input): Json<ApprovalInput>) -> Result<Response, ApiError> {
@@ -522,7 +530,7 @@ fn app(state: AppState) -> Router {
         .route("/api/v1/account", delete(delete_account))
         .route("/api/v1/billing/verify", post(verify_billing))
         .route("/api/approvals", get(get_approval).post(post_approval))
-        .route("/api/approvals/{receipt_id}", get(get_approval))
+        .route("/api/approvals/{receipt_id}", get(get_approval_by_id))
         .route("/", get(spa))
         .route("/demo", get(spa))
         .route("/app", get(spa))
@@ -684,5 +692,14 @@ mod tests {
         let health = router.oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(health.status(), StatusCode::OK, "the container health route must remain available");
         assert!(health.headers().get(header::CONTENT_TYPE).unwrap().to_str().unwrap().starts_with("application/json"));
+    }
+
+    #[tokio::test]
+    async fn regression_unaccepted_approval_lookup_is_a_successful_empty_response() {
+        let response = app(test_state().await)
+            .oneshot(Request::builder().uri(format!("/api/approvals?packetDigest={}", "a".repeat(64))).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
     }
 }
