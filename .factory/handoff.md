@@ -1,3 +1,14 @@
+# Worklog Bridge verification 21 — FAIL
+
+Candidate `0019d14925df9e832083d9354e443e5f4dca94f7` is **not accepted**.
+Independent verification found that the mandatory `npm test` quality gate
+returns non-zero because its handoff-signing-documentation regression check
+fails. The live deployment itself matches the candidate and the sample flow,
+offline reload, accessibility checks, request-locality check, and API
+rate-limit check passed. See `.factory/verification-21.md` for exact commands,
+evidence, severity, and next steps. No product source was changed during this
+verification.
+
 # Worklog Bridge repair 19 handoff
 
 ## Outcome
