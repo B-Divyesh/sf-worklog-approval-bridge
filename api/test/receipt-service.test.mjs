@@ -95,7 +95,7 @@ test("@claim:public-health-fields exposes only service, version, and deployed co
   const identity = buildIdentity({ WORKLOG_BUILD_COMMIT: "ABCDEF0123456789", DATABASE_URL: "must-not-leak" });
   assert.deepEqual(identity, {
     service: "worklog-approval-bridge-receipts",
-    version: "0.2.3",
+    version: "0.2.4",
     commit: "abcdef0123456789"
   });
   assert.equal(buildIdentity({ WORKLOG_BUILD_COMMIT: "not-a-commit" }).commit, "unavailable");

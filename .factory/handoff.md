@@ -1,68 +1,62 @@
-# Worklog Bridge verification 21 — FAIL
-
-Candidate `0019d14925df9e832083d9354e443e5f4dca94f7` is **not accepted**.
-Independent verification found that the mandatory `npm test` quality gate
-returns non-zero because its handoff-signing-documentation regression check
-fails. The live deployment itself matches the candidate and the sample flow,
-offline reload, accessibility checks, request-locality check, and API
-rate-limit check passed. See `.factory/verification-21.md` for exact commands,
-evidence, severity, and next steps. No product source was changed during this
-verification.
-
-# Worklog Bridge repair 19 handoff
+# Worklog Bridge repair 20 handoff
 
 ## Outcome
 
-Repair 19 resolves every release blocker in independent verification 20 for
-candidate `21781cfeefb4e564f4a073d342182a4d01e99dcf`. The repaired release is
-`0.2.3`. It preserves the local-first editor, one-click demo, account boundary,
-approval receipts, accessibility behavior, and container deployment class.
+Repair 20 resolves the sole release blocker in independent verification 21 for
+candidate `0019d14925df9e832083d9354e443e5f4dca94f7`. The repaired release is
+`0.2.4`. It preserves the deployed M2 editor, account boundary, approval
+receipts, durable SQLite state under `/data`, one-click demo, and container
+deployment class.
 
-## Reproduction and root causes
+## Reproduction and root cause
 
-- `npm test -- --grep @claim:installed-app-locality` reproduced the reported
-  30-second timeout at **Add selected entries**. On 1 September the empty app
-  selected the week of 31 August, while the fixed ICS fixture contained an
-  event on 25 August. The app correctly rejected that out-of-week event, but
-  the locality test incorrectly depended on the wall-clock week.
-- A cold `npm test -- --grep @claim:offline-reload` made the zero-config Node
-  test compile the server while other Node test files could also compile Rust.
-  Its enclosing 120-second limit could cancel the test before startup even
-  though the persistence assertions passed once compilation was cached.
-- Independent verification could not build the desktop packages because its
-  image lacked the documented GLib/WebKitGTK development packages. This was an
-  environment prerequisite, not a product defect; repair verification installs
-  those prerequisites and proves the packages below.
+Before any edit, `npm test` reproduced the verifier's exact failure. The
+Node/script stage passed 31 checks and failed only:
 
-## Repairs and exact regression coverage
+```text
+@regression:verification-13 documents every optional signing secret and unsigned release behavior
+AssertionError: handoff must name APPLE_CERTIFICATE
+```
 
-- The installed-app locality claim now creates and closes its own browser
-  context, fixes the selected week to 24 August 2026, uploads the matching ICS
-  fixture, and explicitly requires the calendar chooser and enabled **Add
-  selected entries** action before continuing through edit, CSV export, link
-  creation, local storage, and request-locality assertions.
-- Both installed-app claims and every test that takes a browser offline use an
-  explicitly created context. Each test closes only that context; none closes
-  Playwright's shared browser.
-- The offline claim now waits for the active service worker, runs
-  `registration.update()`, verifies its scope and script URL, then reloads in
-  the isolated offline context.
-- The zero-config test uses one memoized asynchronous server build with a
-  deterministic 300-second build deadline. Its enclosing claim deadline is
-  420 seconds. Node test files run with concurrency one, so cold Rust builds do
-  not contend and cancel the persistence claim. The service is still launched
-  twice to prove the generated secret and SQLite data survive a restart.
-- Product and package identity advances to `0.2.3`; the site, Axum service,
-  Tauri manifests, package metadata, workflow default, and legacy receipt
-  fixture agree.
+The candidate handoff had been replaced during the previous verification and
+no longer contained its required desktop-signing operations contract. Because
+the repository deliberately tests that contract, the mandatory gate stopped
+before its build and browser stages. The live M2 behavior was not the cause.
+
+## Repair and regression coverage
+
+- Restored the complete signing contract below.
+- Added
+  `@regression:verification-21 keeps the signing contract in a dedicated handoff section`.
+  It extracts this exact section, requires all eight optional credential names,
+  and checks tag, manual unsigned, complete signed, and partial-secret behavior.
+  Archived wording elsewhere can no longer satisfy the regression by accident.
+- Advanced the site, API, Rust service, Tauri app, lockfiles, and release workflow
+  together to `0.2.4`. No data model, migration, storage path, auth, billing, or
+  runtime behavior changed.
+
+## Release signing contract
+
+Signing secrets are optional. Tag-triggered releases always build an unsigned
+preview, even when signing secrets are present. A manual release with
+`sign_release` set to `false` also builds an unsigned preview. Set
+`sign_release` to `true` only when all platform signing secrets are available.
+macOS signing and notarization use `APPLE_CERTIFICATE`,
+`APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
+`APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses
+`WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. When signing is requested, a
+partly configured secret set fails before packaging instead of silently
+producing an unsigned file.
 
 ## Local verification evidence
 
-All checks passed on 1 September 2026 from a clean npm install:
+Verified on 1 September 2026 from fresh npm installs:
 
 ```sh
 npm ci
 npm --prefix api ci
+npm audit --audit-level=high
+npm --prefix api audit --audit-level=high
 npm test
 npm run build
 cargo fmt --manifest-path server/Cargo.toml -- --check
@@ -74,73 +68,75 @@ npm run build:server
 CI=1 npm run build:desktop
 ```
 
-- `npm ci` installed 39 packages with zero audit findings. The API install
-  installed 28 packages with zero audit findings.
-- `npm test` passed 32 Node/script tests, 9 Axum tests, and 39 Chromium tests.
-  The browser suite covers desktop and 390 px layouts, keyboard focus and
-  shortcuts, Axe WCAG 2 A/AA scans, privacy request capture, response handling,
-  offline reload/update, and console errors.
-- All 27 exact commands in `.factory/claims.json` passed. The two commands that
-  failed verification 20 also passed separately. With `server/target` removed,
-  the offline command completed its cold server build in 79.57 seconds without
-  cancellation; the installed-app browser assertion completed in 1.0 second.
-- Both formatting checks and both Clippy checks with warnings denied passed.
-  The two Tauri Git-locality tests passed.
-- The production Axum build and site build passed. Initial JavaScript is 18.36
-  KB gzip, CSS is 4.99 KB gzip, and the lazily loaded sign-in chunk is 74.15 KB
-  gzip.
-- The factory URL verifier passed `/`, `/demo`, `/app`, `/privacy`, `/terms`,
-  and `/download` at desktop and 390 px with one `h1`, `lang=en`, a main
-  landmark, labelled images and controls, and no console errors. Visual review
-  found no overflow or blocked controls.
+- Both npm audits reported zero vulnerabilities.
+- `npm test` passed 33 Node/script checks, 9 Axum tests, the production site
+  build, and 39 Chromium tests. The new verification-21 regression passed.
+- Every one of the 27 commands in `.factory/claims.json` passed separately in
+  manifest order.
+- Type checking, both formatting checks, both all-feature Clippy checks with
+  warnings denied, 2 native Git-locality tests, and the production server build
+  passed.
+- The browser suite covers desktop and 390 px layouts, keyboard navigation and
+  shortcuts, dialog focus, Axe WCAG 2 A/AA scans, touch targets, same-origin
+  privacy, demo isolation, offline reload/update, route metadata, and console
+  errors. All 39 checks passed.
+- The production build contains 17.35 KB gzip of initial application JavaScript,
+  4.99 KB gzip of CSS, and a 74.15 KB gzip sign-in chunk loaded only on demand.
+- The factory URL verifier found one `h1`, `lang=en`, a main landmark, labelled
+  images and controls, and no console errors at desktop and 390 px widths.
 - Mobile Lighthouse scored Performance 100, Accessibility 100, Best Practices
-  100, and SEO 100. FCP was 1,345 ms, LCP 1,679 ms, TBT 26 ms, CLS 0, and total
-  transfer 120,923 bytes.
-- Local response checks returned identical `0.2.3` health bodies from `/health`
-  and `/api/health`, preserved HSTS/CSP/referrer/permissions headers, challenged
-  protected worklog routes with `401` and `WWW-Authenticate: Bearer`, and
-  returned 12 invalid approval writes followed by `429` with `Retry-After`.
+  100, and SEO 100. FCP was 1,295 ms, LCP 1,605 ms, TBT 35 ms, CLS 0, and total
+  transfer was 120,923 bytes.
+- A fresh local service returned identical `0.2.4` identity from `/health` and
+  `/api/health`, preserved CSP/HSTS/referrer/permissions headers, challenged
+  account routes with `401` plus `WWW-Authenticate: Bearer`, returned 12 invalid
+  approval writes followed by `429` plus `Retry-After`, and retained a real 404.
 
-Linux packages produced by the previously missing desktop gate:
+The Linux package gate that verification 21 could not run was repeated after
+installing the documented GLib/WebKitGTK prerequisites:
 
 | Package | Bytes | SHA-256 |
 | --- | ---: | --- |
-| `Worklog Bridge_0.2.3_amd64.deb` | 2,002,054 | `70a5fe81f0cd2a7c870009e55bbb33ba75abd5e05ada9a1b17043c9c8b621baf` |
-| `Worklog Bridge-0.2.3-1.x86_64.rpm` | 2,004,140 | `91d80c3d30903a8f0c19e4d55d40b40e231759cb99c83f6882fdc65d2b8789c5` |
-| `Worklog Bridge_0.2.3_amd64.AppImage` | 77,249,016 | `d5062afc38363ddcf30e4e858bbd68404d7381f590afd3cddf6e3c18f1df048f` |
+| `Worklog Bridge_0.2.4_amd64.deb` | 2,002,004 | `17b6f832c2d1e74362ce0be5af8ffa39dd1a954d9c49eb64e29603aa78dfca74` |
+| `Worklog Bridge-0.2.4-1.x86_64.rpm` | 2,004,118 | `d6bc922f9470513f1f6c0ddc070d48e8694fdff6e6b03179273bfa07315dcab7` |
+| `Worklog Bridge_0.2.4_amd64.AppImage` | 77,249,016 | `aa1aa5af96cd9c3bb2ebf1957ce75ef1a3b0ec162d8fe4edf9addefa63136939` |
 
-## Release, deployment, and live acceptance
+## Release and deployment evidence
 
-The commit containing this handoff is the immutable source for tag `v0.2.3`,
-the desktop release workflow, and the product container. Deployment uses only
-the existing `sf-worklog-approval-bridge` Container App, port 8080, and its
-factory-managed durable `/data` mount with one replica.
+The final source is pushed on `main` and tagged `v0.2.4`. The tag-triggered
+workflow builds the unsigned macOS, Windows, and Linux preview artifacts from
+that immutable commit. Release provenance and checksums are checked with:
 
-Delivery is accepted only when all of these hold for that same commit:
+```sh
+npm run verify:release -- --tag v0.2.4 --expected-commit "$(git rev-parse HEAD)"
+```
 
-- `v0.2.3`, `latest.json`, every platform provenance record, and every release
-  asset resolve to the tag commit.
-- `/health` and `/api/health` return service `worklog-approval-bridge`, version
-  `0.2.3`, and the full tag commit.
-- `npm run verify:release -- --tag v0.2.3 --expected-commit <commit>` and
-  `npm run verify:live -- --expected-commit <commit>` pass.
-- Live desktop/mobile, keyboard, accessibility, same-origin privacy, service
-  worker update/offline reload, security headers, account bearer boundary, and
-  rate-limit checks remain green.
+The same commit is rebuilt by the factory container deployment and served by
+the existing `sf-worklog-approval-bridge` Container App on port 8080. The
+factory-managed durable share remains mounted at `/data` with one replica; it
+is adopted rather than recreated. Delivery is checked with:
 
-No unrelated app, database, vault, secret, or storage resource was read or
-modified during this repair.
+```sh
+npm run verify:live -- --expected-commit "$(git rev-parse HEAD)"
+npm run verify:delivery -- --tag v0.2.4
+```
+
+The live checks cover both health identities, the hosted Sociobot checkout
+handoff, bearer protection on every account route, immutable frontend assets,
+the isolated demo approval flow, a real approval lookup, and genuine 404
+routing. No unrelated app, database, vault, secret, storage account, DNS name,
+or image was read or modified during this repair.
 
 ## Known limits
 
-- The account suite proves the full RS256 issuer, audience, tenant, expiry,
+- The account suite proves the RS256 issuer, audience, tenant, expiry,
   not-before, stable account-ID, route, and tenant-isolation behavior. Live
   identity verification stops at the public Sociobot CIAM redirect and bearer
   boundary because no human test account is stored in the repository.
-- Desktop packages remain clearly labelled unsigned previews. macOS and
-  Windows may show a trust warning.
+- This release remains an explicitly labelled unsigned desktop preview. macOS
+  and Windows may show a trust warning.
 
 ## Next step
 
-Run independent verification against the exact `v0.2.3` tag commit. No product
-or release blocker is known after the checks above.
+Run independent verification against the immutable `v0.2.4` commit. No known
+product or release blocker remains.

@@ -52,3 +52,20 @@ test("@regression:verification-13 documents every optional signing secret and un
     assert.match(compact, /partly configured.*fails before packaging/i, `${name} must document the requested-signing failure mode`);
   }
 });
+
+test("@regression:verification-21 keeps the signing contract in a dedicated handoff section", async () => {
+  const handoff = await readFile(new URL("../.factory/handoff.md", import.meta.url), "utf8");
+  const section = handoff.match(/^## Release signing contract\s*$[\s\S]*?(?=^#{1,2}\s|(?![\s\S]))/m)?.[0];
+  assert.ok(section, "handoff must keep a dedicated Release signing contract section");
+
+  for (const name of [...signingSecrets.macos, ...signingSecrets.windows]) {
+    assert.match(section, new RegExp(`\\b${name}\\b`), `release signing section must name ${name}`);
+  }
+
+  const compact = section.replace(/\s+/g, " ");
+  assert.match(compact, /Signing secrets are optional\./i);
+  assert.match(compact, /Tag-triggered releases always build an unsigned preview, even when signing secrets are present\./i);
+  assert.match(compact, /manual release.*sign_release.*false.*unsigned preview/i);
+  assert.match(compact, /sign_release.*true.*all.*platform.*secrets/i);
+  assert.match(compact, /partly configured.*fails before packaging/i);
+});
