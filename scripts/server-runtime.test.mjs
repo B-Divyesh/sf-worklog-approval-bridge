@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { createServer } from "node:net";
@@ -11,6 +11,32 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifest = join(root, "server", "Cargo.toml");
 const binary = join(root, "server", "target", "debug", process.platform === "win32" ? "worklog-approval-bridge-server.exe" : "worklog-approval-bridge-server");
+const BUILD_TIMEOUT_MS = 300_000;
+const CLAIM_TIMEOUT_MS = 420_000;
+let serverBuild;
+
+function buildServerOnce() {
+  serverBuild ??= new Promise((resolve, reject) => {
+    const child = spawn("cargo", ["build", "--manifest-path", manifest, "--locked"], {
+      cwd: root,
+      stdio: "pipe"
+    });
+    let output = "";
+    child.stdout.on("data", chunk => { output += chunk; });
+    child.stderr.on("data", chunk => { output += chunk; });
+    child.once("error", reject);
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error(`server build exceeded ${BUILD_TIMEOUT_MS}ms:\n${output}`));
+    }, BUILD_TIMEOUT_MS);
+    child.once("close", code => {
+      clearTimeout(timeout);
+      if (code === 0) resolve();
+      else reject(new Error(`server build exited ${code}:\n${output}`));
+    });
+  });
+  return serverBuild;
+}
 
 async function availablePort() {
   const server = createServer();
@@ -54,14 +80,9 @@ async function startServer(cwd, port) {
   throw new Error(`server did not become healthy:\n${output}`);
 }
 
-test("@claim:zero-config-persistence starts with only PORT and reuses its generated SQLite secret", { timeout: 120_000 }, async () => {
+test("@claim:zero-config-persistence starts with only PORT and reuses its generated SQLite secret", { timeout: CLAIM_TIMEOUT_MS }, async () => {
   assert.equal(existsSync("/data"), false, "this sandbox must exercise the documented local fallback when /data is not mounted");
-  const build = spawnSync("cargo", ["build", "--manifest-path", manifest, "--locked"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: "pipe"
-  });
-  assert.equal(build.status, 0, `${build.stdout}\n${build.stderr}`);
+  await buildServerOnce();
 
   const directory = await mkdtemp(join(tmpdir(), "worklog-zero-config-"));
   const port = await availablePort();

@@ -3,6 +3,21 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 
 type Receipt = { version: 2; receiptId: string; packetDigest: string; approver: string; acceptedAt: string; attestation: string };
+const APP_ORIGIN = "http://127.0.0.1:4173";
+
+async function inIsolatedContext(
+  browser: import("@playwright/test").Browser,
+  run: (page: import("@playwright/test").Page, context: import("@playwright/test").BrowserContext) => Promise<void>,
+  permissions: string[] = []
+) {
+  const context = await browser.newContext({ baseURL: APP_ORIGIN, permissions });
+  const page = await context.newPage();
+  try {
+    await run(page, context);
+  } finally {
+    await context.close();
+  }
+}
 
 function mockApprovalService(page: import("@playwright/test").Page, observed?: { bodies: unknown[]; lookupStatuses?: number[] }) {
   let receipt: Receipt | undefined;
@@ -23,15 +38,23 @@ function mockApprovalService(page: import("@playwright/test").Page, observed?: {
   });
 }
 
-test("@claim:offline-reload saved work remains available offline", async ({ page, context }) => {
-  await page.goto("/demo");
-  await expect(page.getByRole("heading", { name: "Review the weekly worklog" })).toBeVisible();
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload();
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.getByText("Fixed patient search filters")).toBeVisible();
-  await expect(page.getByText("You are offline. Saved work remains available.")).toBeVisible();
+test("@claim:offline-reload saved work remains available offline", async ({ browser }) => {
+  await inIsolatedContext(browser, async (page, context) => {
+    await page.goto("/demo");
+    await expect(page.getByRole("heading", { name: "Review the weekly worklog" })).toBeVisible();
+    const worker = await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.update();
+      return { scope: registration.scope, script: registration.active?.scriptURL };
+    });
+    expect(worker.scope).toBe(`${APP_ORIGIN}/`);
+    expect(worker.script).toBe(`${APP_ORIGIN}/service-worker.js`);
+    await page.reload();
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText("Fixed patient search filters")).toBeVisible();
+    await expect(page.getByText("You are offline. Saved work remains available.")).toBeVisible();
+  });
 });
 
 test("@claim:csv-export exports six sample records", async ({ page }) => {
@@ -258,63 +281,67 @@ test("@claim:calendar-import imports selected ICS events from the chosen week", 
   await expect(row).toContainText("Calendar");
 });
 
-test("@claim:license-unlock enables Pro only after a current valid verdict and only uses a fresh cache offline", async ({ page, context }) => {
-  let verifyCalls = 0;
-  await page.route("https://api.sociobot.in/**", async route => {
-    verifyCalls++;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2026-09-28T00:00:00Z" }) });
-  });
-  await page.goto("/app?license=test-license-token");
-  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
-  expect(page.url()).not.toContain("license=");
-  expect(await page.evaluate(() => localStorage.getItem("sb_license:worklog-approval-bridge"))).toBe("test-license-token");
-  expect(verifyCalls).toBe(1);
-  await page.reload();
-  expect(verifyCalls).toBe(1);
-  await page.goto("/#pricing");
-  await expect(page.locator(".price")).toContainText("$12 / user / month");
-  await page.goto("/app");
-  await page.unroute("https://api.sociobot.in/**");
-  await context.setOffline(true);
-  for (const verdict of [
-    null,
-    { valid: false, reason: "invalid", checkedAt: Date.now() },
-    { valid: true, reason: "expired", checkedAt: Date.now(), expiresAt: "2020-01-01T00:00:00Z" },
-    { valid: false, reason: "revoked", checkedAt: Date.now() }
-  ]) {
-    await page.evaluate(value => {
-      localStorage.setItem("sb_license:worklog-approval-bridge", "test-token");
-      if (value) localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify(value));
-      else localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
-    }, verdict);
+test("@claim:license-unlock enables Pro only after a current valid verdict and only uses a fresh cache offline", async ({ browser }) => {
+  await inIsolatedContext(browser, async (page, context) => {
+    let verifyCalls = 0;
+    await page.route("https://api.sociobot.in/**", async route => {
+      verifyCalls++;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2026-09-28T00:00:00Z" }) });
+    });
+    await page.goto("/app?license=test-license-token");
+    await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
+    expect(page.url()).not.toContain("license=");
+    expect(await page.evaluate(() => localStorage.getItem("sb_license:worklog-approval-bridge"))).toBe("test-license-token");
+    expect(verifyCalls).toBe(1);
     await page.reload();
-    await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
-  }
-  await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" })));
-  await page.reload();
-  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
-  await context.setOffline(false);
-  await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
-  await page.route("https://api.sociobot.in/**", async route => {
-    verifyCalls++;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
+    expect(verifyCalls).toBe(1);
+    await page.goto("/#pricing");
+    await expect(page.locator(".price")).toContainText("$12 / user / month");
+    await page.goto("/app");
+    await page.unroute("https://api.sociobot.in/**");
+    await context.setOffline(true);
+    for (const verdict of [
+      null,
+      { valid: false, reason: "invalid", checkedAt: Date.now() },
+      { valid: true, reason: "expired", checkedAt: Date.now(), expiresAt: "2020-01-01T00:00:00Z" },
+      { valid: false, reason: "revoked", checkedAt: Date.now() }
+    ]) {
+      await page.evaluate(value => {
+        localStorage.setItem("sb_license:worklog-approval-bridge", "test-token");
+        if (value) localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify(value));
+        else localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
+      }, verdict);
+      await page.reload();
+      await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
+    }
+    await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" })));
+    await page.reload();
+    await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
+    await context.setOffline(false);
+    await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
+    await page.route("https://api.sociobot.in/**", async route => {
+      verifyCalls++;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
+    });
+    await page.reload();
+    await expect.poll(() => verifyCalls).toBeGreaterThan(1);
   });
-  await page.reload();
-  await expect.poll(() => verifyCalls).toBeGreaterThan(1);
 });
 
-test("@regression:an invalid token with no cached verdict cannot unlock Pro offline", async ({ page, context }) => {
-  await page.goto("/app");
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload();
-  await page.evaluate(() => {
-    localStorage.setItem("sb_license:worklog-approval-bridge", "definitely-not-a-license");
-    localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
+test("@regression:an invalid token with no cached verdict cannot unlock Pro offline", async ({ browser }) => {
+  await inIsolatedContext(browser, async (page, context) => {
+    await page.goto("/app");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+    await page.evaluate(() => {
+      localStorage.setItem("sb_license:worklog-approval-bridge", "definitely-not-a-license");
+      localStorage.removeItem("sb_license:worklog-approval-bridge:verdict");
+    });
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Import calendar file · Pro" })).toBeVisible();
   });
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.getByText("Saved approval history · Pro")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Import calendar file · Pro" })).toBeVisible();
 });
 
 test("@regression:license-verdict rejects invalid absent expired and revoked cache states", async ({ page }) => {
@@ -336,27 +363,29 @@ test("@regression:license-verdict rejects invalid absent expired and revoked cac
   }
 });
 
-test("@regression:license-verdict permits only fresh valid offline cache and refreshes at 24 hours", async ({ page, context }) => {
-  await page.goto("/app");
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload();
-  await page.evaluate(() => {
-    localStorage.setItem("sb_license:worklog-approval-bridge", "valid-token");
-    localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" }));
+test("@regression:license-verdict permits only fresh valid offline cache and refreshes at 24 hours", async ({ browser }) => {
+  await inIsolatedContext(browser, async (page, context) => {
+    await page.goto("/app");
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+    await page.evaluate(() => {
+      localStorage.setItem("sb_license:worklog-approval-bridge", "valid-token");
+      localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" }));
+    });
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
+    await context.setOffline(false);
+    let calls = 0;
+    await page.route("https://api.sociobot.in/**", async route => {
+      calls++;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
+    });
+    await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
+    await page.reload();
+    await expect.poll(() => calls).toBe(1);
+    await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
   });
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
-  await context.setOffline(false);
-  let calls = 0;
-  await page.route("https://api.sociobot.in/**", async route => {
-    calls++;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: "2099-01-01T00:00:00Z" }) });
-  });
-  await page.evaluate(() => localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now() - 86_400_000, expiresAt: "2099-01-01T00:00:00Z" })));
-  await page.reload();
-  await expect.poll(() => calls).toBe(1);
-  await expect(page.getByText("Saved approval history · Pro")).toBeVisible();
 });
 
 test("@claim:sample-counts match the sample data", async ({ page }) => {
@@ -431,40 +460,46 @@ test("@claim:no-analytics sends no analytics or advertising request through samp
   expect(requests.some(path => /analytics|advertis|collect|events|telemetry/i.test(path))).toBe(false);
 });
 
-test("@claim:installed-app-locality keeps import, edit, export, and sharing in the packaged app frontend", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4173" });
-  const tauri = JSON.parse(await readFile(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"));
-  expect(tauri.app.windows[0].url).toBe("/app");
-  const requests: string[] = [];
-  page.on("request", request => requests.push(request.url()));
-  await page.goto("/app");
-  await page.evaluate(() => {
-    localStorage.setItem("sb_license:worklog-approval-bridge", "packaged-app-fixture");
-    localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" }));
-  });
-  await page.reload();
-  await page.locator("#ics-file").setInputFiles({ name: "desktop-import.ics", mimeType: "text/calendar", buffer: Buffer.from("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART:20260825T100000Z\r\nDTEND:20260825T110000Z\r\nSUMMARY:Desktop client review\r\nDESCRIPTION:Imported on device\r\nEND:VEVENT\r\nEND:VCALENDAR") });
-  await page.getByRole("button", { name: "Add selected entries" }).click();
-  await page.getByRole("button", { name: "Edit Desktop client review" }).click();
-  await page.getByLabel("Client-ready summary").fill("Edited desktop client review");
-  await page.getByLabel("Ready to share").check();
-  await page.getByRole("button", { name: "Save entry" }).click();
-  const csvPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export CSV" }).click();
-  const stream = await (await csvPromise).createReadStream();
-  let csv = ""; for await (const chunk of stream!) csv += chunk.toString();
-  expect(csv).toContain("Edited desktop client review");
-  await page.locator("#client").fill("Desktop privacy client");
-  await page.locator("#client").press("Tab");
-  await page.getByRole("button", { name: "Copy approval link" }).click();
-  const link = await page.evaluate(() => navigator.clipboard.readText());
-  expect(link).toContain("/approve#");
-  expect(link).not.toContain("demo=1");
-  const storage = await page.evaluate(() => ({ real: localStorage.getItem("worklog-bridge:project"), demo: localStorage.getItem("demo:worklog-bridge:project") }));
-  expect(storage.real).toContain("Edited desktop client review");
-  expect(storage.demo).toBeNull();
-  expect(requests.every(url => new URL(url).origin === "http://127.0.0.1:4173")).toBe(true);
-  expect(requests.some(url => new URL(url).pathname.startsWith("/api/"))).toBe(false);
+test("@claim:installed-app-locality keeps import, edit, export, and sharing in the packaged app frontend", async ({ browser }) => {
+  await inIsolatedContext(browser, async page => {
+    const tauri = JSON.parse(await readFile(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"));
+    expect(tauri.app.windows[0].url).toBe("/app");
+    const requests: string[] = [];
+    page.on("request", request => requests.push(request.url()));
+    await page.goto("/app");
+    await page.evaluate(() => {
+      localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "", week: "2026-08-24", rate: 0, currency: "USD", entries: [], sources: [] }));
+      localStorage.setItem("sb_license:worklog-approval-bridge", "packaged-app-fixture");
+      localStorage.setItem("sb_license:worklog-approval-bridge:verdict", JSON.stringify({ valid: true, checkedAt: Date.now(), expiresAt: "2099-01-01T00:00:00Z" }));
+    });
+    await page.reload();
+    await expect(page.getByLabel("Week starts")).toHaveValue("2026-08-24");
+    await page.locator("#ics-file").setInputFiles({ name: "desktop-import.ics", mimeType: "text/calendar", buffer: Buffer.from("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART:20260825T100000Z\r\nDTEND:20260825T110000Z\r\nSUMMARY:Desktop client review\r\nDESCRIPTION:Imported on device\r\nEND:VEVENT\r\nEND:VCALENDAR") });
+    const chooser = page.getByRole("dialog", { name: "Choose calendar events" });
+    await expect(chooser).toBeVisible();
+    await expect(chooser.getByRole("button", { name: "Add selected entries" })).toBeEnabled();
+    await chooser.getByRole("button", { name: "Add selected entries" }).click();
+    await page.getByRole("button", { name: "Edit Desktop client review" }).click();
+    await page.getByLabel("Client-ready summary").fill("Edited desktop client review");
+    await page.getByLabel("Ready to share").check();
+    await page.getByRole("button", { name: "Save entry" }).click();
+    const csvPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export CSV" }).click();
+    const stream = await (await csvPromise).createReadStream();
+    let csv = ""; for await (const chunk of stream!) csv += chunk.toString();
+    expect(csv).toContain("Edited desktop client review");
+    await page.locator("#client").fill("Desktop privacy client");
+    await page.locator("#client").press("Tab");
+    await page.getByRole("button", { name: "Copy approval link" }).click();
+    const link = await page.evaluate(() => navigator.clipboard.readText());
+    expect(link).toContain("/approve#");
+    expect(link).not.toContain("demo=1");
+    const storage = await page.evaluate(() => ({ real: localStorage.getItem("worklog-bridge:project"), demo: localStorage.getItem("demo:worklog-bridge:project") }));
+    expect(storage.real).toContain("Edited desktop client review");
+    expect(storage.demo).toBeNull();
+    expect(requests.every(url => new URL(url).origin === APP_ORIGIN)).toBe(true);
+    expect(requests.some(url => new URL(url).pathname.startsWith("/api/"))).toBe(false);
+  }, ["clipboard-read", "clipboard-write"]);
 });
 
 test("@claim:entry-review saves edits, time, readiness, removal, and the resulting export", async ({ page }) => {
@@ -502,17 +537,19 @@ test("@claim:free-editor lets an unlicensed workspace edit and export", async ({
   expect(csv).toContain("Unlicensed editor entry");
 });
 
-test("@claim:desktop-sample-project loads the isolated sample from the configured first-run route", async ({ page }) => {
-  await page.goto("/app");
-  await expect(page.getByRole("button", { name: "Load sample project" })).toBeVisible();
-  await page.getByRole("button", { name: "Load sample project" }).click();
-  await expect(page).toHaveURL(/\/demo$/);
-  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
-  await expect(page.locator("[data-entry-id]")).toHaveCount(6);
-  expect(await page.evaluate(() => localStorage.getItem("worklog-bridge:project"))).toBeNull();
-  await page.goto("/?demo=1");
-  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
-  await expect(page.locator("[data-entry-id]")).toHaveCount(6);
+test("@claim:desktop-sample-project loads the isolated sample from the configured first-run route", async ({ browser }) => {
+  await inIsolatedContext(browser, async page => {
+    await page.goto("/app");
+    await expect(page.getByRole("button", { name: "Load sample project" })).toBeVisible();
+    await page.getByRole("button", { name: "Load sample project" }).click();
+    await expect(page).toHaveURL(/\/demo$/);
+    await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+    await expect(page.locator("[data-entry-id]")).toHaveCount(6);
+    expect(await page.evaluate(() => localStorage.getItem("worklog-bridge:project"))).toBeNull();
+    await page.goto("/?demo=1");
+    await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+    await expect(page.locator("[data-entry-id]")).toHaveCount(6);
+  });
 });
 
 test("landing and routes meet the semantic and serious accessibility baseline", async ({ page }) => {
