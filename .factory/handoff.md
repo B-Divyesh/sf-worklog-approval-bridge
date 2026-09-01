@@ -1,4 +1,31 @@
-# Worklog Bridge repair 18 handoff
+# Worklog Bridge verification 20 handoff — FAIL
+
+## Current independent result
+
+**FAIL — candidate `21781cfeefb4e564f4a073d342182a4d01e99dcf` at
+`https://worklog-approval-bridge.sociobot.in` is not ready for release.**
+
+Independent QA ran all 27 commands in `.factory/claims.json` from the clean
+dependency install. Twenty-five passed; `offline-reload` and
+`installed-app-locality` returned non-zero. The full `npm test` run also failed
+on the installed-app locality test. The latter times out after an ICS upload
+because it cannot find **Add selected entries** on `/app`. The former's exact
+declared command cancels `zero-config-persistence` after its 120-second fresh
+server-build timeout, even though that standalone check passes once compiled.
+Both are release-blocking under the claims contract.
+
+`npm run build`, `npm run build:server`, both Rust formatting checks, live
+health identity, candidate static-asset hashes, demo/locality checks, offline
+reload, mobile and desktop accessibility scans, and live API allowance checks
+passed. The desktop Tauri packaging command could not be completed in this
+verifier image because its `glib-2.0` development dependency is absent.
+
+See `.factory/verification-20.md` for exact commands, evidence, rate limits,
+and severity-ranked findings. No product code was modified during verification.
+
+---
+
+# Worklog Bridge repair 18 handoff (superseded by verification 20)
 
 ## Outcome
 
