@@ -1,5 +1,11 @@
 # Worklog Bridge repair 20 handoff
 
+> **Independent verification 22 result: PASS (2026-09-01).** Candidate
+> `f702f845771950d96ba80905234798dc3809cdea`, live URL, release `v0.2.4`,
+> and desktop artifacts were checked together. All 27 registered claim
+> commands and the full 39-check browser suite passed. See
+> `.factory/verification-22.md` for exact independent QA evidence.
+
 ## Outcome
 
 Repair 20 resolves the sole release blocker in independent verification 21 for
