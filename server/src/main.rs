@@ -1293,6 +1293,34 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
         format!("http://{address}/api/v1")
     }
 
+    async fn license_fixture() -> String {
+        let fixture = Router::new().route(
+            "/api/v1/products/worklog-approval-bridge/verify",
+            get(
+                |Query(query): Query<std::collections::HashMap<String, String>>| async move {
+                    if query.get("license").map(String::as_str) != Some("known-private-license") {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error": "unexpected license"})),
+                        );
+                    }
+                    (
+                        StatusCode::OK,
+                        Json(json!({
+                            "valid": true,
+                            "reason": "ok",
+                            "expires_at": "2026-12-31T23:59:59Z"
+                        })),
+                    )
+                },
+            ),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+        format!("http://{address}/api/v1")
+    }
+
     fn sample_worklog(client: &str) -> WorklogPayload {
         WorklogPayload {
             client: client.to_owned(),
@@ -1314,7 +1342,9 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
 
     #[tokio::test]
     async fn claim_m2_account_persistence_uses_authenticated_http_routes() {
-        let router = app(authenticated_test_state().await);
+        let state = authenticated_test_state().await;
+        let pool = state.pool.clone();
+        let router = app(state);
         let alice_token = bearer_token("alice-oid", "Alice");
         let bob_token = bearer_token("bob-oid", "Bob");
 
@@ -1333,6 +1363,18 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
                 .await
                 .unwrap();
             assert_eq!(response.status(), StatusCode::OK);
+        }
+
+        for (owner, license_hash) in [
+            ("alice-oid", hash_text("alice-license")),
+            ("bob-oid", hash_text("bob-license")),
+        ] {
+            sqlx::query("INSERT INTO licenses (owner_oid, license_hash, valid, reason) VALUES (?, ?, 1, 'ok')")
+                .bind(owner)
+                .bind(license_hash)
+                .execute(&pool)
+                .await
+                .unwrap();
         }
 
         let alice = router
@@ -1394,6 +1436,27 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
             .unwrap();
         assert!(response_json(alice_after_delete).await["worklog"].is_null());
 
+        let alice_license_count =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM licenses WHERE owner_oid = ?")
+                .bind("alice-oid")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        let bob_license_count =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM licenses WHERE owner_oid = ?")
+                .bind("bob-oid")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            alice_license_count, 0,
+            "account deletion must remove that account's license result"
+        );
+        assert_eq!(
+            bob_license_count, 1,
+            "account deletion must not change another account's license result"
+        );
+
         let bob = router
             .oneshot(authenticated_request(
                 Method::GET,
@@ -1404,6 +1467,53 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
             .await
             .unwrap();
         assert_eq!(response_json(bob).await["worklog"]["client"], "Bob client");
+    }
+
+    #[tokio::test]
+    async fn claim_m2_license_token_storage_is_one_way() {
+        let mut state = authenticated_test_state().await;
+        Arc::make_mut(&mut state.config).billing_base = license_fixture().await;
+        state.auth.config = state.config.clone();
+        let pool = state.pool.clone();
+        let router = app(state);
+        let token = bearer_token("alice-oid", "Alice");
+        let raw_license = "known-private-license";
+
+        let response = router
+            .oneshot(authenticated_request(
+                Method::POST,
+                "/api/v1/billing/verify",
+                &token,
+                Body::from(json!({"license": raw_license}).to_string()),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response_json(response).await["valid"], true);
+
+        let (stored_hash, valid, reason) = sqlx::query_as::<_, (String, i64, String)>(
+            "SELECT license_hash, valid, reason FROM licenses WHERE owner_oid = ?",
+        )
+        .bind("alice-oid")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(stored_hash, hash_text(raw_license));
+        assert_ne!(stored_hash, raw_license);
+        assert_eq!(valid, 1);
+        assert_eq!(reason, "ok");
+
+        let stored_row = sqlx::query_scalar::<_, String>(
+            "SELECT owner_oid || '|' || license_hash || '|' || reason FROM licenses WHERE owner_oid = ?",
+        )
+        .bind("alice-oid")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(
+            !stored_row.contains(raw_license),
+            "the raw license token must not be stored"
+        );
     }
 
     #[tokio::test]
@@ -1562,6 +1672,38 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
                 .unwrap();
             assert!((1..=60).contains(&retry_after), "{path}");
         }
+    }
+
+    #[tokio::test]
+    async fn claim_m2_rate_limit_storage_hashes_client_addresses() {
+        let state = test_state().await;
+        let pool = state.pool.clone();
+        let router = app(state);
+        let client_address = "203.0.113.77";
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/app")
+                    .header("x-forwarded-for", format!("{client_address}, 10.0.0.1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_ne!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+
+        let stored_key = sqlx::query_scalar::<_, String>(
+            "SELECT client_key FROM rate_limits WHERE scope = 'read'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(stored_key, hash_text(client_address));
+        assert_ne!(stored_key, client_address);
+        assert!(
+            !stored_key.contains(client_address),
+            "the client address must not be stored in plaintext"
+        );
     }
 
     #[tokio::test]

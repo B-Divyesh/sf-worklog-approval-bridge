@@ -81,12 +81,12 @@ function accountControl() {
 }
 
 function header(active = "") {
-  return `<aside class="preview-banner" aria-label="Release status">Unsigned desktop preview · macOS and Windows may show a trust warning.</aside><header class="site-header">
+  return `<aside class="preview-banner" aria-label="Release status">Unsigned desktop packages · macOS and Windows may show a trust warning.</aside><header class="site-header">
     <div class="header-inner">
       ${routeLink("/", `<span class="wordmark-mark" aria-hidden="true"></span><span>Worklog Bridge</span>`, "wordmark")}
       <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav"><span aria-hidden="true">☰</span><span class="sr-only">Open menu</span></button>
       <nav class="main-nav" id="main-nav" aria-label="Main navigation">
-        ${routeLink("/demo", "Demo")}
+        ${routeLink("/?demo=1", "Demo")}
         ${routeLink("/download", "Download")}
         <a href="/#pricing">Pricing</a>
         ${routeLink("/privacy", "Privacy")}
@@ -98,7 +98,7 @@ function header(active = "") {
 
 function footer() {
   return `<footer class="site-footer"><div class="shell footer-grid">
-      <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready worklog.</p><p class="build-id">Unsigned desktop preview · v${__WORKLOG_VERSION__} · build 2026.09.01 · Generated hero art disclosed in the design record.</p></div>
+      <div><p>Worklog Bridge turns selected Git and calendar activity into a client-ready worklog.</p><p class="build-id">Unsigned desktop packages · v${__WORKLOG_VERSION__} · build 2026.09.01 · Generated hero art disclosed in the design record.</p></div>
     <nav class="footer-links" aria-label="Footer navigation">${routeLink("/privacy", "Privacy")}${routeLink("/terms", "Terms")}<a href="https://sociobot.in" rel="noopener">Built by Param Factory <span class="sr-only">(external site)</span></a></nav>
   </div></footer>`;
 }
@@ -110,7 +110,7 @@ function landing() {
       <div class="hero-copy">
         <h1 tabindex="-1">Turn activity into an approved worklog</h1>
         <p class="lede">For freelancers who rebuild billable work from Git and calendars each week.</p>
-        <div class="hero-actions">${routeLink("/demo", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Your real worklog stays unchanged.</p></div>
+        <div class="hero-actions">${routeLink("/?demo=1", "Try it with sample data", "button cyan")}<p class="after-click">A filled weekly worklog opens next. Your real worklog stays unchanged.</p></div>
         <ul class="facts"><li>Worklogs stay local until you share or back up</li><li>Saved work stays available offline after the first visit</li><li>Free editor and exports · Pro is $12 per user each month</li></ul>
       </div>
       <figure class="hero-art">
@@ -205,7 +205,7 @@ function legalPage(kind: "privacy" | "terms") {
 
 function downloadPage() {
   document.title = "Download — Worklog Bridge";
-  return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop preview</p><h1 tabindex="-1">Install Worklog Bridge preview</h1><p class="lede">Choose the preview app for your computer. Browser worklogs stay in this browser.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned preview:</strong> Confirm you trust this preview before opening it.</div></div></main>${footer()}`;
+  return `${header("download")}<main id="main" class="download-page"><div class="narrow"><p class="eyebrow">Desktop packages</p><h1 tabindex="-1">Install the desktop preview</h1><p class="lede">Choose the preview package for your computer. Browser worklogs stay in this browser.</p><div class="download-box" id="download-box" aria-live="polite"><p class="platform-label">Checking your platform and the latest release…</p></div><h2>Command line install</h2><p>The macOS and Linux installer rejects a download whose SHA-256 does not match the published checksum.</p><p>macOS and Linux</p><div class="code-line" tabindex="0" aria-label="macOS and Linux installer command. Use the left and right arrow keys to read the full command.">curl -fsSL ${SITE}/install.sh | sh</div><p>Windows PowerShell</p><div class="code-line" tabindex="0" aria-label="Windows PowerShell installer command. Use the left and right arrow keys to read the full command.">irm ${SITE}/install.ps1 | iex</div><div class="notice"><strong>Unsigned packages:</strong> Confirm you trust a package before opening it.</div></div></main>${footer()}`;
 }
 
 function checkoutPage() {
@@ -750,7 +750,7 @@ async function bindApproval() {
       const response = await fetch(`${APPROVALS_API}?packetDigest=${encodeURIComponent(initialPacket.digest)}`, { cache: "no-store" });
       if (response.status === 200) {
         const result = await response.json() as { receipt: ApprovalReceipt; valid: boolean };
-        if (!result.valid) throw new Error("The receipt attestation could not be verified.");
+        if (!result.valid) throw new Error("The receipt signature could not be verified.");
         showReceipt(result.receipt, area!);
         if (submit) submit.disabled = true;
         [...formNode.querySelectorAll<HTMLInputElement>("input")].forEach(input => input.disabled = true);
@@ -801,7 +801,7 @@ function demoReceipt(digest: string) {
 }
 
 function showReceipt(receipt: ApprovalReceipt, area: HTMLElement, demo = false) {
-  area.innerHTML = `<div class="receipt"><strong>${demo ? "Demo receipt created" : "Acceptance recorded"}</strong><p>${esc(receipt.approver)} accepted this worklog at ${esc(new Date(receipt.acceptedAt).toLocaleString())}.</p><p>This worklog can be accepted only once. Receipt ID: <code>${esc(receipt.receiptId)}</code></p><p>${demo ? "Demo marker" : "Server attestation"}: <code>${esc(receipt.attestation)}</code></p><p><button type="button" id="download-receipt" class="secondary">Download receipt</button></p></div>`;
+  area.innerHTML = `<div class="receipt"><strong>${demo ? "Demo receipt created" : "Acceptance recorded"}</strong><p>${esc(receipt.approver)} accepted this worklog at ${esc(new Date(receipt.acceptedAt).toLocaleString())}.</p><p>This worklog can be accepted only once. Receipt ID: <code>${esc(receipt.receiptId)}</code></p><p>${demo ? "Demo marker" : "Server signature"}: <code>${esc(receipt.attestation)}</code></p><p><button type="button" id="download-receipt" class="secondary">Download receipt</button></p></div>`;
   document.querySelector("#download-receipt")?.addEventListener("click", () => downloadBlob(`worklog-receipt-${receipt.packetDigest.slice(0, 10)}.json`, JSON.stringify(receipt, null, 2), "application/json"));
 }
 
@@ -859,7 +859,7 @@ const routeDescriptions: Record<string, string> = {
   "/app": "Review worklog entries, export CSV, and create a private client approval link.",
   "/privacy": "How Worklog Bridge stores worklogs, checks licenses, and records acceptance.",
   "/terms": "The terms for using Worklog Bridge, approval receipts, and Pro subscriptions.",
-  "/download": "Download the unsigned Worklog Bridge desktop preview for macOS, Windows, or Linux.",
+  "/download": "Download unsigned Worklog Bridge preview packages for macOS, Windows, or Linux.",
   "/checkout": "Open Sociobot checkout for the Worklog Bridge Pro monthly subscription.",
   "/auth/callback": "Complete Sociobot account sign-in for Worklog Bridge.",
   "/approve": "Review and accept a weekly worklog, then download its receipt."
@@ -873,7 +873,7 @@ function render(transition: RouteTransition = false) {
   if (canonical) canonical.href = `${SITE}${metadataPath === "/" ? "/" : metadataPath}`;
   document.querySelectorAll<HTMLMetaElement>('meta[property="og:title"], meta[name="twitter:title"]').forEach(meta => meta.content = document.title);
   document.querySelectorAll<HTMLMetaElement>('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]').forEach(meta => meta.content = description);
-  if (location.pathname === "/app" || location.pathname === "/demo") bindApp(); else document.onkeydown = null;
+  if (location.pathname === "/app" || location.pathname === "/demo" || (location.pathname === "/" && isDemo())) bindApp(); else document.onkeydown = null;
   if (location.pathname === "/approve") void bindApproval();
   if (location.pathname === "/download") void bindDownloads();
   if (location.pathname === "/checkout") {

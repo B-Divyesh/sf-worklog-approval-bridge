@@ -20,6 +20,7 @@ test("@claim:release-signing-mode keeps unsigned previews explicit and rejects p
     readFile(new URL("../README.md", import.meta.url), "utf8")
   ]);
   assert.match(workflow, /sign_release:[\s\S]*type: boolean[\s\S]*default: false/);
+  assert.match(workflow, /Operator gate: require complete credentials and verify signed packages/);
   assert.match(workflow, /id: macos-signing[\s\S]*node scripts\/signing-mode\.mjs macos/);
   assert.match(workflow, /if: startsWith\(matrix\.os, 'macos'\) && steps\.macos-signing\.outputs\.enabled == 'true'/);
   assert.match(workflow, /id: windows-signing[\s\S]*node scripts\/signing-mode\.mjs windows/);
@@ -30,8 +31,8 @@ test("@claim:release-signing-mode keeps unsigned previews explicit and rejects p
 
   assert.match(signingModeMessage("macos", signingMode("macos", macosCredentials), false), /optional and was not requested.*unsigned preview/i);
   assert.match(signingModeMessage("windows", signingMode("windows", windowsCredentials, true), true), /was requested and every required credential is present/i);
-  assert.match(main, /Unsigned desktop preview · macOS and Windows may show a trust warning\./);
-  assert.match(readme, /whole product is a preview.*macOS and Windows packages remain unsigned/i);
+  assert.match(main, /Unsigned desktop packages · macOS and Windows may show a trust warning\./);
+  assert.match(readme, /macOS and Windows download packages are unsigned previews/i);
 });
 
 test("@regression:verification-13 documents every optional signing secret and unsigned release behavior", async () => {
@@ -45,11 +46,12 @@ test("@regression:verification-13 documents every optional signing secret and un
   }
   for (const [name, document] of [["README", readme], ["handoff", handoff]]) {
     const compact = document.replace(/\s+/g, " ");
-    assert.match(compact, /Signing secrets are optional\./i, `${name} must disclose that installing secrets does not force signing`);
-    assert.match(compact, /Tag-triggered releases always build an unsigned preview, even when signing secrets are present\./i, `${name} must document tag behavior`);
-    assert.match(compact, /manual release.*sign_release.*false.*unsigned preview/i, `${name} must document the unsigned manual path`);
-    assert.match(compact, /sign_release.*true.*all.*platform.*secrets/i, `${name} must document the complete signing requirement`);
-    assert.match(compact, /partly configured.*fails before packaging/i, `${name} must document the requested-signing failure mode`);
+    assert.match(compact, /Desktop signing is an operator-gated release action\./i, `${name} must identify the operator gate`);
+    assert.match(compact, /Tags and manual runs.*sign_release.*false.*unsigned preview packages/i, `${name} must document unsigned package behavior`);
+    assert.match(compact, /operator requests signed packages.*sign_release.*true.*every platform credential/i, `${name} must document the complete signing requirement`);
+    assert.match(compact, /missing signing credential stops packaging/i, `${name} must document the requested-signing failure mode`);
+    assert.match(compact, /verify.*macOS signatures.*notarization tickets.*Windows signatures.*before publication/i, `${name} must document signature verification`);
+    assert.match(compact, /verifies the source commit and package checksums/i, `${name} must keep provenance checks explicit`);
   }
 });
 
@@ -63,9 +65,10 @@ test("@regression:verification-21 keeps the signing contract in a dedicated hand
   }
 
   const compact = section.replace(/\s+/g, " ");
-  assert.match(compact, /Signing secrets are optional\./i);
-  assert.match(compact, /Tag-triggered releases always build an unsigned preview, even when signing secrets are present\./i);
-  assert.match(compact, /manual release.*sign_release.*false.*unsigned preview/i);
-  assert.match(compact, /sign_release.*true.*all.*platform.*secrets/i);
-  assert.match(compact, /partly configured.*fails before packaging/i);
+  assert.match(compact, /Desktop signing is an operator-gated release action\./i);
+  assert.match(compact, /Tags and manual runs.*sign_release.*false.*unsigned preview packages/i);
+  assert.match(compact, /operator requests signed packages.*sign_release.*true.*every platform credential/i);
+  assert.match(compact, /missing signing credential stops packaging/i);
+  assert.match(compact, /verify.*macOS signatures.*notarization tickets.*Windows signatures.*before publication/i);
+  assert.match(compact, /verifies the source commit and package checksums/i);
 });

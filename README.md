@@ -1,6 +1,6 @@
-# Worklog Bridge — unsigned desktop preview
+# Worklog Bridge
 
-The whole product is a preview while its macOS and Windows packages remain unsigned. Those systems may show a trust warning.
+The macOS and Windows download packages are unsigned previews. Those systems may show a trust warning.
 
 Turn Git and calendar activity into a client-ready worklog.
 
@@ -58,11 +58,11 @@ The approval link contains visible worklog details. Treat it like a private docu
 
 ## Account backup
 
-Select **Sign in** in the app to use Sociobot CIAM. The sign-in return address is `/auth/callback`. The app keeps the browser copy until you select **Back up this worklog**. Account backup stores the active worklog under the Entra `oid`, not an email address. Use **Load saved worklog** on another signed-in device. **Download account copy** exports the saved JSON. **Delete account copy** removes the saved worklog and license record; it does not clear the browser copy.
+Select **Sign in** in the app to use your Sociobot account. The sign-in return address is `/auth/callback`. The app keeps the browser copy until you select **Back up this worklog**. Account backup links the saved worklog to your stable Sociobot account ID, not your email address. Use **Load saved worklog** on another signed-in device. **Download account copy** exports the saved JSON. **Delete account copy** removes the saved worklog and license result. It does not clear the browser copy.
 
 ## Pro license
 
-Pro costs $12 per user each month. It adds ICS import and saved approval history. The subscription opens Sociobot's hosted checkout. On return, `?license=<token>` is stored as `sb_license:worklog-approval-bridge`, removed from the address, and checked at most once per day. Users can also paste a license in the calendar import dialog. A signed-in check stores only a one-way token hash and its verdict for that account. Offline Pro access needs a valid license check saved less than 24 hours ago. A token alone never unlocks Pro.
+Pro costs $12 per user each month. It adds ICS import and saved approval history. The subscription opens Sociobot's hosted checkout. On return, `?license=<token>` is stored as `sb_license:worklog-approval-bridge`, removed from the address, and checked at most once per day. Users can also paste a license in the calendar import dialog. For signed-in accounts, the server stores a one-way token hash and whether the license was valid. Offline Pro access needs a valid license check saved less than 24 hours ago. A token alone never enables Pro.
 
 ## Privacy and architecture
 
@@ -70,10 +70,12 @@ Pro costs $12 per user each month. It adds ICS import and saved approval history
 - Tauri 2 and a small Rust command read Git metadata on the selected path.
 - The installed-app frontend stores imported and edited worklogs in local WebView storage.
 - Local storage is split between real and demo namespaces.
-- The Rust Axum service uses SQLite migrations for account-owned worklogs, license verdicts, receipts, and hashed client rate-limit keys.
-- CIAM discovery and JWKS are loaded from the shared Sociobot tenant. The API validates RS256 issuer, audience, tenant, expiry, and not-before claims before it reads an account worklog.
-- Approval payloads use URL fragments, which browsers do not send in HTTP requests.
-- The receipt API stores only a worklog identifier, name, server time, receipt ID, and attestation.
+- The Rust service stores account worklogs, license results, receipts, and rate-limit records in SQLite.
+- Client addresses used for rate limits are stored only as one-way hashes.
+- The server loads Sociobot sign-in settings and public token-verification keys.
+- Before reading a worklog, the server checks who issued the sign-in token, who it is for, and when it is valid.
+- Approval links put worklog details after the `#`, so browsers do not send them to the server.
+- The receipt service stores only a worklog identifier, name, server time, receipt ID, and signature.
 - There are no analytics, third-party scripts, remote fonts, screenshots, timers, or keystroke capture.
 
 See `/privacy` and `/terms` in the site. The night-market design and generated-image provenance are recorded in [.factory/design.md](.factory/design.md).
@@ -91,7 +93,7 @@ The release workflow builds macOS, Windows, and Linux bundles. A pushed version 
 
 The download page reads release metadata from the GitHub API. It shows that release files are not available yet when the API cannot provide an immutable release. It never fetches a GitHub redirect URL. The macOS and Linux `/install.sh` installer rejects a release file when its SHA-256 does not match the published checksum.
 
-Signing secrets are optional. Tag-triggered releases always build an unsigned preview, even when signing secrets are present. A manual release with `sign_release` set to `false` also builds an unsigned preview. Set `sign_release` to `true` only when all platform signing secrets are available. macOS signing and notarization use `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. When signing is requested, a partly configured secret set fails before packaging instead of silently producing an unsigned file.
+Desktop signing is an operator-gated release action. Tags and manual runs with `sign_release` set to `false` publish unsigned preview packages. An operator requests signed packages by setting `sign_release` to `true` and supplying every platform credential. macOS signing and notarization require `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing requires `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. A missing signing credential stops packaging. Signed runs verify macOS signatures, notarization tickets, and Windows signatures before publication. Every run still verifies the source commit and package checksums.
 
 The anonymous health endpoints are `/health` and `/api/health`. They return only service name, version, and build commit. They never return configuration or storage settings. The container build supplies the commit with `BUILD_SHA`, `GIT_SHA`, or `SOURCE_COMMIT`.
 

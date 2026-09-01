@@ -1,1 +1,1 @@
-Turn selected Git commits and calendar events into a client-ready worklog.
+Turn selected Git and calendar activity into a client-ready weekly worklog.

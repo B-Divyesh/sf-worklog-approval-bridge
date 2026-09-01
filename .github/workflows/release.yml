@@ -8,12 +8,12 @@ on:
       tag:
         description: Release tag
         required: true
-        default: v0.2.4
+        default: v0.2.5
       source_commit:
         description: Full immutable source commit to package and release
         required: true
       sign_release:
-        description: Sign and notarize with the configured platform secrets
+        description: "Operator gate: require complete credentials and verify signed packages"
         required: true
         type: boolean
         default: false

@@ -1,10 +1,10 @@
 # Copy audit
 
-Audited 1 September 2026 after repair 19. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears.
+Audited 1 September 2026 after polish round 5. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears. Read aloud, the first screen states the job, audience, first action, and result in one short breath.
 
 | Landing text | Words | Result |
 |---|---:|---|
-| Unsigned desktop preview · macOS and Windows may show a trust warning. | 11 | Pass |
+| Unsigned desktop packages · macOS and Windows may show a trust warning. | 11 | Pass; accurately scoped to unsigned packages |
 | Turn activity into an approved worklog | 6 | Pass |
 | For freelancers who rebuild billable work from Git and calendars each week. | 12 | Pass |
 | Try it with sample data | 5 | Pass |
@@ -55,7 +55,7 @@ Audited 1 September 2026 after repair 19. Every landing-page sentence and meanin
 | Start Pro subscription | 3 | Pass |
 | Subscriptions open in Sociobot checkout. | 5 | Pass |
 | Worklog Bridge turns selected Git and calendar activity into a client-ready worklog. | 12 | Pass |
-| Unsigned desktop preview · v0.2.3 · build 2026.09.01 | 7 | Pass |
+| Unsigned desktop packages · v0.2.4 · build 2026.09.01 | 7 | Pass; accurately scoped to unsigned packages |
 | Generated hero art disclosed in the design record. | 8 | Pass |
 
 Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Param Factory. Each names its destination.
@@ -70,6 +70,28 @@ Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Para
 | Client acceptance proof | receipt |
 | Paid level | Pro |
 | Isolated sample workspace | demo |
+
+## Review 5 README rewrites
+
+These are the review-5 sentences that changed. They use reader-facing terms and remain within the 22-word cap.
+
+| README text | Words | Result |
+|---|---:|---|
+| The macOS and Windows download packages are unsigned previews. | 9 | Pass |
+| Those systems may show a trust warning. | 7 | Pass |
+| Select Sign in in the app to use your Sociobot account. | 11 | Pass; removes CIAM jargon |
+| Account backup links the saved worklog to your stable Sociobot account ID, not your email address. | 16 | Pass; removes provider field jargon |
+| Delete account copy removes the saved worklog and license result. | 10 | Pass; registered account-persistence claim |
+| It does not clear the browser copy. | 7 | Pass |
+| For signed-in accounts, the server stores a one-way token hash and whether the license was valid. | 16 | Pass; registered account-license-storage claim |
+| The Rust service stores account worklogs, license results, receipts, and rate-limit records in SQLite. | 14 | Pass |
+| Client addresses used for rate limits are stored only as one-way hashes. | 12 | Pass; registered rate-limit-storage claim |
+| The server loads Sociobot sign-in settings and public token-verification keys. | 10 | Pass; removes CIAM and JWKS jargon |
+| Before reading a worklog, the server checks who issued the sign-in token, who it is for, and when it is valid. | 21 | Pass |
+| Approval links put worklog details after the #, so browsers do not send them to the server. | 17 | Pass; removes payload and fragment jargon |
+| The receipt service stores only a worklog identifier, name, server time, receipt ID, and signature. | 15 | Pass; removes attestation jargon |
+
+The README contains no reader-facing uses of CIAM, JWKS, Entra `oid`, URL fragments, payloads, verdicts, or attestations.
 
 ## M2 account-copy checks
 
@@ -101,4 +123,4 @@ is the optional server copy, and **demo** remains the isolated sample.
 | Checkout is unavailable right now. Keep using the free editor and try again. | 12 | Pass |
 | Checkout returned an unsafe address. Try again later. | 8 | Pass |
 
-Catalog description: “Turn selected Git commits and calendar events into a client-ready worklog.” (11 words, 74 characters)
+Catalog description: “Turn selected Git and calendar activity into a client-ready weekly worklog.” (11 words, 75 characters)

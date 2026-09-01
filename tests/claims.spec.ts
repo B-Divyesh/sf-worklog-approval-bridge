@@ -91,7 +91,12 @@ test("@claim:local-demo isolates editing, acceptance, receipt download, reset, a
   page.on("request", request => requests.push({ method: request.method(), path: new URL(request.url()).pathname }));
   await page.goto("/app");
   await page.evaluate(() => localStorage.setItem("worklog-bridge:project", JSON.stringify({ client: "Real Client", week: "2026-08-24", rate: 80, currency: "USD", entries: [], sources: [] })));
-  await page.goto("/demo");
+  await page.goto("/");
+  const sampleLink = page.getByRole("link", { name: "Try it with sample data" });
+  await expect(sampleLink).toHaveAttribute("href", "/?demo=1");
+  await sampleLink.click();
+  await expect(page).toHaveURL(/\/?\?demo=1$/);
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
   await expect(page.getByLabel("Client")).toHaveValue("Northstar Health");
   await page.getByRole("button", { name: "Edit Investigated slow dashboard queries" }).click();
   await page.getByLabel("Client-ready summary").fill("Investigated dashboard query delay");
@@ -570,7 +575,7 @@ test("routes set specific metadata and the 404 uses plain recovery copy", async 
     ["/app", "Worklog — Worklog Bridge", "Review worklog entries"],
     ["/privacy", "Privacy — Worklog Bridge", "How Worklog Bridge stores worklogs"],
     ["/terms", "Terms — Worklog Bridge", "The terms for using Worklog Bridge"],
-    ["/download", "Download — Worklog Bridge", "Download the unsigned Worklog Bridge desktop preview"]
+    ["/download", "Download — Worklog Bridge", "Download unsigned Worklog Bridge preview packages"]
   ];
   for (const [route, title, description] of routes) {
     await page.goto(route);
