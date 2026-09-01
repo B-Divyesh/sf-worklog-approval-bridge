@@ -1,87 +1,53 @@
-# Worklog Bridge verification 20 handoff — FAIL
-
-## Current independent result
-
-**FAIL — candidate `21781cfeefb4e564f4a073d342182a4d01e99dcf` at
-`https://worklog-approval-bridge.sociobot.in` is not ready for release.**
-
-Independent QA ran all 27 commands in `.factory/claims.json` from the clean
-dependency install. Twenty-five passed; `offline-reload` and
-`installed-app-locality` returned non-zero. The full `npm test` run also failed
-on the installed-app locality test. The latter times out after an ICS upload
-because it cannot find **Add selected entries** on `/app`. The former's exact
-declared command cancels `zero-config-persistence` after its 120-second fresh
-server-build timeout, even though that standalone check passes once compiled.
-Both are release-blocking under the claims contract.
-
-`npm run build`, `npm run build:server`, both Rust formatting checks, live
-health identity, candidate static-asset hashes, demo/locality checks, offline
-reload, mobile and desktop accessibility scans, and live API allowance checks
-passed. The desktop Tauri packaging command could not be completed in this
-verifier image because its `glib-2.0` development dependency is absent.
-
-See `.factory/verification-20.md` for exact commands, evidence, rate limits,
-and severity-ranked findings. No product code was modified during verification.
-
----
-
-# Worklog Bridge repair 18 handoff (superseded by verification 20)
+# Worklog Bridge repair 19 handoff
 
 ## Outcome
 
-Repair 18 resolves every release blocker in independent verification 19. The
-M2 Axum service, public health identity, authenticated account/worklog routes,
-both rate-limit families, checkout handoff, and exact claim coverage are live
-in the product-scoped container deployment. The release version is `0.2.2`.
+Repair 19 resolves every release blocker in independent verification 20 for
+candidate `21781cfeefb4e564f4a073d342182a4d01e99dcf`. The repaired release is
+`0.2.3`. It preserves the local-first editor, one-click demo, account boundary,
+approval receipts, accessibility behavior, and container deployment class.
 
-## Reproduced findings
+## Reproduction and root causes
 
-Before changing code, the candidate reproduced the verifier's exact backend
-split: the public hostname returned 404 from `/health`, identified
-`worklog-approval-bridge-receipts` at `aedc0f4…` from `/api/health`, and returned
-404 for every M2 account route. `cargo fmt --check` exited 1. The shared
-production checkout returned 303 to `https://checkout.dodopayments.com` during
-this repair; verification 19 records the earlier environment-gated HTTP 500.
-The obsolete pilot product now returns 404.
+- `npm test -- --grep @claim:installed-app-locality` reproduced the reported
+  30-second timeout at **Add selected entries**. On 1 September the empty app
+  selected the week of 31 August, while the fixed ICS fixture contained an
+  event on 25 August. The app correctly rejected that out-of-week event, but
+  the locality test incorrectly depended on the wall-clock week.
+- A cold `npm test -- --grep @claim:offline-reload` made the zero-config Node
+  test compile the server while other Node test files could also compile Rust.
+  Its enclosing 120-second limit could cancel the test before startup even
+  though the persistence assertions passed once compilation was cached.
+- Independent verification could not build the desktop packages because its
+  image lacked the documented GLib/WebKitGTK development packages. This was an
+  environment prerequisite, not a product defect; repair verification installs
+  those prerequisites and proves the packages below.
 
-## Repairs and regression coverage
+## Repairs and exact regression coverage
 
-- `server/src/main.rs` is formatted by `cargo fmt`.
-- The account persistence claim sends signed RS256 tokens through the real
-  Axum routes and covers backup, load, JSON download, deletion, and tenant
-  isolation.
-- The auth claim covers every protected M2 route plus issuer, audience, tenant,
-  expiry, not-before, and stable account-ID rejection.
-- The rate-limit claim separately exhausts account and approval write limits
-  and requires 429 plus `Retry-After` from each API family.
-- The zero-config claim launches the compiled server twice with only `PATH` and
-  `PORT`, checks `/health`, verifies SQLite creation, and proves the generated
-  receipt-signing secret is reused.
-- The first `/data` deployment reproduced a SQLite migration lock on Azure
-  Files. The production pool now uses one connection, rollback-journal mode,
-  a 30-second busy timeout, and SQLite's lockless Unix VFS. This is safe because
-  the deployment is pinned to one process and one replica. Startup removes only
-  a zero-byte database and its interrupted journal before retrying migration;
-  non-empty databases are never touched. A regression recreates that exact
-  failed-bootstrap state and checks recovery, VFS availability, journal mode,
-  and serialized connection behavior.
-- Both health routes have exact-field M2 tests. Live verification requires
-  `/health` and `/api/health` to agree on service, version, and full commit,
-  then checks every protected account/worklog/billing route for the bearer
-  challenge.
-- Every response preserves the previously verified HSTS policy; the health
-  regression requires `max-age=31536000; includeSubDomains`.
-- Exact regression fixtures reject verification 19's stale receipt-only health
-  body and the observed checkout HTTP 500. The direct live checkout assertion
-  remains strict. The product-owned `/checkout` route fails soft with a retry
-  and a path back to the free editor, without logging a browser error.
-- The zero-config billing default is the registered production Sociobot API.
-  The server follows no upstream redirect and hands the browser only an HTTPS
-  `checkout.dodopayments.com` URL. Tests replace the upstream and spend nothing.
+- The installed-app locality claim now creates and closes its own browser
+  context, fixes the selected week to 24 August 2026, uploads the matching ICS
+  fixture, and explicitly requires the calendar chooser and enabled **Add
+  selected entries** action before continuing through edit, CSV export, link
+  creation, local storage, and request-locality assertions.
+- Both installed-app claims and every test that takes a browser offline use an
+  explicitly created context. Each test closes only that context; none closes
+  Playwright's shared browser.
+- The offline claim now waits for the active service worker, runs
+  `registration.update()`, verifies its scope and script URL, then reloads in
+  the isolated offline context.
+- The zero-config test uses one memoized asynchronous server build with a
+  deterministic 300-second build deadline. Its enclosing claim deadline is
+  420 seconds. Node test files run with concurrency one, so cold Rust builds do
+  not contend and cancel the persistence claim. The service is still launched
+  twice to prove the generated secret and SQLite data survive a restart.
+- Product and package identity advances to `0.2.3`; the site, Axum service,
+  Tauri manifests, package metadata, workflow default, and legacy receipt
+  fixture agree.
 
-## Verification evidence
+## Local verification evidence
 
-Run from a clean dependency install. All commands passed on 30 August 2026:
+All checks passed on 1 September 2026 from a clean npm install:
 
 ```sh
 npm ci
@@ -97,81 +63,73 @@ npm run build:server
 CI=1 npm run build:desktop
 ```
 
-Exact results:
+- `npm ci` installed 39 packages with zero audit findings. The API install
+  installed 28 packages with zero audit findings.
+- `npm test` passed 32 Node/script tests, 9 Axum tests, and 39 Chromium tests.
+  The browser suite covers desktop and 390 px layouts, keyboard focus and
+  shortcuts, Axe WCAG 2 A/AA scans, privacy request capture, response handling,
+  offline reload/update, and console errors.
+- All 27 exact commands in `.factory/claims.json` passed. The two commands that
+  failed verification 20 also passed separately. With `server/target` removed,
+  the offline command completed its cold server build in 79.57 seconds without
+  cancellation; the installed-app browser assertion completed in 1.0 second.
+- Both formatting checks and both Clippy checks with warnings denied passed.
+  The two Tauri Git-locality tests passed.
+- The production Axum build and site build passed. Initial JavaScript is 18.36
+  KB gzip, CSS is 4.99 KB gzip, and the lazily loaded sign-in chunk is 74.15 KB
+  gzip.
+- The factory URL verifier passed `/`, `/demo`, `/app`, `/privacy`, `/terms`,
+  and `/download` at desktop and 390 px with one `h1`, `lang=en`, a main
+  landmark, labelled images and controls, and no console errors. Visual review
+  found no overflow or blocked controls.
+- Mobile Lighthouse scored Performance 100, Accessibility 100, Best Practices
+  100, and SEO 100. FCP was 1,345 ms, LCP 1,679 ms, TBT 26 ms, CLS 0, and total
+  transfer 120,923 bytes.
+- Local response checks returned identical `0.2.3` health bodies from `/health`
+  and `/api/health`, preserved HSTS/CSP/referrer/permissions headers, challenged
+  protected worklog routes with `401` and `WWW-Authenticate: Bearer`, and
+  returned 12 invalid approval writes followed by `429` with `Retry-After`.
 
-- `npm ci`: 39 packages and zero audit findings. `npm --prefix api ci`: 28
-  packages and zero audit findings.
-- `npm test`: 32 Node tests, 9 Axum tests, and 39 Chromium tests passed.
-  Browser coverage includes desktop and 390 px mobile, keyboard navigation,
-  focus management, Axe serious/critical checks, privacy request recording,
-  offline reload/update, response policy, routing, and console errors.
-- Every one of the 27 commands in `.factory/claims.json` passed separately.
-- Both `cargo fmt --check` commands and both `cargo clippy ... -D warnings`
-  commands passed. The Tauri crate passed 2 tests.
-- The release Axum build passed. Tauri produced the v0.2.2 DEB, RPM, and
-  AppImage packages.
-- The factory URL verifier passed `/`, `/demo`, `/app`, `/checkout`,
-  `/privacy`, `/terms`, and `/download` at 1366 px and 390 px. Every route had
-  one `h1`, `lang=en`, a main landmark, labelled images/buttons, and zero
-  browser console errors.
-- Final mobile Lighthouse: performance 99, accessibility 100, best practices
-  100, SEO 100; FCP 1,370 ms, LCP 1,685 ms, CLS 0, TBT 0 ms.
-- The production site build emits 18.36 KB gzip initial JavaScript and 4.99 KB
-  gzip CSS. The lazily loaded sign-in chunk is 74.15 KB gzip.
-- A concurrent 100-request `/health` smoke completed in 168 ms (597 effective
-  requests/second), with all 100 responses returning 200.
+Linux packages produced by the previously missing desktop gate:
 
-## Deployment
+| Package | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `Worklog Bridge_0.2.3_amd64.deb` | 2,002,054 | `70a5fe81f0cd2a7c870009e55bbb33ba75abd5e05ada9a1b17043c9c8b621baf` |
+| `Worklog Bridge-0.2.3-1.x86_64.rpm` | 2,004,140 | `91d80c3d30903a8f0c19e4d55d40b40e231759cb99c83f6882fdc65d2b8789c5` |
+| `Worklog Bridge_0.2.3_amd64.AppImage` | 77,249,016 | `d5062afc38363ddcf30e4e858bbd68404d7381f590afd3cddf6e3c18f1df048f` |
 
-The work order deployment uses only the existing Container App
-`sf-worklog-approval-bridge`, the repository `Dockerfile`, port 8080, one
-replica, and `deploy.data_dir=/data`. The factory deploy command builds the
-committed source with its full SHA, mounts the product's durable share at
-`/data`, and maps only the product hostname.
+## Release, deployment, and live acceptance
 
-Live evidence from the final runtime build:
+The commit containing this handoff is the immutable source for tag `v0.2.3`,
+the desktop release workflow, and the product container. Deployment uses only
+the existing `sf-worklog-approval-bridge` Container App, port 8080, and its
+factory-managed durable `/data` mount with one replica.
 
-- Exactly one revision is active and healthy, with one replica and the `data`
-  volume mounted at `/data`. Its image tag derives from the pushed source SHA.
-- `/health` and `/api/health` return the same exact full pushed commit,
-  `worklog-approval-bridge`, and version `0.2.2`.
-- The repository's strict `verify:live` command passes the production checkout,
-  both health routes, four protected M2 routes, four frontend assets, isolated
-  demo, real approval lookup, and genuine 404 behavior.
-- Account DELETE requests 1–12 returned 401 and request 13 returned 429 with
-  `Retry-After`. Approval POST requests 1–12 returned 422 and request 13
-  returned 429 with `Retry-After`.
-- Live sign-in redirects to `sociobotcustomers.ciamlogin.com` with the required
-  tenant and client IDs, callback URI, `openid profile email offline_access`
-  scopes, and PKCE `S256`.
-- After a controlled restart of that exact revision, health returned the same
-  commit and startup logged `generated_receipt_signing_secret:false` against
-  `sqlite:///data/worklog-bridge.sqlite3?mode=rwc`. The persisted database was
-  73,728 bytes.
-- The shared production checkout returned 303 to the hosted Dodo checkout.
+Delivery is accepted only when all of these hold for that same commit:
 
-No unrelated app, database, key vault, or Sociobot production resource was
-read or modified.
+- `v0.2.3`, `latest.json`, every platform provenance record, and every release
+  asset resolve to the tag commit.
+- `/health` and `/api/health` return service `worklog-approval-bridge`, version
+  `0.2.3`, and the full tag commit.
+- `npm run verify:release -- --tag v0.2.3 --expected-commit <commit>` and
+  `npm run verify:live -- --expected-commit <commit>` pass.
+- Live desktop/mobile, keyboard, accessibility, same-origin privacy, service
+  worker update/offline reload, security headers, account bearer boundary, and
+  rate-limit checks remain green.
+
+No unrelated app, database, vault, secret, or storage resource was read or
+modified during this repair.
 
 ## Known limits
 
-- The automated auth suite signs real RS256 fixtures and proves issuer,
-  audience, tenant, expiry, not-before, account-ID, route, and tenant-isolation
-  behavior. Live checks stop at the public CIAM redirect and unauthenticated
-  bearer boundary because no human test account is stored in this repository.
-- The checkout screen is deliberately fail-soft when the shared billing system
-  is unavailable. The free editor, CSV export, and account worklog features do
-  not depend on checkout availability.
-- Desktop packages remain explicitly unsigned previews.
+- The account suite proves the full RS256 issuer, audience, tenant, expiry,
+  not-before, stable account-ID, route, and tenant-isolation behavior. Live
+  identity verification stops at the public Sociobot CIAM redirect and bearer
+  boundary because no human test account is stored in the repository.
+- Desktop packages remain clearly labelled unsigned previews. macOS and
+  Windows may show a trust warning.
 
-## Signing and operator notes
+## Next step
 
-macOS signing needs `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
-`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`.
-Windows signing needs `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`.
-
-Signing secrets are optional. Tag-triggered releases always build an unsigned
-preview, even when signing secrets are present. A manual release with
-`sign_release` set to `false` also builds an unsigned preview. Set
-`sign_release` to `true` only after all platform secrets are installed; a
-partly configured signing request fails before packaging.
+Run independent verification against the exact `v0.2.3` tag commit. No product
+or release blocker is known after the checks above.

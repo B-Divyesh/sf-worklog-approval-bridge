@@ -1,6 +1,6 @@
 # Copy audit
 
-Audited 30 August 2026 after repair 18. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears.
+Audited 1 September 2026 after repair 19. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears.
 
 | Landing text | Words | Result |
 |---|---:|---|
@@ -55,7 +55,7 @@ Audited 30 August 2026 after repair 18. Every landing-page sentence and meaningf
 | Start Pro subscription | 3 | Pass |
 | Subscriptions open in Sociobot checkout. | 5 | Pass |
 | Worklog Bridge turns selected Git and calendar activity into a client-ready worklog. | 12 | Pass |
-| Unsigned desktop preview · v0.2.2 · build 2026.08.30 | 7 | Pass |
+| Unsigned desktop preview · v0.2.3 · build 2026.09.01 | 7 | Pass |
 | Generated hero art disclosed in the design record. | 8 | Pass |
 
 Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Param Factory. Each names its destination.

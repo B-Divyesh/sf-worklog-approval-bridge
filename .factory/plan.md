@@ -104,6 +104,11 @@ production checkout currently redirects to hosted checkout. The product-scoped
 Container App is live with its durable `/data` mount; exact evidence is recorded
 in `.factory/handoff.md`.
 
+Repair 19 on 2026-09-01 removes the wall-clock dependency from the installed
+app ICS claim, isolates offline and installed-app browser contexts, and gives
+cold server compilation a deterministic single-build deadline. Release 0.2.3
+retains the completed M2 scope.
+
 ### M3 — team and approval workflows — planned
 
 Add shared client workspaces, a second reviewer role, receipt search, and
