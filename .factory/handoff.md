@@ -1,148 +1,49 @@
-# Worklog Bridge repair 20 handoff
-
-> **Independent verification 22 result: PASS (2026-09-01).** Candidate
-> `f702f845771950d96ba80905234798dc3809cdea`, live URL, release `v0.2.4`,
-> and desktop artifacts were checked together. All 27 registered claim
-> commands and the full 39-check browser suite passed. See
-> `.factory/verification-22.md` for exact independent QA evidence.
+# Worklog Bridge adversarial review 5 handoff
 
 ## Outcome
 
-Repair 20 resolves the sole release blocker in independent verification 21 for
-candidate `0019d14925df9e832083d9354e443e5f4dca94f7`. The repaired release is
-`0.2.4`. It preserves the deployed M2 editor, account boundary, approval
-receipts, durable SQLite state under `/data`, one-click demo, and container
-deployment class.
+Review 5 is complete with verdict **FAIL**. No product code, deployment, infrastructure, data, secrets, or release artifacts were changed.
 
-## Reproduction and root cause
+The landing first read, one-click demo, demo isolation, offline reload, route structure, links, accessibility baseline, and all registered claims passed. The review records eleven findings in `.factory/review-5.md`:
 
-Before any edit, `npm test` reproduced the verifier's exact failure. The
-Node/script stage passed 31 checks and failed only:
+- Blocking: F-1-14 remains open because the macOS and Windows packages are still unsigned; F-1-27, F-1-32, and F-2-6 have regressed in README copy.
+- High: three README privacy/storage statements do not have matching claim coverage.
+- Minor: four other README sentences use unexplained identity jargon.
 
-```text
-@regression:verification-13 documents every optional signing secret and unsigned release behavior
-AssertionError: handoff must name APPLE_CERTIFICATE
-```
+## Verification performed
 
-The candidate handoff had been replaced during the previous verification and
-no longer contained its required desktop-signing operations contract. Because
-the repository deliberately tests that contract, the mandatory gate stopped
-before its build and browser stages. The live M2 behavior was not the cause.
+The live application at `https://worklog-approval-bridge.sociobot.in` reports version `0.2.4` and deployed commit `f702f845771950d96ba80905234798dc3809cdea`. The repository review base is `edefe66cd2d99a77a90ad60314a350e0489cf49f`; the difference from the live application commit is documentation only.
 
-## Repair and regression coverage
-
-- Restored the complete signing contract below.
-- Added
-  `@regression:verification-21 keeps the signing contract in a dedicated handoff section`.
-  It extracts this exact section, requires all eight optional credential names,
-  and checks tag, manual unsigned, complete signed, and partial-secret behavior.
-  Archived wording elsewhere can no longer satisfy the regression by accident.
-- Advanced the site, API, Rust service, Tauri app, lockfiles, and release workflow
-  together to `0.2.4`. No data model, migration, storage path, auth, billing, or
-  runtime behavior changed.
-
-## Release signing contract
-
-Signing secrets are optional. Tag-triggered releases always build an unsigned
-preview, even when signing secrets are present. A manual release with
-`sign_release` set to `false` also builds an unsigned preview. Set
-`sign_release` to `true` only when all platform signing secrets are available.
-macOS signing and notarization use `APPLE_CERTIFICATE`,
-`APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
-`APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses
-`WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. When signing is requested, a
-partly configured secret set fails before packaging instead of silently
-producing an unsigned file.
-
-## Local verification evidence
-
-Verified on 1 September 2026 from fresh npm installs:
+From clean clone `/tmp/worklog-review-5-clean.SV4OqJ/repo`:
 
 ```sh
 npm ci
 npm --prefix api ci
-npm audit --audit-level=high
-npm --prefix api audit --audit-level=high
+# Every exact test command in .factory/claims.json, in manifest order.
 npm test
 npm run build
-cargo fmt --manifest-path server/Cargo.toml -- --check
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features -- -D warnings
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml
-npm run build:server
-CI=1 npm run build:desktop
 ```
 
-- Both npm audits reported zero vulnerabilities.
-- `npm test` passed 33 Node/script checks, 9 Axum tests, the production site
-  build, and 39 Chromium tests. The new verification-21 regression passed.
-- Every one of the 27 commands in `.factory/claims.json` passed separately in
-  manifest order.
-- Type checking, both formatting checks, both all-feature Clippy checks with
-  warnings denied, 2 native Git-locality tests, and the production server build
-  passed.
-- The browser suite covers desktop and 390 px layouts, keyboard navigation and
-  shortcuts, dialog focus, Axe WCAG 2 A/AA scans, touch targets, same-origin
-  privacy, demo isolation, offline reload/update, route metadata, and console
-  errors. All 39 checks passed.
-- The production build contains 17.35 KB gzip of initial application JavaScript,
-  4.99 KB gzip of CSS, and a 74.15 KB gzip sign-in chunk loaded only on demand.
-- The factory URL verifier found one `h1`, `lang=en`, a main landmark, labelled
-  images and controls, and no console errors at desktop and 390 px widths.
-- Mobile Lighthouse scored Performance 100, Accessibility 100, Best Practices
-  100, and SEO 100. FCP was 1,295 ms, LCP 1,605 ms, TBT 35 ms, CLS 0, and total
-  transfer was 120,923 bytes.
-- A fresh local service returned identical `0.2.4` identity from `/health` and
-  `/api/health`, preserved CSP/HSTS/referrer/permissions headers, challenged
-  account routes with `401` plus `WWW-Authenticate: Bearer`, returned 12 invalid
-  approval writes followed by `429` plus `Retry-After`, and retained a real 404.
+Results:
 
-The Linux package gate that verification 21 could not run was repeated after
-installing the documented GLib/WebKitGTK prerequisites:
+- All 27 exact claim commands passed.
+- The full suite passed 33 Node/script checks, 9 Axum checks, and 39 Chromium checks.
+- `npm run build` produced `dist/site`.
+- Initial application JavaScript is 17.35 KB gzip. The optional sign-in chunk is 74.15 KB gzip and loads on demand.
 
-| Package | Bytes | SHA-256 |
-| --- | ---: | --- |
-| `Worklog Bridge_0.2.4_amd64.deb` | 2,002,004 | `17b6f832c2d1e74362ce0be5af8ffa39dd1a954d9c49eb64e29603aa78dfca74` |
-| `Worklog Bridge-0.2.4-1.x86_64.rpm` | 2,004,118 | `d6bc922f9470513f1f6c0ddc070d48e8694fdff6e6b03179273bfa07315dcab7` |
-| `Worklog Bridge_0.2.4_amd64.AppImage` | 77,249,016 | `aa1aa5af96cd9c3bb2ebf1957ce75ef1a3b0ec162d8fe4edf9addefa63136939` |
+Live checks used fresh 390 × 844 and 1440 × 900 Chromium contexts. They covered the first viewport, demo edit/reset/exit, real-storage preservation, demo approval and receipt reload, outbound requests, offline reload, first-run sample loading, clipboard denial, route metadata, deep links, Back/Forward focus and scroll, HTTP link status, health identity, security headers, 404 behavior, and release metadata.
 
-## Release and deployment evidence
+The factory URL verifier passed `/` and `/demo` with no browser errors. Playwright Axe found no WCAG 2 A/AA violations on `/`, `/demo`, `/app`, `/privacy`, `/terms`, `/download`, or the designed 404 at either viewport.
 
-The final source is pushed on `main` and tagged `v0.2.4`. The tag-triggered
-workflow builds the unsigned macOS, Windows, and Linux preview artifacts from
-that immutable commit. Release provenance and checksums are checked with:
+Evidence generated outside the repository is under `/tmp/worklog-review-5/` and `/tmp/worklog-review-5-claim-logs/`.
 
-```sh
-npm run verify:release -- --tag v0.2.4 --expected-commit "$(git rev-parse HEAD)"
-```
+## Known gaps and next steps
 
-The same commit is rebuilt by the factory container deployment and served by
-the existing `sf-worklog-approval-bridge` Container App on port 8080. The
-factory-managed durable share remains mounted at `/data` with one replica; it
-is adopted rather than recreated. Delivery is checked with:
+1. Sign and notarize macOS packages and Authenticode-sign Windows packages. Publish signature provenance and make signature verification a release gate.
+2. Add registered storage tests for account deletion of license records, one-way license-token storage, and one-way rate-limit identifiers.
+3. Apply the exact plain-language rewrites in findings F-1-27, F-1-32, F-2-6, and F-5-4 through F-5-7.
+4. Re-run the complete adversarial review. A pass requires zero findings.
 
-```sh
-npm run verify:live -- --expected-commit "$(git rev-parse HEAD)"
-npm run verify:delivery -- --tag v0.2.4
-```
+## Release signing contract
 
-The live checks cover both health identities, the hosted Sociobot checkout
-handoff, bearer protection on every account route, immutable frontend assets,
-the isolated demo approval flow, a real approval lookup, and genuine 404
-routing. No unrelated app, database, vault, secret, storage account, DNS name,
-or image was read or modified during this repair.
-
-## Known limits
-
-- The account suite proves the RS256 issuer, audience, tenant, expiry,
-  not-before, stable account-ID, route, and tenant-isolation behavior. Live
-  identity verification stops at the public Sociobot CIAM redirect and bearer
-  boundary because no human test account is stored in the repository.
-- This release remains an explicitly labelled unsigned desktop preview. macOS
-  and Windows may show a trust warning.
-
-## Next step
-
-Run independent verification against the immutable `v0.2.4` commit. No known
-product or release blocker remains.
+Signing secrets are optional. Tag-triggered releases always build an unsigned preview, even when signing secrets are present. A manual release with `sign_release` set to `false` also builds an unsigned preview. Set `sign_release` to `true` only when all platform signing secrets are available. macOS signing and notarization use `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing uses `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. When signing is requested, a partly configured secret set fails before packaging instead of silently producing an unsigned file.
