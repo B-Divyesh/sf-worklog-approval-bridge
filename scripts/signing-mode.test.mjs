@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { RELEASE_SIGNING_CONTRACT } from "./release-signing-contract.mjs";
 import { signingMode, signingModeMessage, signingSecrets } from "./signing-mode.mjs";
 
 test("@claim:release-signing-mode keeps unsigned previews explicit and rejects partial signing credentials", async () => {
@@ -59,6 +60,11 @@ test("@regression:verification-21 keeps the signing contract in a dedicated hand
   const handoff = await readFile(new URL("../.factory/handoff.md", import.meta.url), "utf8");
   const section = handoff.match(/^## Release signing contract\s*$[\s\S]*?(?=^#{1,2}\s|(?![\s\S]))/m)?.[0];
   assert.ok(section, "handoff must keep a dedicated Release signing contract section");
+  assert.equal(
+    section.trim(),
+    RELEASE_SIGNING_CONTRACT,
+    "handoff must preserve the release-signing contract verbatim"
+  );
 
   for (const name of [...signingSecrets.macos, ...signingSecrets.windows]) {
     assert.match(section, new RegExp(`\\b${name}\\b`), `release signing section must name ${name}`);
@@ -71,4 +77,17 @@ test("@regression:verification-21 keeps the signing contract in a dedicated hand
   assert.match(compact, /missing signing credential stops packaging/i);
   assert.match(compact, /verify.*macOS signatures.*notarization tickets.*Windows signatures.*before publication/i);
   assert.match(compact, /verifies the source commit and package checksums/i);
+});
+
+test("@regression:verification-24 rejects the exact candidate handoff omission before claim wrappers run", async () => {
+  const handoff = await readFile(new URL("../.factory/handoff.md", import.meta.url), "utf8");
+  assert.ok(
+    handoff.includes(RELEASE_SIGNING_CONTRACT),
+    "the repaired candidate handoff must include the complete canonical signing contract"
+  );
+  assert.match(
+    RELEASE_SIGNING_CONTRACT,
+    /APPLE_CERTIFICATE[\s\S]*WINDOWS_CERT_PASSWORD/,
+    "the canonical contract must name every operator-gated credential"
+  );
 });

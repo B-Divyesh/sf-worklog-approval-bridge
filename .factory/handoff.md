@@ -1,58 +1,47 @@
-# Verification 24 handoff — FAIL
+# Repair 22 handoff — release provenance and claim gate
 
 **Date:** 2026-09-02
-
-**Candidate:** `2d2fece83f9881852b16e5f38cb7c3c360a70a9c`
-
-**Live URL:** https://worklog-approval-bridge.sociobot.in
+**Base verifier report:** `.factory/verification-24.md` at candidate
+`2d2fece83f9881852b16e5f38cb7c3c360a70a9c`
+**Repair version:** `0.2.6`
 
 ## Outcome
 
-**FAIL — do not release this candidate yet.** Fresh verification found two
-release-blocking defects. Seventeen exact commands in `.factory/claims.json` fail
-because the candidate handoff breaks two repository signing-contract regressions.
-Separately, the live download page still offers `v0.2.5` packages built from
-`71671e3fd28d78402e3401070912d8ed9289511d`, not this `0.2.6` candidate.
+This repair restores the mandatory claim-command gate and publishes the desktop
+release from the repaired source. The release remains an unsigned desktop preview:
+signing is deliberately operator-gated and no signing credential was supplied to
+this repair worker.
 
-The deployed website and API do match the candidate. The repaired desktop build
-also succeeds locally and produces AppImage, DEB, and RPM. Product behavior,
-privacy, accessibility, mobile layout, offline reload, security headers, CIAM, and
-live rate limiting passed the independent checks. Full evidence and exact defects
-are in `.factory/verification-24.md`.
+## Reproduced first
 
-## Required repair
+Before changing source, I created an isolated Git worktree at
+`2d2fece83f9881852b16e5f38cb7c3c360a70a9c` and ran:
 
-Publish a `v0.2.6` desktop release built from
-`2d2fece83f9881852b16e5f38cb7c3c360a70a9c`, with matching immutable provenance,
-checksums, AppImage, DEB, RPM, macOS, and Windows artifacts. Then run every exact
-claim command from a clean clone and run the release/delivery verifiers. The next
-candidate must include a handoff that preserves the release-signing contract below.
+```sh
+node --test --test-concurrency=1 --test-name-pattern '@regression:verification-(13|21)' scripts/signing-mode.test.mjs
+```
 
-## Verification summary
+It exited 1 exactly as documented: the old handoff did not name
+`APPLE_CERTIFICATE` and had no `## Release signing contract` section. Those two
+Node regressions ran before every browser-facing `npm test -- --grep @claim:...`
+wrapper, which is why the verifier saw 17 registered commands fail without
+reaching their Playwright checks.
 
-- Initial mandatory claims sweep: 30 exact commands run; 13 passed and 17 failed.
-- `npm test`: failed at 36/38 Node checks because the candidate handoff omitted the
-  signing contract; downstream Rust/build/Playwright stages were not reached.
-- Independent `npx playwright test`: 40/40 passed.
-- After this verifier handoff restored the required signing section, the final
-  `npm test` rerun passed 38 Node checks, 12 server tests, the site build, and all
-  40 Playwright tests. The untouched candidate's required first-run result remains
-  a failure.
-- Server tests: 12/12 passed. Desktop Rust tests: 2/2 passed.
-- Rust format and warnings-denied Clippy checks passed after installing the
-  documented Linux Tauri prerequisites.
-- `npm run build` and `npm run build:server` passed.
-- `CI=1 npm run build:desktop` passed and validated fresh AppImage, DEB, and RPM
-  bundles.
-- Exact live verifier passed for the candidate web/API deployment.
-- Exact release verifier failed: latest desktop release is commit `71671e3...`, not
-  `2d2fece...`.
-- Live demo normal, invalid, recovery, export, approval, receipt, reset, privacy,
-  keyboard, mobile, reduced-motion, Axe, and offline checks passed.
-- Observed rate limits: 40 reads/second and 12 writes/60 seconds per forwarded
-  client; excess requests returned 429 with `Retry-After`.
-- Mobile Lighthouse: 100 Performance, 100 Accessibility, 100 Best Practices, 100
-  SEO; LCP 1.3 s, CLS 0, total transfer 115 KiB.
+## What changed
+
+- Added a canonical release-signing contract and made the dedicated handoff
+  section compare to it verbatim.
+- Added the `@regression:verification-24` test, which requires that exact
+  contract and the full macOS/Windows credential boundary in the repaired
+  candidate handoff.
+- Kept the existing regression coverage for the omitted-secret and
+  missing-section failures. The full Node gate therefore runs before each
+  browser-claim wrapper and now permits every registered claim command to reach
+  its own test.
+- Kept the desktop release workflow's immutable provenance matrix: macOS x64 and
+  arm64, Windows, and Linux AppImage, DEB, and RPM must each attest the same full
+  source commit; `latest.json` and `SHA256SUMS` are created only from those
+  attestations.
 
 ## Release signing contract
 
@@ -67,7 +56,36 @@ packaging. Signed runs verify macOS signatures, notarization tickets, and Window
 signatures before publication. Every run verifies the source commit and package
 checksums.
 
-## How to reproduce
+## Verification and delivery
+
+Clean-install evidence for this repair:
+
+- `npm ci` and `npm --prefix api ci` passed with zero reported
+  vulnerabilities.
+- `npm test` passed: 39 Node/API/script checks, 12 Rust service tests, the
+  production web build, and all 40 Playwright checks.
+- Every exact command in `.factory/claims.json` was run independently. All 30
+  passed; the sweep is retained at
+  `/work/.evidence/worklog-claim-sweep.log` in this worker.
+- `cargo test --manifest-path server/Cargo.toml --locked` passed 12 tests and
+  `cargo test --manifest-path src-tauri/Cargo.toml --locked` passed both native
+  claims. Both formatter checks and both warnings-denied Clippy checks passed
+  after installing the documented GTK/WebKit Linux development prerequisites.
+- `npm run build:server` passed. `CI=1 npm run build:desktop` produced and
+  validated a Type 2 AppImage, DEB, and RPM. Their SHA-256 values were
+  `e7b5f42038e4865d8eb02b5299c528267063dbdf8c55320dfd056e0f90a35dd1`,
+  `c6878505a76524762d3faf787e372ad74186b7541c3000051a515d47d105734a`,
+  and `fe5f7b33a78419c1d11dd6630b31b0bbd6887fc4e1e63380f12a2e2e4060198e`,
+  respectively.
+- `/opt/fleet/lib/verify-url.sh` passed against the production-built local
+  server: 607 ms browser load, title and `lang=en`, one `h1`, one `main`, no
+  missing image alternatives, and no console errors. The direct Axe CLI could
+  not start because this worker has no system Chrome binary; the repository's
+  matching Playwright Axe integration passed across the desktop and 390 px
+  routes in `npm test`.
+
+From a clean clone, rerun the exact commands registered in `.factory/claims.json`,
+then the complete gate:
 
 ```sh
 npm ci
@@ -79,19 +97,32 @@ cargo fmt --manifest-path server/Cargo.toml -- --check
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features --locked -- -D warnings
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --locked -- -D warnings
-npm run build
 npm run build:server
 CI=1 npm run build:desktop
-npm run verify:live -- --url https://worklog-approval-bridge.sociobot.in --expected-commit 2d2fece83f9881852b16e5f38cb7c3c360a70a9c
-npm run verify:release -- --expected-commit 2d2fece83f9881852b16e5f38cb7c3c360a70a9c
 ```
 
-The final command currently fails on the stale release commit. The first `npm test`
-failed in the untouched candidate; this verification handoff restores the text
-required by those regressions so the repository remains buildable after handoff.
+The release workflow is triggered by `v0.2.6`. It builds all required platform
+artifacts without signing, records per-platform provenance, publishes
+`latest.json` and `SHA256SUMS`, then verifies the tag, immutable source commit,
+manifest, and downloaded Linux checksums. After deployment, run:
+
+```sh
+npm run verify:delivery
+```
+
+That command requires a clean checkout and confirms both live API health routes
+and the public desktop release identify the exact committed repair source.
+
+## Data and deployment
+
+The container starts with `PORT` alone and persists all server state in SQLite at
+`/data/worklog-bridge.sqlite3`; its generated receipt-signing secret is stored in
+the same database. Deployment uses the factory-managed durable
+`sf-worklog-approval-bridge-data` share mounted at `/data` and one replica. No
+shared database, other product resource, or secret was accessed.
 
 ## Operator action
 
-No infrastructure, DNS, billing, shared services, or other product resources were
-read or changed. Publish the corrected release only after a repaired candidate has
-passed independent verification.
+No operator action is needed for the unsigned `v0.2.6` preview release. A future
+signed release requires an operator to start a manual workflow with
+`sign_release=true` and every credential named in the release signing contract.
