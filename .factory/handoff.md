@@ -108,10 +108,20 @@ Passed evidence in this worker:
 
 ## Deployment
 
-The repair is ready to deploy through the factory container script with
-`WO_DATA_DIR=/data`. The container keeps its SQLite database and generated
-receipt signing secret under `/data`; no shared platform database, secret, or
-other product resource is used.
+Deployment completed through the factory container script with `WO_DATA_DIR=/data`.
+The container keeps its SQLite database and generated receipt signing secret
+under `/data`; no shared platform database, secret, or other product resource
+was accessed. The owned app was updated with one replica and the owned
+`sf-worklog-approval-bridge-data` share at `/data`.
+
+Production verification passed at `https://worklog-approval-bridge.sociobot.in`:
+the health endpoints report Worklog Bridge `0.2.6` and the deployed repair
+commit, `npm run verify:live` passed its checkout, identity, protected-route,
+demo, approval, asset, and routing checks, and the factory URL verifier found
+no browser console errors. `/demo`, `/app`, `/privacy`, `/terms`, and
+`/download` return 200; an unknown route returns 404. Live response headers
+include the expected CSP/HSTS/privacy policy and `service-worker.js` has
+`Cache-Control: no-cache`.
 
 ## Known gaps and operator action
 
