@@ -55,7 +55,7 @@ Audited 2 September 2026 for repair 21. Every landing-page sentence and meaningf
 | Start Pro subscription | 3 | Pass |
 | Subscriptions open in Sociobot checkout. | 5 | Pass |
 | Worklog Bridge turns selected Git and calendar activity into a client-ready worklog. | 12 | Pass |
-| Unsigned desktop packages · v0.2.6 · build 2026.09.02 | 7 | Pass; accurately scoped to unsigned packages |
+| Unsigned desktop packages · v0.2.7 · Generated hero art disclosed in the design record. | 12 | Pass; accurately scoped to unsigned packages and art provenance |
 | Generated hero art disclosed in the design record. | 8 | Pass |
 
 Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Param Factory. Each names its destination.

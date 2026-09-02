@@ -9,7 +9,7 @@ export function buildIdentity(environment = process.env) {
     .find(value => typeof value === "string" && COMMIT.test(value));
   return {
     service: "worklog-approval-bridge-receipts",
-    version: "0.2.6",
+    version: "0.2.7",
     commit: commit ? commit.toLowerCase() : "unavailable"
   };
 }

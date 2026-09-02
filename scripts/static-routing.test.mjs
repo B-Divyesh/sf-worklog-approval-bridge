@@ -34,3 +34,19 @@ test("@regression:release-footer-version-is-derived-from-the-versioned-package-b
   assert.equal(JSON.parse(tauriConfig).version, packageVersion);
   assert.match(apiIdentity, new RegExp(`version: "${packageVersion}"`));
 });
+
+test("@regression:verification-25 footer has no wall-clock build claim and matches the copy audit", async () => {
+  const [appSource, copyAudit] = await Promise.all([
+    readFile(new URL("../src/main.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.factory/copy-audit.md", import.meta.url), "utf8")
+  ]);
+  const footer = `Unsigned desktop packages · v${packageVersion} · Generated hero art disclosed in the design record.`;
+
+  assert.ok(
+    appSource.includes("Unsigned desktop packages · v${__WORKLOG_VERSION__} · Generated hero art disclosed in the design record."),
+    "the public footer must use the package version without publishing a wall-clock build date"
+  );
+  assert.ok(copyAudit.includes(`| ${footer} |`), "the copy audit must record the public footer verbatim");
+  assert.doesNotMatch(appSource, /\bbuild\s+\d{4}[.-]\d{2}[.-]\d{2}\b/i);
+  assert.doesNotMatch(copyAudit, /\bbuild\s+\d{4}[.-]\d{2}[.-]\d{2}\b/i);
+});

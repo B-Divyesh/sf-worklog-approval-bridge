@@ -1,94 +1,126 @@
-# Independent verification 25 handoff — FAIL
+# Repair handoff — verification 25 fixes
 
-**Verified candidate:** `112750e487d3cc8538a7abe357535f777a4b7bbd`
-
-**Live URL:** <https://worklog-approval-bridge.sociobot.in>
-
-**Verified:** 2026-09-02
-
-## Verification 25 outcome
-
-**FAIL — do not release this candidate.** All 30 declared claim commands pass,
-the complete tests and production builds pass, the real product flow works, and
-the deployed site/API plus published `v0.2.6` desktop artifacts identify the exact
-candidate. The remaining blocker is the live landing footer's unlisted, stale
-`build 2026.09.01` claim. The candidate and release are dated 2026-09-02, the copy
-audit says `build 2026.09.02`, and no claim test covers the displayed date. See
-`.factory/verification-25.md` for the complete evidence.
-
-Successful approval and billing-checkout responses also omit an explicit
-`Cache-Control: no-store` policy even though those JSON bodies contain a supplied
-name or ephemeral checkout URL. This is recorded as a medium-severity finding.
-
-## Verification performed
-
-- Ran every exact command in `.factory/claims.json` independently: 30/30 passed.
-- Ran `npm test`: 39 Node checks, 12 Rust server tests, and 40 Chromium tests
-  passed.
-- Ran both locked Rust suites, both formatter checks, both warnings-denied Clippy
-  checks, the site build, release server build, and `CI=1 npm run build:desktop`.
-- Built and validated fresh AppImage, DEB, and RPM packages.
-- Completed live demo and real worklog-to-immutable-receipt flows, invalid input
-  recovery, CSV export, ICS week boundaries, tamper rejection, concurrency, and
-  persistence checks.
-- Verified desktop and 390 px layouts, keyboard-only use, visible focus, 44 px
-  targets, reduced motion, route semantics, zero serious/critical Axe findings,
-  zero unexpected console errors, and offline service-worker reload.
-- Verified live request logs, security/caching headers, API and Sociobot license
-  rate limits, CIAM PKCE redirect settings, hosted $12 monthly checkout, health
-  identity, local/live asset hashes, GitHub release provenance, and delivery.
-- Fresh mobile Lighthouse: 100 Performance, 100 Accessibility, 100 Best Practices,
-  100 SEO; LCP 1.5 s, TBT 20 ms, CLS 0, 115 KiB transferred.
-
-No product source was modified by this verifier. Docker was unavailable; all other
-repository and delivery gates were executed. To repair, remove or derive and test
-the footer build date, synchronize the copy audit, add `no-store` to successful
-dynamic responses, and rerun verification.
-
-# Prior repair 22 handoff — release provenance and claim gate
-
-**Date:** 2026-09-02
-**Base verifier report:** `.factory/verification-24.md` at candidate
-`2d2fece83f9881852b16e5f38cb7c3c360a70a9c`
-**Repair version:** `0.2.6`
+**Repair version:** `0.2.7`
+**Base verifier report:** `.factory/verification-25.md` for candidate
+`112750e487d3cc8538a7abe357535f777a4b7bbd`
+**Product:** Worklog Bridge (`worklog-approval-bridge`)
+**Deployment class:** container with the desktop release workflow
 
 ## Outcome
 
-This repair restores the mandatory claim-command gate and publishes the desktop
-release from the repaired source. The release remains an unsigned desktop preview:
-signing is deliberately operator-gated and no signing credential was supplied to
-this repair worker.
+This repair closes both findings in verification 25 without changing the
+worklog, demo, approval, account, or Pro behaviours that passed.
 
-## Reproduced first
+- The footer no longer publishes a wall-clock build date. It displays only the
+  package-derived version and the generated-art disclosure.
+- `.factory/copy-audit.md` now records that exact public footer text.
+- Every successful dynamic backend route receives `Cache-Control: no-store`,
+  including both health routes, approval lookup/creation, account routes, and
+  checkout handoff responses.
+- The product version is `0.2.7` across the web package, Tauri package,
+  backend, legacy receipt identity, release workflow default, and desktop test
+  fixture. Tag `v0.2.7` therefore represents one immutable repair candidate.
 
-Before changing source, I created an isolated Git worktree at
-`2d2fece83f9881852b16e5f38cb7c3c360a70a9c` and ran:
+## Root-cause repairs and regression coverage
+
+### Footer claim
+
+The `2026.09.01` footer date was a literal in `src/main.ts`, while the audit
+contained a different literal date. It was neither immutable build metadata nor
+an observable registered claim. The footer now uses
+`v${__WORKLOG_VERSION__}` only. The new
+`@regression:verification-25 footer has no wall-clock build claim and matches the copy audit`
+test requires the package version in the audit, exact footer wording, and no
+date-shaped build value in either source.
+
+### Dynamic cache policy
+
+Successful JSON results did not consistently set cache policy because the
+existing `no-store` headers lived only in selected handlers. The security
+middleware now identifies `/health`, `/api/health`, and every `/api/` path and
+sets `Cache-Control: no-store` after the handler produces its response.
+`regression_verification_25_successful_dynamic_responses_disable_caching`
+exercises successful health (200), unaccepted approval lookup (204), approval
+creation (201), accepted lookup (200), and hosted checkout handoff (200) with a
+local fixture.
+
+## Verification evidence
+
+All commands below completed on this repair source after the version update.
+
+- `npm ci`: 39 packages, zero vulnerabilities.
+- `npm --prefix api ci`: 28 packages, zero vulnerabilities.
+- `npm test`: 40 Node/API/script tests, 13 backend tests, a production site
+  build, and 40 Chromium tests passed.
+- Every command listed in `.factory/claims.json` was executed independently in
+  manifest order: **30/30 passed**.
+- `cargo test --manifest-path server/Cargo.toml --locked`: 13 passed.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: 2 passed.
+- Both Rust formatter checks and both `cargo clippy --all-targets
+  --all-features --locked -- -D warnings` checks passed.
+- `npm run build:server` passed with the release backend binary.
+- `CI=1 npm run build:desktop` passed and produced fresh AppImage, DEB, and RPM
+  bundles. The documented Tauri GTK/WebKit packages were installed in this
+  disposable worker before rerunning this gate.
+- `git diff --check` passed.
+
+Fresh Linux bundle evidence:
+
+| Bundle | SHA-256 | Consumer check |
+| --- | --- | --- |
+| AppImage | `9d55c04901ef31b7055fd4a8865d5697ec7bfb379b4494afcbd33ddc38897dab` | `file` reports 64-bit ELF static PIE |
+| DEB | `b7923eb9860ecc735adff39b8f4e70bfb6e08946708449bb20450a0ce34cfd27` | package `worklog-bridge`, version `0.2.7`, amd64 |
+| RPM | `6ee6418dfd6b9176b9235253e71200ec373826bf5c901655db424b0250944254` | package `worklog-bridge`, version `0.2.7`, x86_64 |
+
+Local production-server verification used the release binary with a temporary
+SQLite directory and `dist/site`. `/opt/fleet/lib/verify-url.sh` loaded the
+site in 602 ms with no console errors; it found the route title, `lang=en`, one
+`h1`, one `main`, no missing image alternatives, and no unlabeled buttons.
+The same server returned `Cache-Control: no-store` on `/health`, `/api/health`,
+and a successful empty approval lookup. The backend regression test above also
+covers successful created/accepted approval and checkout responses. The
+production site build contains no remaining date-shaped `build YYYY.MM.DD`
+text. The first application module is 55,430 bytes raw (17.35 KB gzip); CSS is
+18.53 KB raw (4.99 KB gzip).
+
+The pinned Playwright Axe integration passed its desktop and 390 px checks with
+zero serious or critical violations across landing, demo, app, legal, download,
+approval, and 404 routes. The same browser suite covers keyboard shortcuts,
+skip link, dialog focus trapping and Escape, 44 px controls, offline demo
+reload, update cache behaviour, privacy request allowlists, and console errors.
+
+No local Docker daemon is available in this worker. The requested deployment
+uses the factory ACR build, which rebuilds the same multi-stage Dockerfile with
+the committed source identity.
+
+## Run and deploy
 
 ```sh
-node --test --test-concurrency=1 --test-name-pattern '@regression:verification-(13|21)' scripts/signing-mode.test.mjs
+npm ci
+npm --prefix api ci
+npm test
+npm run build:server
+CI=1 npm run build:desktop
 ```
 
-It exited 1 exactly as documented: the old handoff did not name
-`APPLE_CERTIFICATE` and had no `## Release signing contract` section. Those two
-Node regressions ran before every browser-facing `npm test -- --grep @claim:...`
-wrapper, which is why the verifier saw 17 registered commands fail without
-reaching their Playwright checks.
+The container starts with `PORT` only, serves on port 8080, and keeps SQLite
+plus the generated receipt-signing secret at
+`/data/worklog-bridge.sqlite3`. The factory deployment mounts the durable
+`sf-worklog-approval-bridge-data` share at `/data` with one replica. Deploy the
+committed candidate through:
 
-## What changed
+```sh
+WO_DATA_DIR=/data /opt/fleet/lib/deploy-container.sh worklog-approval-bridge /work/repo Dockerfile 8080
+```
 
-- Added a canonical release-signing contract and made the dedicated handoff
-  section compare to it verbatim.
-- Added the `@regression:verification-24` test, which requires that exact
-  contract and the full macOS/Windows credential boundary in the repaired
-  candidate handoff.
-- Kept the existing regression coverage for the omitted-secret and
-  missing-section failures. The full Node gate therefore runs before each
-  browser-claim wrapper and now permits every registered claim command to reach
-  its own test.
-- Kept the desktop release workflow's immutable provenance matrix: macOS x64 and
-  arm64, Windows, and Linux AppImage, DEB, and RPM must each attest the same full
-  source commit; `latest.json` and `SHA256SUMS` are created only from those
-  attestations.
+After the `v0.2.7` GitHub release completes and the container is live, verify
+the exact clean candidate with `npm run verify:delivery`.
+
+## Known gaps
+
+There are no known product gaps from verification 25. Desktop signing remains
+deliberately operator-gated; the `v0.2.7` tag is an unsigned preview release.
+No signing credential was accessed or added.
 
 ## Release signing contract
 
@@ -103,73 +135,7 @@ packaging. Signed runs verify macOS signatures, notarization tickets, and Window
 signatures before publication. Every run verifies the source commit and package
 checksums.
 
-## Verification and delivery
+## Needs operator action
 
-Clean-install evidence for this repair:
-
-- `npm ci` and `npm --prefix api ci` passed with zero reported
-  vulnerabilities.
-- `npm test` passed: 39 Node/API/script checks, 12 Rust service tests, the
-  production web build, and all 40 Playwright checks.
-- Every exact command in `.factory/claims.json` was run independently. All 30
-  passed; the sweep is retained at
-  `/work/.evidence/worklog-claim-sweep.log` in this worker.
-- `cargo test --manifest-path server/Cargo.toml --locked` passed 12 tests and
-  `cargo test --manifest-path src-tauri/Cargo.toml --locked` passed both native
-  claims. Both formatter checks and both warnings-denied Clippy checks passed
-  after installing the documented GTK/WebKit Linux development prerequisites.
-- `npm run build:server` passed. `CI=1 npm run build:desktop` produced and
-  validated a Type 2 AppImage, DEB, and RPM. Their SHA-256 values were
-  `e7b5f42038e4865d8eb02b5299c528267063dbdf8c55320dfd056e0f90a35dd1`,
-  `c6878505a76524762d3faf787e372ad74186b7541c3000051a515d47d105734a`,
-  and `fe5f7b33a78419c1d11dd6630b31b0bbd6887fc4e1e63380f12a2e2e4060198e`,
-  respectively.
-- `/opt/fleet/lib/verify-url.sh` passed against the production-built local
-  server: 607 ms browser load, title and `lang=en`, one `h1`, one `main`, no
-  missing image alternatives, and no console errors. The direct Axe CLI could
-  not start because this worker has no system Chrome binary; the repository's
-  matching Playwright Axe integration passed across the desktop and 390 px
-  routes in `npm test`.
-
-From a clean clone, rerun the exact commands registered in `.factory/claims.json`,
-then the complete gate:
-
-```sh
-npm ci
-npm --prefix api ci
-npm test
-cargo test --manifest-path server/Cargo.toml --locked
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-cargo fmt --manifest-path server/Cargo.toml -- --check
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features --locked -- -D warnings
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --locked -- -D warnings
-npm run build:server
-CI=1 npm run build:desktop
-```
-
-The release workflow is triggered by `v0.2.6`. It builds all required platform
-artifacts without signing, records per-platform provenance, publishes
-`latest.json` and `SHA256SUMS`, then verifies the tag, immutable source commit,
-manifest, and downloaded Linux checksums. After deployment, run:
-
-```sh
-npm run verify:delivery
-```
-
-That command requires a clean checkout and confirms both live API health routes
-and the public desktop release identify the exact committed repair source.
-
-## Data and deployment
-
-The container starts with `PORT` alone and persists all server state in SQLite at
-`/data/worklog-bridge.sqlite3`; its generated receipt-signing secret is stored in
-the same database. Deployment uses the factory-managed durable
-`sf-worklog-approval-bridge-data` share mounted at `/data` and one replica. No
-shared database, other product resource, or secret was accessed.
-
-## Operator action
-
-No operator action is needed for the unsigned `v0.2.6` preview release. A future
-signed release requires an operator to start a manual workflow with
-`sign_release=true` and every credential named in the release signing contract.
+None for the unsigned `v0.2.7` preview. A future signed release requires an
+operator to request `sign_release=true` with every credential named above.

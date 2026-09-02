@@ -856,10 +856,10 @@ test("390px routes have no serious accessibility issues, console errors, or hori
     status: 200,
     contentType: "application/json",
     body: JSON.stringify({
-      tag_name: "v0.2.6",
+      tag_name: "v0.2.7",
       target_commitish: "1234567890abcdef1234567890abcdef12345678",
-      html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.2.6",
-      assets: [{ name: "Worklog.Bridge_0.2.6_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.2.6/Worklog.Bridge_0.2.6_amd64.AppImage" }]
+      html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.2.7",
+      assets: [{ name: "Worklog.Bridge_0.2.7_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.2.7/Worklog.Bridge_0.2.7_amd64.AppImage" }]
     })
   }));
 

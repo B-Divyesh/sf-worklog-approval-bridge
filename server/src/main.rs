@@ -480,8 +480,16 @@ async fn rate_limit(State(state): State<AppState>, request: Request, next: Next)
 }
 
 async fn security_headers(request: Request, next: Next) -> Response {
+    let dynamic = matches!(request.uri().path(), "/health" | "/api/health")
+        || request.uri().path().starts_with("/api/");
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
+    if dynamic {
+        // Dynamic JSON can contain a client-supplied name, an account backup,
+        // or a short-lived hosted checkout address. It must never be stored by
+        // a browser or an intermediary cache, including on successful paths.
+        headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
     headers.insert(
         "x-content-type-options",
         HeaderValue::from_static("nosniff"),
@@ -1844,6 +1852,55 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
             response_json(success).await["checkoutUrl"],
             "https://checkout.dodopayments.com/session/regression"
         );
+    }
+
+    #[tokio::test]
+    async fn regression_verification_25_successful_dynamic_responses_disable_caching() {
+        let digest = "c".repeat(64);
+        let mut state = test_state().await;
+        Arc::make_mut(&mut state.config).billing_base = billing_fixture(
+            StatusCode::SEE_OTHER,
+            Some("https://checkout.dodopayments.com/session/cache-policy"),
+        )
+        .await;
+        let router = app(state);
+
+        let requests = [
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+            Request::builder()
+                .uri(format!("/api/approvals?packetDigest={digest}"))
+                .body(Body::empty())
+                .unwrap(),
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/approvals")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(format!(
+                    r#"{{"packetDigest":"{digest}","approver":"Cache policy verifier"}}"#
+                )))
+                .unwrap(),
+            Request::builder()
+                .uri(format!("/api/approvals?packetDigest={digest}"))
+                .body(Body::empty())
+                .unwrap(),
+            Request::builder()
+                .uri("/api/v1/billing/checkout")
+                .body(Body::empty())
+                .unwrap(),
+        ];
+
+        for request in requests {
+            let response = router.clone().oneshot(request).await.unwrap();
+            assert!(response.status().is_success(), "dynamic route must succeed");
+            assert_eq!(
+                response.headers().get(header::CACHE_CONTROL),
+                Some(&HeaderValue::from_static("no-store")),
+                "successful dynamic responses must not be cacheable"
+            );
+        }
     }
 
     #[tokio::test]
