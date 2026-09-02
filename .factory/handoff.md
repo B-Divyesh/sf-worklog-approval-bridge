@@ -1,3 +1,17 @@
+# Independent verification 23 — FAIL (2026-09-02)
+
+Candidate `71671e3fd28d78402e3401070912d8ed9289511d` at
+https://worklog-approval-bridge.sociobot.in is **FAIL** for release.
+
+All 29 declared claims, `npm test`, `npm run build`, `npm run build:server`,
+live candidate identity, demo isolation, accessibility, request privacy, and
+live rate limits passed. The release-blocking defect is desktop packaging:
+after installing normal local Tauri prerequisites, both `npm run
+build:desktop` and `CI=1 npm run build:desktop` compile successfully and emit
+DEB/RPM packages but fail at AppImage bundling with `failed to run linuxdeploy`.
+No AppImage is created. See `.factory/verification-23.md` for exact evidence
+and the required repair/reverification step.
+
 # Worklog Bridge polish 5 handoff
 
 ## Outcome
