@@ -1,6 +1,6 @@
 # Copy audit
 
-Audited 1 September 2026 after polish round 5. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears. Read aloud, the first screen states the job, audience, first action, and result in one short breath.
+Audited 2 September 2026 for repair 21. Every landing-page sentence and meaningful label is below. No item exceeds 22 words. No banned plain-words term appears. Read aloud, the first screen states the job, audience, first action, and result in one short breath.
 
 | Landing text | Words | Result |
 |---|---:|---|
@@ -55,7 +55,7 @@ Audited 1 September 2026 after polish round 5. Every landing-page sentence and m
 | Start Pro subscription | 3 | Pass |
 | Subscriptions open in Sociobot checkout. | 5 | Pass |
 | Worklog Bridge turns selected Git and calendar activity into a client-ready worklog. | 12 | Pass |
-| Unsigned desktop packages · v0.2.5 · build 2026.09.01 | 7 | Pass; accurately scoped to unsigned packages |
+| Unsigned desktop packages · v0.2.6 · build 2026.09.02 | 7 | Pass; accurately scoped to unsigned packages |
 | Generated hero art disclosed in the design record. | 8 | Pass |
 
 Navigation labels are Demo, Download, Pricing, Privacy, Terms, and Built by Param Factory. Each names its destination.

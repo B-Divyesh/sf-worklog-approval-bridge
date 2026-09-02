@@ -16,7 +16,9 @@ Try the isolated sample at `/demo`, `/?demo=1`, or <https://worklog-approval-bri
 
 Requirements: Node.js 22, npm, Rust stable, Git, and [Tauri 2 system packages](https://v2.tauri.app/start/prerequisites/) for your platform.
 
-On Ubuntu or Debian, desktop packaging also needs `file`:
+On Ubuntu or Debian, install the Tauri desktop libraries below. The build also
+uses `file` when it is present. If a clean worker does not have it, the AppImage
+build supplies the compatibility probe that the packaging tool expects.
 
 ```sh
 sudo apt-get update
@@ -39,7 +41,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path server/Cargo.toml
 npm run build        # writes the deployable site to dist/site/
 npm run build:server # builds the container API
-npm run build:desktop
+npm run build:desktop # verifies fresh AppImage, DEB, and RPM files on Linux
 ```
 
 Playwright 1.58.2 uses the browser path supplied by the factory worker. The claim registry is [.factory/claims.json](.factory/claims.json). The demo contract is [.factory/demo.md](.factory/demo.md).
