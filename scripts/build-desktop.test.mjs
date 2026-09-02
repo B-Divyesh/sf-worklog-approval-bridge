@@ -23,7 +23,7 @@ test("@regression:ci-one-desktop-build normalises CI=1 before invoking Tauri", a
   assert.match(source, /verifyLinuxDesktopArtifacts/);
 });
 
-test("@regression:verification-23 supplies appimagetool's file probe when the worker has none", async () => {
+test("@claim:clean-worker-packaging supplies appimagetool's file probe when the worker has none", async () => {
   const root = await mkdtemp(join(tmpdir(), "worklog-file-probe-test-"));
   const env = { PATH: "", WORKLOG_FORCE_FILE_SHIM: "0" };
   const prepared = await prepareDesktopBuildEnvironment({ env, platform: "linux", temporaryRoot: root });
@@ -45,13 +45,15 @@ test("@regression:verification-23 release CI forces the clean-worker AppImage fa
   assert.equal(config.bundle.useLocalToolsDir, true);
 });
 
-test("@regression:verification-23 rejects a missing AppImage while preserving DEB and RPM checks", async () => {
+test("@regression:verification-23 requires an executable AppImage runtime while preserving DEB and RPM", async () => {
   const root = await mkdtemp(join(tmpdir(), "worklog-bundle-contract-test-"));
   const signatures = {
     appimage: Buffer.from([0x7f, 0x45, 0x4c, 0x46]),
     deb: Buffer.from("!<arch>\n"),
     rpm: Buffer.from([0xed, 0xab, 0xee, 0xdb])
   };
+  const probed = [];
+  const appImageProbe = async artifact => { probed.push(artifact); };
   try {
     for (const [kind, signature] of Object.entries(signatures)) {
       await mkdir(join(root, kind), { recursive: true });
@@ -61,10 +63,31 @@ test("@regression:verification-23 rejects a missing AppImage while preserving DE
     }
     assert.deepEqual(requestedLinuxBundles([]), ["appimage", "deb", "rpm"]);
     assert.match(linuxBundleRoot(["--target", "x86_64-unknown-linux-gnu"], "/repo"), /x86_64-unknown-linux-gnu/);
-    assert.equal((await verifyLinuxDesktopArtifacts({ bundleRoot: root, bundles: requestedLinuxBundles([]) })).length, 3);
+    assert.equal((await verifyLinuxDesktopArtifacts({
+      bundleRoot: root,
+      bundles: requestedLinuxBundles([]),
+      appImageProbe
+    })).length, 3);
+    assert.deepEqual(probed, [join(root, "appimage", "worklog.AppImage")]);
+
+    await chmod(join(root, "appimage", "worklog.AppImage"), 0o644);
+    await assert.rejects(
+      verifyLinuxDesktopArtifacts({ bundleRoot: root, bundles: ["appimage"], appImageProbe }),
+      /AppImage is not executable/
+    );
+    await chmod(join(root, "appimage", "worklog.AppImage"), 0o755);
+
+    let nonAppImageProbeCalled = false;
+    assert.equal((await verifyLinuxDesktopArtifacts({
+      bundleRoot: root,
+      bundles: ["deb", "rpm"],
+      appImageProbe: async () => { nonAppImageProbeCalled = true; }
+    })).length, 2);
+    assert.equal(nonAppImageProbeCalled, false, "DEB and RPM must not execute the AppImage probe");
+
     await rm(join(root, "appimage"), { recursive: true });
     await assert.rejects(
-      verifyLinuxDesktopArtifacts({ bundleRoot: root, bundles: requestedLinuxBundles([]) }),
+      verifyLinuxDesktopArtifacts({ bundleRoot: root, bundles: requestedLinuxBundles([]), appImageProbe }),
       /Expected one fresh \.AppImage/
     );
   } finally {
@@ -101,9 +124,10 @@ test("@regression:appimage-linuxdeploy-plugin adds the required type probe to a 
   assert.equal(patchGtkPlugin(patched), patched, "the cache patch is idempotent");
 });
 
-test("@regression:appimage-linuxdeploy-ci-installs-file-command", async () => {
+test("@regression:appimage-linuxdeploy-ci-installs-required-packaging-commands", async () => {
   const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
-  assert.match(workflow, /apt-get install -y file\s+libwebkit2gtk-4\.1-dev/);
+  assert.match(workflow, /apt-get install -y file\s+libwebkit2gtk-4\.1-dev[^\n]*\brpm\b/);
+  assert.match(workflow, /-name '\*\.rpm'/);
   assert.doesNotMatch(workflow, /prerelease:\s*true/);
   assert.match(workflow, /source_commit:/);
   assert.match(workflow, /source_commit:\s*\n\s*description: Full immutable source commit to package and release\s*\n\s*required: true/);

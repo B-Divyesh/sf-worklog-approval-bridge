@@ -3,7 +3,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const artifactPattern = /\.(?:dmg|msi|exe|AppImage|deb)$/i;
+const artifactPattern = /\.(?:dmg|msi|exe|AppImage|deb|rpm)$/i;
 
 async function artifactPaths(directory) {
   const paths = [];

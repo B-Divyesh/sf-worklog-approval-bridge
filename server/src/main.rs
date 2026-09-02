@@ -908,7 +908,13 @@ async fn asset(State(state): State<AppState>, Path(path): Path<String>) -> Respo
 async fn root_file(State(state): State<AppState>, uri: Uri) -> Response {
     let name = uri.path().trim_start_matches('/');
     if safe_relative(name) {
-        serve_named(&state.config.static_dir, name).await
+        let mut response = serve_named(&state.config.static_dir, name).await;
+        if name == "service-worker.js" && response.status().is_success() {
+            response
+                .headers_mut()
+                .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+        }
+        response
     } else {
         not_found(State(state)).await
     }
@@ -1943,6 +1949,42 @@ uJzySjmjr9zJItq0qgkAInvJJFMQdiviHRt3pP/avuzFscPImcOfTZr8dYdInVt+
             .to_str()
             .unwrap()
             .starts_with("application/json"));
+    }
+
+    #[tokio::test]
+    async fn regression_service_worker_response_disables_http_caching() {
+        let static_root = TempDir::new().unwrap();
+        tokio::fs::write(
+            static_root.path().join("service-worker.js"),
+            "self.addEventListener('fetch', () => {});",
+        )
+        .await
+        .unwrap();
+        let router = app(test_state_with_static_dir(static_root.path().to_path_buf()).await);
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/service-worker.js")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::CACHE_CONTROL).unwrap(),
+            "no-cache",
+            "the container must revalidate the service worker on every update check"
+        );
+        assert!(response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("javascript"));
     }
 
     #[tokio::test]

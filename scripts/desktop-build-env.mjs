@@ -55,4 +55,3 @@ export async function prepareDesktopBuildEnvironment({
     cleanup: () => rm(shimDirectory, { recursive: true, force: true })
   };
 }
-

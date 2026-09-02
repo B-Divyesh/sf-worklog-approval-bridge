@@ -7,7 +7,7 @@ export function platformFor(name) {
   if (/(aarch64|arm64).*\.dmg$/i.test(name)) return "macos-arm64";
   if (/\.dmg$/i.test(name)) return "macos-x64";
   if (/\.(msi|exe)$/i.test(name)) return "windows-x64";
-  if (/\.(AppImage|deb)$/i.test(name)) return "linux-x64";
+  if (/\.(AppImage|deb|rpm)$/i.test(name)) return "linux-x64";
   return null;
 }
 
@@ -47,8 +47,8 @@ export async function createReleaseManifest(directory, tag, commit, repository) 
   for (const platform of ["macos-arm64", "macos-x64", "windows-x64", "linux-x64"]) {
     if (!files.some(file => file.platform === platform)) throw new Error(`Missing required ${platform} release asset.`);
   }
-  if (!files.some(file => /\.AppImage$/i.test(file.name)) || !files.some(file => /\.deb$/i.test(file.name))) {
-    throw new Error("Linux release must include AppImage and DEB assets.");
+  if (!files.some(file => /\.AppImage$/i.test(file.name)) || !files.some(file => /\.deb$/i.test(file.name)) || !files.some(file => /\.rpm$/i.test(file.name))) {
+    throw new Error("Linux release must include AppImage, DEB, and RPM assets.");
   }
   const manifest = { version: tag.slice(1), tag, commit: commit.toLowerCase(), files };
   const sums = files.map(file => `${file.sha256}  ${file.name}`).join("\n") + "\n";

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { createBuildProvenance } from "./build-provenance.mjs";
 import { createReleaseManifest } from "./release-manifest.mjs";
-import { validateRelease } from "./verify-release.mjs";
+import { validateRelease, verifyPublishedRelease } from "./verify-release.mjs";
 import { assertDeployedCommit } from "./verify-live-options.mjs";
 import { assertCandidateReady } from "./verify-delivery.mjs";
 
@@ -25,20 +25,59 @@ const verificationSeventeenPredecessor = "47a2c6b969886cd9033c288354a0d2f1aee6b3
 test("@claim:release-provenance binds every required desktop platform to the tagged source commit", async () => {
   const directory = await mkdtemp(join(tmpdir(), "worklog-release-"));
   try {
-    const fixtures = ["Worklog.Bridge_aarch64.dmg", "Worklog.Bridge_x64.dmg", "Worklog.Bridge_x64.msi", "Worklog.Bridge_amd64.AppImage", "Worklog.Bridge_amd64.deb"];
+    const fixtures = ["Worklog.Bridge_aarch64.dmg", "Worklog.Bridge_x64.dmg", "Worklog.Bridge_x64.msi", "Worklog.Bridge_amd64.AppImage", "Worklog.Bridge_amd64.deb", "Worklog.Bridge_x86_64.rpm"];
     for (const name of fixtures) {
       await writeFile(join(directory, name), `fixture:${name}`);
     }
-    for (const [label, matcher] of [["macos-arm64", /aarch64/], ["macos-x64", /x64\.dmg/], ["windows-x64", /\.msi/], ["linux-x64", /\.(?:AppImage|deb)$/]]) {
+    for (const [label, matcher] of [["macos-arm64", /aarch64/], ["macos-x64", /x64\.dmg/], ["windows-x64", /\.msi/], ["linux-x64", /\.(?:AppImage|deb|rpm)$/]]) {
       const platformDirectory = await mkdtemp(join(tmpdir(), `worklog-${label}-`));
       for (const name of fixtures.filter(name => matcher.test(name))) await writeFile(join(platformDirectory, name), `fixture:${name}`);
       await createBuildProvenance(platformDirectory, label, repairedCommit, join(directory, `provenance-${label}.json`));
       await rm(platformDirectory, { recursive: true, force: true });
     }
     const manifest = await createReleaseManifest(directory, "v0.1.4", repairedCommit, "B-Divyesh/sf-worklog-approval-bridge");
+    assert.ok(manifest.files.some(file => file.name.endsWith(".rpm")), "release manifest must publish the RPM");
     const sums = await readFile(join(directory, "SHA256SUMS"), "utf8");
-    const release = { tag_name: "v0.1.4", target_commitish: repairedCommit, assets: [...manifest.files.map(file => ({ name: file.name })), { name: "latest.json" }, { name: "SHA256SUMS" }] };
+    const manifestUrl = "https://downloads.test/latest.json";
+    const sumsUrl = "https://downloads.test/SHA256SUMS";
+    const release = {
+      tag_name: "v0.1.4",
+      target_commitish: repairedCommit,
+      assets: [
+        ...manifest.files.map(file => ({ name: file.name, browser_download_url: file.url })),
+        { name: "latest.json", browser_download_url: manifestUrl },
+        { name: "SHA256SUMS", browser_download_url: sumsUrl }
+      ]
+    };
     validateRelease(release, manifest, sums, repairedCommit, repairedCommit);
+    const fetchedArtifacts = [];
+    const fetcher = async url => {
+      if (url === "https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest") {
+        return Response.json(release);
+      }
+      if (url === manifestUrl) return Response.json(manifest);
+      if (url === sumsUrl) return new Response(sums);
+      if (url === "https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/git/ref/tags/v0.1.4") {
+        return Response.json({ object: { type: "commit", sha: repairedCommit } });
+      }
+      const artifact = manifest.files.find(file => file.url === url);
+      if (artifact) {
+        fetchedArtifacts.push(artifact.name);
+        return new Response(await readFile(join(directory, artifact.name)));
+      }
+      return new Response("not found", { status: 404 });
+    };
+    const published = await verifyPublishedRelease({
+      repository: "B-Divyesh/sf-worklog-approval-bridge",
+      tag: "v0.1.4",
+      expectedCommit: repairedCommit,
+      fetcher
+    });
+    const expectedLinuxArtifacts = manifest.files
+      .filter(file => /\.(?:AppImage|deb|rpm)$/i.test(file.name))
+      .map(file => file.name);
+    assert.deepEqual(fetchedArtifacts, expectedLinuxArtifacts);
+    assert.deepEqual(published.checkedArtifacts.map(artifact => artifact.name), expectedLinuxArtifacts);
     const staleFileManifest = structuredClone(manifest);
     staleFileManifest.files[0].commit = staleCommit;
     assert.throws(
@@ -48,6 +87,12 @@ test("@claim:release-provenance binds every required desktop platform to the tag
     assert.throws(
       () => validateRelease({ ...release, assets: [...release.assets, { name: "untracked-setup.exe" }] }, manifest, sums, repairedCommit, repairedCommit),
       /latest\.json must cover every downloadable desktop artifact/
+    );
+    const withoutRpm = structuredClone(manifest);
+    withoutRpm.files = withoutRpm.files.filter(file => !file.name.endsWith(".rpm"));
+    assert.throws(
+      () => validateRelease(release, withoutRpm, sums, repairedCommit, repairedCommit),
+      /missing Linux RPM/
     );
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -61,7 +106,7 @@ test("regression: one stale matrix artifact blocks the whole release", async () 
       "macos-arm64": ["Worklog.Bridge_aarch64.dmg"],
       "macos-x64": ["Worklog.Bridge_x64.dmg"],
       "windows-x64": ["Worklog.Bridge_x64.msi"],
-      "linux-x64": ["Worklog.Bridge_amd64.AppImage", "Worklog.Bridge_amd64.deb"]
+      "linux-x64": ["Worklog.Bridge_amd64.AppImage", "Worklog.Bridge_amd64.deb", "Worklog.Bridge_x86_64.rpm"]
     };
     for (const [label, names] of Object.entries(fixtures)) {
       const platformDirectory = await mkdtemp(join(tmpdir(), `worklog-${label}-`));

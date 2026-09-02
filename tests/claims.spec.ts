@@ -845,3 +845,43 @@ test("routes load without browser console errors", async ({ page }) => {
   }
   expect(errors).toEqual([]);
 });
+
+test("390px routes have no serious accessibility issues, console errors, or horizontal overflow", async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: APP_ORIGIN });
+  const errors: string[] = [];
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("https://api.github.com/repos/B-Divyesh/sf-worklog-approval-bridge/releases/latest", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      tag_name: "v0.2.6",
+      target_commitish: "1234567890abcdef1234567890abcdef12345678",
+      html_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/tag/v0.2.6",
+      assets: [{ name: "Worklog.Bridge_0.2.6_amd64.AppImage", browser_download_url: "https://github.com/B-Divyesh/sf-worklog-approval-bridge/releases/download/v0.2.6/Worklog.Bridge_0.2.6_amd64.AppImage" }]
+    })
+  }));
+
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Copy approval link" }).click();
+  const approvalRoute = await page.evaluate(() => navigator.clipboard.readText());
+
+  for (const route of ["/", "/?demo=1", "/demo", "/app", "/privacy", "/terms", "/download", approvalRoute, "/missing-page"]) {
+    await page.goto(route);
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("main")).toHaveCount(1);
+    await expect(page.locator("h1")).toHaveCount(1);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      `${route} must not overflow at 390px`
+    ).toBe(true);
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(
+      results.violations.filter(item => ["serious", "critical"].includes(item.impact || "")),
+      `${route} must have no serious or critical Axe violations at 390px`
+    ).toEqual([]);
+  }
+
+  expect(errors).toEqual([]);
+});

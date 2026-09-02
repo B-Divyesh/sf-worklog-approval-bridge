@@ -19,6 +19,7 @@ export function validateRelease(release, manifest, sumsText, tagCommit, expected
   }
   assert.ok(manifest.files.some(file => /\.AppImage$/i.test(file.name)), "missing Linux AppImage");
   assert.ok(manifest.files.some(file => /\.deb$/i.test(file.name)), "missing Linux DEB");
+  assert.ok(manifest.files.some(file => /\.rpm$/i.test(file.name)), "missing Linux RPM");
   const assets = new Map(release.assets.map(asset => [asset.name, asset]));
   const downloadableArtifacts = release.assets.filter(asset => platformFor(asset.name)).map(asset => asset.name).sort();
   assert.deepEqual(manifest.files.map(file => file.name).sort(), downloadableArtifacts, "latest.json must cover every downloadable desktop artifact");
@@ -67,12 +68,15 @@ export async function verifyPublishedRelease({ repository, tag, expectedCommit, 
   const sumsText = await sumsResponse.text();
   const tagCommit = await resolveTagCommit(fetcher, api, release.tag_name, headers);
   validateRelease(release, manifest, sumsText, tagCommit, expectedCommit);
-  const deb = manifest.files.find(file => /\.deb$/i.test(file.name));
-  const artifactResponse = await fetcher(deb.url, { headers });
-  if (!artifactResponse.ok) throw new Error(`Linux DEB returned HTTP ${artifactResponse.status}`);
-  const actual = createHash("sha256").update(Buffer.from(await artifactResponse.arrayBuffer())).digest("hex");
-  assert.equal(actual, deb.sha256, "downloaded Linux DEB does not match its published checksum");
-  return { release, manifest, tagCommit, checkedAsset: deb.name, checkedSha256: actual };
+  const checkedArtifacts = [];
+  for (const artifact of manifest.files.filter(file => /\.(?:AppImage|deb|rpm)$/i.test(file.name))) {
+    const artifactResponse = await fetcher(artifact.url, { headers });
+    if (!artifactResponse.ok) throw new Error(`${artifact.name} returned HTTP ${artifactResponse.status}`);
+    const actual = createHash("sha256").update(Buffer.from(await artifactResponse.arrayBuffer())).digest("hex");
+    assert.equal(actual, artifact.sha256, `downloaded ${artifact.name} does not match its published checksum`);
+    checkedArtifacts.push({ name: artifact.name, sha256: actual });
+  }
+  return { release, manifest, tagCommit, checkedArtifacts };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -85,5 +89,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     expectedCommit: args.get("--expected-commit"),
     token: process.env.GITHUB_TOKEN || ""
   });
-  process.stdout.write(`Verified ${result.release.tag_name} at ${result.tagCommit}; ${result.checkedAsset} ${result.checkedSha256}.\n`);
+  const checks = result.checkedArtifacts.map(artifact => `${artifact.name} ${artifact.sha256}`).join("; ");
+  process.stdout.write(`Verified ${result.release.tag_name} at ${result.tagCommit}; ${checks}.\n`);
 }

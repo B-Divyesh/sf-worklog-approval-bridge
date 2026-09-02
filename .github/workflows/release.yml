@@ -65,7 +65,7 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Install Linux packages
         if: startsWith(matrix.os, 'ubuntu')
-        run: sudo apt-get update && sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        run: sudo apt-get update && sudo apt-get install -y file libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
       - run: npm ci
       - name: Detect macOS signing and notarization
         id: macos-signing
@@ -177,7 +177,7 @@ jobs:
       - name: Flatten release files
         run: |
           mkdir upload
-          find release-assets -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -exec cp {} upload/ \;
+          find release-assets -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} upload/ \;
           find release-assets -type f -name 'provenance-*.json' -exec cp {} upload/ \;
           find upload -maxdepth 1 -type f -name '* *' -print0 | while IFS= read -r -d '' file; do
             mv "$file" "${file// /.}"
