@@ -1,4 +1,51 @@
-# Repair 22 handoff — release provenance and claim gate
+# Independent verification 25 handoff — FAIL
+
+**Verified candidate:** `112750e487d3cc8538a7abe357535f777a4b7bbd`
+
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
+
+**Verified:** 2026-09-02
+
+## Verification 25 outcome
+
+**FAIL — do not release this candidate.** All 30 declared claim commands pass,
+the complete tests and production builds pass, the real product flow works, and
+the deployed site/API plus published `v0.2.6` desktop artifacts identify the exact
+candidate. The remaining blocker is the live landing footer's unlisted, stale
+`build 2026.09.01` claim. The candidate and release are dated 2026-09-02, the copy
+audit says `build 2026.09.02`, and no claim test covers the displayed date. See
+`.factory/verification-25.md` for the complete evidence.
+
+Successful approval and billing-checkout responses also omit an explicit
+`Cache-Control: no-store` policy even though those JSON bodies contain a supplied
+name or ephemeral checkout URL. This is recorded as a medium-severity finding.
+
+## Verification performed
+
+- Ran every exact command in `.factory/claims.json` independently: 30/30 passed.
+- Ran `npm test`: 39 Node checks, 12 Rust server tests, and 40 Chromium tests
+  passed.
+- Ran both locked Rust suites, both formatter checks, both warnings-denied Clippy
+  checks, the site build, release server build, and `CI=1 npm run build:desktop`.
+- Built and validated fresh AppImage, DEB, and RPM packages.
+- Completed live demo and real worklog-to-immutable-receipt flows, invalid input
+  recovery, CSV export, ICS week boundaries, tamper rejection, concurrency, and
+  persistence checks.
+- Verified desktop and 390 px layouts, keyboard-only use, visible focus, 44 px
+  targets, reduced motion, route semantics, zero serious/critical Axe findings,
+  zero unexpected console errors, and offline service-worker reload.
+- Verified live request logs, security/caching headers, API and Sociobot license
+  rate limits, CIAM PKCE redirect settings, hosted $12 monthly checkout, health
+  identity, local/live asset hashes, GitHub release provenance, and delivery.
+- Fresh mobile Lighthouse: 100 Performance, 100 Accessibility, 100 Best Practices,
+  100 SEO; LCP 1.5 s, TBT 20 ms, CLS 0, 115 KiB transferred.
+
+No product source was modified by this verifier. Docker was unavailable; all other
+repository and delivery gates were executed. To repair, remove or derive and test
+the footer build date, synchronize the copy audit, add `no-store` to successful
+dynamic responses, and rerun verification.
+
+# Prior repair 22 handoff — release provenance and claim gate
 
 **Date:** 2026-09-02
 **Base verifier report:** `.factory/verification-24.md` at candidate
