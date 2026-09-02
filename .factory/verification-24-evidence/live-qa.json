@@ -1,0 +1,724 @@
+{
+  "checks": [
+    {
+      "name": "landing returns 200",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "first screen says what it does",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "first screen names its audience",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "one-click sample action is visible",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "sample opens in one click",
+      "pass": true,
+      "detail": "https://worklog-approval-bridge.sociobot.in/?demo=1"
+    },
+    {
+      "name": "demo boundary banner is persistent",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "demo loads six realistic entries",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "invalid negative rate explains recovery",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "invalid rate restores prior value",
+      "pass": true,
+      "detail": "135"
+    },
+    {
+      "name": "edited narrative is saved",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "CSV contains reviewed narrative",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "CSV contains header plus six entries",
+      "pass": true,
+      "detail": "7"
+    },
+    {
+      "name": "demo approval link stays in demo mode",
+      "pass": true,
+      "detail": "https://worklog-approval-bridge.sociobot.in/approve?demo=1#eyJ2ZXJzaW9uIjoxLCJjbGllbnQiOiJOb3J0aHN0YXIgSGVhbHRoIiwid2VlayI6IjIwMjYtMDgtMjQiLCJyYXRlIjoxMzUsImN1cnJlbmN5IjoiVVNEIiwiZW50cmllcyI6W3siaWQiOiI3MTU3MjUzMC0yYmE1LTQ2MDAtODljMS04MjBmYTA1YTA2YzUiLCJkYXRlIjoiMjAyNi0wOC0yNCIsInRpdGxlIjoiRml4ZWQgcGF0aWVudCBzZWFyY2ggZmlsdGVycyIsImRldGFpbCI6IkNvbWJpbmVkIHRoZSBzdGF0dXMgZmlsdGVycyBhbmQgYWRkZWQgZW1wdHktcmVzdWx0IGhhbmRsaW5nLiIsInNvdXJjZSI6IkdpdCIsImR1cmF0aW9uIjoxMDUsInJlYWR5Ijp0cnVlfSx7ImlkIjoiOTkyMTNkZDctNWUzMi00MzU0LThmMDktZjVlMDczZTYwZDY3IiwiZGF0ZSI6IjIwMjYtMDgtMjQiLCJ0aXRsZSI6IldlZWtseSBkZWxpdmVyeSBwbGFubmluZyIsImRldGFpbCI6IlJldmlld2VkIHRoZSByZWxlYXNlIHNjb3BlIHdpdGggdGhlIGNsaWVudCB0ZWFtLiIsInNvdXJjZSI6IkNhbGVuZGFyIiwiZHVyYXRpb24iOjQ1LCJyZWFkeSI6dHJ1ZX0seyJpZCI6IjU1NWNiODA2LWRlNWUtNDc1ZS04OTBlLWZlMjYzNmYzOWFhOSIsImRhdGUiOiIyMDI2LTA4LTI1IiwidGl0bGUiOiJBZGRlZCBhdWRpdCBsb2cgZXhwb3J0IiwiZGV0YWlsIjoiQnVpbHQgdGhlIENTViBleHBvcnQgYW5kIGNvdmVyZWQgZGF0ZS1yYW5nZSBlZGdlIGNhc2VzLiIsInNvdXJjZSI6IkdpdCIsImR1cmF0aW9uIjoxNzAsInJlYWR5Ijp0cnVlfSx7ImlkIjoiNGEwNTUzMjItMTQ5ZS00MDgwLTgwMzUtY2U4Y2JhZTllMWE4IiwiZGF0ZSI6IjIwMjYtMDgtMjciLCJ0aXRsZSI6IlJlbGVhc2UgcmV2aWV3IiwiZGV0YWlsIjoiV2Fsa2VkIHRocm91Z2ggdGhlIHJlbGVhc2UgY2FuZGlkYXRlIGFuZCBjYXB0dXJlZCBmb2xsb3ctdXAgd29yay4iLCJzb3VyY2UiOiJDYWxlbmRhciIsImR1cmF0aW9uIjo2MCwicmVhZHkiOnRydWV9LHsiaWQiOiI5NWRhYTM1MS1iMDQ0LTQ0NmMtYWIzMS01NGQ4NjkzM2MxNzgiLCJkYXRlIjoiMjAyNi0wOC0yOCIsInRpdGxlIjoiUmVkdWNlZCBkYXNoYm9hcmQgcXVlcnkgdGltZSIsImRldGFpbCI6IkFkZGVkIHRhcmdldGVkIGluZGV4ZXMgYW5kIHZlcmlmaWVkIHRoZSByZXBvcnRpbmcgcGF0aHMuIiwic291cmNlIjoiR2l0IiwiZHVyYXRpb24iOjE5NSwicmVhZHkiOnRydWV9XSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0wMlQwNDo0MToyMS42NjBaIiwiZGlnZXN0IjoiOTRkNzJkZGEyZmQyYzFhMDkxYmNkNGI4M2EyZTg2NWY3Nzc3YWM2YTUzOWMxYWJjMTc3MDdhYThkYTBmZTk1ZSJ9"
+    },
+    {
+      "name": "demo approval creates a receipt",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "demo receipt is explicitly local",
+      "pass": true,
+      "detail": "demo-only-local-receipt"
+    },
+    {
+      "name": "reset restores sample data",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "demo flow sends only same-origin requests",
+      "pass": true,
+      "detail": "https://worklog-approval-bridge.sociobot.in"
+    },
+    {
+      "name": "demo never calls production approval API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "demo sends no analytics or ad requests",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "demo storage stays namespaced",
+      "pass": true,
+      "detail": "demo:worklog-bridge:project"
+    },
+    {
+      "name": "main live flow has no console or page errors",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "keyboard starts on skip link",
+      "pass": true,
+      "detail": "{\"text\":\"Skip to main content\",\"href\":\"#main\",\"outlineWidth\":\"3px\",\"outlineStyle\":\"solid\"}"
+    },
+    {
+      "name": "focused skip link has a visible 3px outline",
+      "pass": true,
+      "detail": "{\"text\":\"Skip to main content\",\"href\":\"#main\",\"outlineWidth\":\"3px\",\"outlineStyle\":\"solid\"}"
+    },
+    {
+      "name": "skip link moves focus into main",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "slash shortcut focuses filter",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "keyboard shortcut opens entry dialog",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Escape closes the dialog",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px / returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "1440px / has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Worklog Bridge — Build client-ready worklogs\"}"
+    },
+    {
+      "name": "1440px / has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px / respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px / has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /demo returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "1440px /demo has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Demo — Worklog Bridge\"}"
+    },
+    {
+      "name": "1440px /demo has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /demo respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px /demo has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /app returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "1440px /app has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Worklog — Worklog Bridge\"}"
+    },
+    {
+      "name": "1440px /app has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /app respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px /app has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /privacy returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "1440px /privacy has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Privacy — Worklog Bridge\"}"
+    },
+    {
+      "name": "1440px /privacy has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /privacy respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px /privacy has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /terms returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "1440px /terms has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Terms — Worklog Bridge\"}"
+    },
+    {
+      "name": "1440px /terms has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /terms respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px /terms has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /download returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "1440px /download has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Download — Worklog Bridge\"}"
+    },
+    {
+      "name": "1440px /download has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /download respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px /download has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /missing-page returns expected status",
+      "pass": true,
+      "detail": "404"
+    },
+    {
+      "name": "1440px /missing-page has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Page not found — Worklog Bridge\"}"
+    },
+    {
+      "name": "1440px /missing-page has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px /missing-page respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "1440px /missing-page has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "1440px route sweep has no unexpected console/page errors",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "name": "390px / returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "390px / has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Worklog Bridge — Build client-ready worklogs\"}"
+    },
+    {
+      "name": "390px / has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px / respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px / has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /demo returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "390px /demo has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Demo — Worklog Bridge\"}"
+    },
+    {
+      "name": "390px /demo has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /demo respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px /demo has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /app returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "390px /app has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Worklog — Worklog Bridge\"}"
+    },
+    {
+      "name": "390px /app has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /app respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px /app has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /privacy returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "390px /privacy has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Privacy — Worklog Bridge\"}"
+    },
+    {
+      "name": "390px /privacy has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /privacy respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px /privacy has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /terms returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "390px /terms has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Terms — Worklog Bridge\"}"
+    },
+    {
+      "name": "390px /terms has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /terms respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px /terms has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /download returns expected status",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "390px /download has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Download — Worklog Bridge\"}"
+    },
+    {
+      "name": "390px /download has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /download respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px /download has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /missing-page returns expected status",
+      "pass": true,
+      "detail": "404"
+    },
+    {
+      "name": "390px /missing-page has semantic baseline",
+      "pass": true,
+      "detail": "{\"h1\":1,\"main\":1,\"lang\":\"en\",\"overflow\":false,\"moving\":0,\"title\":\"Page not found — Worklog Bridge\"}"
+    },
+    {
+      "name": "390px /missing-page has no horizontal overflow",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px /missing-page respects reduced motion",
+      "pass": true,
+      "detail": "0"
+    },
+    {
+      "name": "390px /missing-page has no serious/critical Axe findings",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "390px route sweep has no unexpected console/page errors",
+      "pass": true,
+      "detail": "[]"
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/",
+      "type": "document"
+    },
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/assets/index-B_PIXb1I.js",
+      "type": "script"
+    },
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/assets/index-DPr_pJGE.css",
+      "type": "stylesheet"
+    },
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/assets/night-market-bridge-1280.webp",
+      "type": "image"
+    },
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/approve?demo=1",
+      "type": "document"
+    },
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/assets/index-B_PIXb1I.js",
+      "type": "script"
+    },
+    {
+      "method": "GET",
+      "url": "https://worklog-approval-bridge.sociobot.in/assets/index-DPr_pJGE.css",
+      "type": "stylesheet"
+    }
+  ],
+  "routeResults": [
+    {
+      "viewport": 1440,
+      "route": "/",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Worklog Bridge — Build client-ready worklogs"
+    },
+    {
+      "viewport": 1440,
+      "route": "/demo",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Demo — Worklog Bridge"
+    },
+    {
+      "viewport": 1440,
+      "route": "/app",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Worklog — Worklog Bridge"
+    },
+    {
+      "viewport": 1440,
+      "route": "/privacy",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Privacy — Worklog Bridge"
+    },
+    {
+      "viewport": 1440,
+      "route": "/terms",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Terms — Worklog Bridge"
+    },
+    {
+      "viewport": 1440,
+      "route": "/download",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Download — Worklog Bridge"
+    },
+    {
+      "viewport": 1440,
+      "route": "/missing-page",
+      "status": 404,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Page not found — Worklog Bridge"
+    },
+    {
+      "viewport": 1440,
+      "routeErrors": [
+        {
+          "route": "/missing-page",
+          "text": "console: Failed to load resource: the server responded with a status of 404 ()"
+        }
+      ]
+    },
+    {
+      "viewport": 390,
+      "route": "/",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Worklog Bridge — Build client-ready worklogs"
+    },
+    {
+      "viewport": 390,
+      "route": "/demo",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Demo — Worklog Bridge"
+    },
+    {
+      "viewport": 390,
+      "route": "/app",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Worklog — Worklog Bridge"
+    },
+    {
+      "viewport": 390,
+      "route": "/privacy",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Privacy — Worklog Bridge"
+    },
+    {
+      "viewport": 390,
+      "route": "/terms",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Terms — Worklog Bridge"
+    },
+    {
+      "viewport": 390,
+      "route": "/download",
+      "status": 200,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Download — Worklog Bridge"
+    },
+    {
+      "viewport": 390,
+      "route": "/missing-page",
+      "status": 404,
+      "severeAxe": [],
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "overflow": false,
+      "moving": 0,
+      "title": "Page not found — Worklog Bridge"
+    },
+    {
+      "viewport": 390,
+      "routeErrors": [
+        {
+          "route": "/missing-page",
+          "text": "console: Failed to load resource: the server responded with a status of 404 ()"
+        }
+      ]
+    }
+  ]
+}

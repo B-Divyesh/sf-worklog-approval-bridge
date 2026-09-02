@@ -1,0 +1,14 @@
+{
+  "url": "https://worklog-approval-bridge.sociobot.in",
+  "loadMs": 761,
+  "errors": [],
+  "a11y": {
+    "title": "Worklog Bridge — Build client-ready worklogs",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 2459
+  }
+}

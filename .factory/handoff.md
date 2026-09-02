@@ -1,132 +1,97 @@
-# Repair 21 handoff — desktop packaging release blocker closed
+# Verification 24 handoff — FAIL
 
 **Date:** 2026-09-02
-**Base verifier report:** `.factory/verification-23.md` at candidate
-`71671e3fd28d78402e3401070912d8ed9289511d`
-**Repair version:** `0.2.6`
+
+**Candidate:** `2d2fece83f9881852b16e5f38cb7c3c360a70a9c`
+
+**Live URL:** https://worklog-approval-bridge.sociobot.in
 
 ## Outcome
 
-The release-blocking Linux desktop packaging defect is repaired. `npm run
-build:desktop` now treats AppImage, DEB, and RPM as required Linux deliverables,
-and the AppImage is checked as an executable Type 2 runtime rather than merely
-an output filename.
+**FAIL — do not release this candidate yet.** Fresh verification found two
+release-blocking defects. Seventeen exact commands in `.factory/claims.json` fail
+because the candidate handoff breaks two repository signing-contract regressions.
+Separately, the live download page still offers `v0.2.5` packages built from
+`71671e3fd28d78402e3401070912d8ed9289511d`, not this `0.2.6` candidate.
 
-## Reproduction and root cause
+The deployed website and API do match the candidate. The repaired desktop build
+also succeeds locally and produces AppImage, DEB, and RPM. Product behavior,
+privacy, accessibility, mobile layout, offline reload, security headers, CIAM, and
+live rate limiting passed the independent checks. Full evidence and exact defects
+are in `.factory/verification-24.md`.
 
-I reproduced the nominated candidate's failure from a clean candidate checkout.
-After native compilation and DEB/RPM creation, the AppImage stage exited through
-`linuxdeploy`; its verbose output identified the cause exactly:
+## Required repair
 
-```
-appimagetool ... file command is missing but required, please install it
-ERROR: Failed to run plugin: appimage (exit code: 1)
-failed to bundle project: `failed to run ... linuxdeploy ...`
-```
+Publish a `v0.2.6` desktop release built from
+`2d2fece83f9881852b16e5f38cb7c3c360a70a9c`, with matching immutable provenance,
+checksums, AppImage, DEB, RPM, macOS, and Windows artifacts. Then run every exact
+claim command from a clean clone and run the release/delivery verifiers. The next
+candidate must include a handoff that preserves the release-signing contract below.
 
-The `file` binary is an undeclared requirement of Tauri's downloaded
-`appimagetool` build. The candidate therefore produced DEB/RPM but no AppImage
-on a clean worker without it.
+## Verification summary
 
-## What changed
+- Initial mandatory claims sweep: 30 exact commands run; 13 passed and 17 failed.
+- `npm test`: failed at 36/38 Node checks because the candidate handoff omitted the
+  signing contract; downstream Rust/build/Playwright stages were not reached.
+- Independent `npx playwright test`: 40/40 passed.
+- After this verifier handoff restored the required signing section, the final
+  `npm test` rerun passed 38 Node checks, 12 server tests, the site build, and all
+  40 Playwright tests. The untouched candidate's required first-run result remains
+  a failure.
+- Server tests: 12/12 passed. Desktop Rust tests: 2/2 passed.
+- Rust format and warnings-denied Clippy checks passed after installing the
+  documented Linux Tauri prerequisites.
+- `npm run build` and `npm run build:server` passed.
+- `CI=1 npm run build:desktop` passed and validated fresh AppImage, DEB, and RPM
+  bundles.
+- Exact live verifier passed for the candidate web/API deployment.
+- Exact release verifier failed: latest desktop release is commit `71671e3...`, not
+  `2d2fece...`.
+- Live demo normal, invalid, recovery, export, approval, receipt, reset, privacy,
+  keyboard, mobile, reduced-motion, Axe, and offline checks passed.
+- Observed rate limits: 40 reads/second and 12 writes/60 seconds per forwarded
+  client; excess requests returned 429 with `Retry-After`.
+- Mobile Lighthouse: 100 Performance, 100 Accessibility, 100 Best Practices, 100
+  SEO; LCP 1.3 s, CLS 0, total transfer 115 KiB.
 
-- Added a narrowly scoped, temporary executable `file` compatibility probe for
-  Linux workers that do not provide `file`; the build enables
-  `APPIMAGE_EXTRACT_AND_RUN=1` for container/CI execution.
-- Enabled Tauri's per-project local tool directory, so download/cache state from
-  another product cannot affect this application's package build. The legacy GTK
-  plugin compatibility patch remains idempotent and is retried only after a
-  failed first download.
-- Made the Linux package contract fail unless exactly one fresh AppImage, DEB,
-  and RPM is present with its expected signature. The AppImage must also be
-  executable and answer `--appimage-version` successfully.
-- Updated release CI to install `rpm`, exercise the compatibility path on Ubuntu,
-  upload the RPM, and include it in provenance, `latest.json`, checksums, and
-  published-release verification.
-- Added the `clean-worker-packaging` claim and regression tests for an empty
-  Linux `PATH`, the GitHub Actions fallback, executable/runtime AppImage checks,
-  preservation of DEB/RPM validation, RPM release coverage, and downloaded
-  checksums for all Linux formats.
-- Marked `service-worker.js` `Cache-Control: no-cache` so deployed clients
-  revalidate the worker during update checks, with a server regression test.
-- Added a 390 px route sweep for serious/critical Axe findings, console errors,
-  semantic landmarks, and horizontal overflow.
+## Release signing contract
 
-## Verification
+Desktop signing is an operator-gated release action. Tags and manual runs with
+`sign_release` set to `false` publish unsigned preview packages. An operator
+requests signed packages by setting `sign_release` to `true` and supplying every
+platform credential. macOS signing and notarization require `APPLE_CERTIFICATE`,
+`APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
+`APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows signing requires
+`WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`. A missing signing credential stops
+packaging. Signed runs verify macOS signatures, notarization tickets, and Windows
+signatures before publication. Every run verifies the source commit and package
+checksums.
 
-From a clean install:
+## How to reproduce
 
 ```sh
 npm ci
 npm --prefix api ci
 npm test
-cargo test --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path server/Cargo.toml --locked
+cargo test --manifest-path src-tauri/Cargo.toml --locked
 cargo fmt --manifest-path server/Cargo.toml -- --check
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features -- -D warnings
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+cargo clippy --manifest-path server/Cargo.toml --all-targets --all-features --locked -- -D warnings
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --locked -- -D warnings
+npm run build
 npm run build:server
 CI=1 npm run build:desktop
+npm run verify:live -- --url https://worklog-approval-bridge.sociobot.in --expected-commit 2d2fece83f9881852b16e5f38cb7c3c360a70a9c
+npm run verify:release -- --expected-commit 2d2fece83f9881852b16e5f38cb7c3c360a70a9c
 ```
 
-Passed evidence in this worker:
+The final command currently fails on the stale release commit. The first `npm test`
+failed in the untouched candidate; this verification handoff restores the text
+required by those regressions so the repository remains buildable after handoff.
 
-- `npm test`: 38 Node/API/script tests, 12 Rust service tests, production web
-  build, and 40 Playwright tests passed.
-- Both native Tauri claim tests passed; formatter and warnings-denied Clippy
-  checks passed for the server and desktop crate.
-- `CI=1 npm run build:desktop` passed from a clean Tauri target and produced all
-  three Linux formats.
-- A stronger clean-worker reproduction rebuilt from an empty Tauri target with
-  the real host `file` command absent from `PATH`. It printed `Using the project
-  AppImage file-command compatibility probe.`, built all three formats, and
-  verified them successfully.
-- Final clean-worker artifacts: executable AppImage (77,249,016 bytes,
-  SHA-256 `4148f5008e89ee0acf6a96d5461c9473d97c9cac3671597c49bd698d496ab775`),
-  DEB (2,002,032 bytes,
-  `642e5d7bcb83997e543aa2f468087fe50f171d5b7ca0e1d04ea0c0e9e95c2df8`), and
-  RPM (2,004,158 bytes,
-  `046aab784ee89c84073d98f20c17ab946dff2e1fc3b4cb3502ca21750f3196df`). The
-  AppImage answered with its Type 2 runtime version.
-- The added claim command,
-  `node --test --test-name-pattern @claim:clean-worker-packaging scripts/build-desktop.test.mjs`,
-  passed independently. The updated release-provenance claim passed
-  independently as well.
-- Local production-server checks passed: `/`, `/demo`, `/app`, `/privacy`,
-  `/terms`, and `/download` returned 200; an unknown route returned 404; both
-  health routes returned only service/version/commit identity data. Hashed JS
-  was immutable for one year, CSP included `frame-ancestors 'none'`, and
-  `service-worker.js` returned `Cache-Control: no-cache`.
-- `/opt/fleet/lib/verify-url.sh` passed locally: title, `lang=en`, one `h1`, a
-  main landmark, image alternatives, and no browser console errors. The
-  Playwright Axe integration passed across desktop and 390 px routes. A direct
-  Axe CLI attempt found this worker's ChromeDriver incompatible with its
-  preinstalled Playwright Chromium; the project uses the matching Playwright
-  Axe integration as permitted by the accessibility contract.
-- Desktop Lighthouse: Performance 100, Accessibility 100, Best Practices 100,
-  SEO 100; FCP 0.4 s, LCP 0.5 s, CLS 0.
+## Operator action
 
-## Deployment
-
-Deployment completed through the factory container script with `WO_DATA_DIR=/data`.
-The container keeps its SQLite database and generated receipt signing secret
-under `/data`; no shared platform database, secret, or other product resource
-was accessed. The owned app was updated with one replica and the owned
-`sf-worklog-approval-bridge-data` share at `/data`.
-
-Production verification passed at `https://worklog-approval-bridge.sociobot.in`:
-the health endpoints report Worklog Bridge `0.2.6` and the deployed repair
-commit, `npm run verify:live` passed its checkout, identity, protected-route,
-demo, approval, asset, and routing checks, and the factory URL verifier found
-no browser console errors. `/demo`, `/app`, `/privacy`, `/terms`, and
-`/download` return 200; an unknown route returns 404. Live response headers
-include the expected CSP/HSTS/privacy policy and `service-worker.js` has
-`Cache-Control: no-cache`.
-
-## Known gaps and operator action
-
-Unsigned macOS and Windows preview packages remain intentionally labelled as
-unsigned. A signed desktop release still requires the operator-controlled Apple
-or Windows credentials described in `README.md` and the release workflow. No
-product, accessibility, privacy, offline/update, mobile, or packaging defect
-from verification 23 remains.
+No infrastructure, DNS, billing, shared services, or other product resources were
+read or changed. Publish the corrected release only after a repaired candidate has
+passed independent verification.
