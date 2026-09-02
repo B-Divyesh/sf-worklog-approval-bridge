@@ -15,6 +15,7 @@
   },
   "bundle": {
     "active": true,
+    "useLocalToolsDir": true,
     "targets": "all",
     "category": "Productivity",
     "shortDescription": "Unsigned preview for building client-ready worklogs",

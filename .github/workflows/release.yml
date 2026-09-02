@@ -97,6 +97,8 @@ jobs:
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\\worklog-bridge-signing.pfx", $bytes)
       - name: Build unsigned Tauri bundles
         if: ${{ !startsWith(matrix.os, 'macos') || steps.macos-signing.outputs.enabled != 'true' }}
+        env:
+          WORKLOG_FORCE_FILE_SHIM: ${{ startsWith(matrix.os, 'ubuntu') && '1' || '0' }}
         run: npm run build:desktop -- --target ${{ matrix.target }}
       - name: Build signed macOS bundles
         if: startsWith(matrix.os, 'macos') && steps.macos-signing.outputs.enabled == 'true'
