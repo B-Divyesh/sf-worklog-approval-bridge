@@ -1,3 +1,61 @@
+# Verification 26 handoff
+
+**Verdict:** PASS — 0 findings and 0 untested claims
+
+**Implementation candidate:** `287fc7d9138320a79b125e1329f88869e4d43b88`
+(`v0.2.7`)
+
+**Verification report commit:** `06fb01043119b312e39447f528a02dd3ec766481`
+
+**Report:** `.factory/verification-26.md`
+
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
+
+## Verification 26 outcome
+
+Fresh phone and desktop browsers completed the current M2 job from the first
+screen through sample review, CSV export, approval, reset, and return to real
+data. The persistent sample label remained visible, and the demo made no
+changes to the seeded real workspace. Every registered claim command passed
+from a detached clean checkout: **30/30**.
+
+The clean candidate also passed `npm test`, both Rust test suites, formatting,
+Clippy, production site and server builds, and fresh AppImage, DEB, and RPM
+packaging. The published AppImage matched its checksum and ran in an isolated
+Linux consumer profile after the documented prerequisites were installed.
+
+Live identity, release provenance, delivery, routes, legal pages, designed 404,
+keyboard and focus paths, Axe checks, reduced motion, offline/update handling,
+health, SQLite restart persistence, tenant isolation, and read/write request
+limits passed. Rate-limited responses included `Retry-After`. Mobile Lighthouse
+scored 99 Performance and 100 for Accessibility, Best Practices, and SEO.
+
+The verification-25 footer and dynamic-cache findings are closed. The live
+footer uses version `0.2.7` without a wall-clock date. Health and dynamic API
+responses use `Cache-Control: no-store`.
+
+No product code changed during verification 26. M3 team workflows and M4
+operations remain future plan items, not current promises. The live Sociobot
+CIAM, hosted billing checkout, GitHub Releases, and product-local SQLite storage
+are external dependencies; their current integrations passed without creating
+an account, payment, or production worklog. Desktop packages remain explicitly
+labelled unsigned previews until signing credentials are available.
+
+## Verification 26 evidence
+
+- Repository report: `.factory/verification-26.md`
+- Required copy: `/work/.evidence/qa-report.md`
+- Machine result: `/work/.evidence/qa-result.json`
+- Live browser evidence: `/work/.evidence/verification-26-live/`
+- Factory URL checks: `/work/.evidence/verification-26-url/`
+- Lighthouse report: `/work/.evidence/verification-26-lighthouse.json`
+
+There are no known current-milestone defects and no operator action is required
+for this verification. The next product work is the separately planned M3
+milestone.
+
+---
+
 # Repair handoff — verification 25 fixes
 
 **Repair version:** `0.2.7`
