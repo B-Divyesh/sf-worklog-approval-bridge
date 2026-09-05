@@ -1,3 +1,62 @@
+# Review 6 handoff
+
+**Verdict:** PASS — 0 findings and 0 untested claims
+
+**Implementation candidate:** `287fc7d9138320a79b125e1329f88869e4d43b88`
+(`v0.2.7`)
+
+**Documentation baseline:** `9020806127ca6bd44fd3014ce8fdf2fc28d7a09c`
+
+**Report:** `.factory/review-6.md`
+
+**Live URL:** <https://worklog-approval-bridge.sociobot.in>
+
+## Review 6 outcome
+
+M2 passes a fresh strict review. New desktop and phone contexts showed the job,
+audience, and sample action before scrolling. The live sample completed edit,
+CSV, approval, receipt, reload, reset, and exit without changing the seeded real
+workspace. Its banner stayed visible and its requests stayed inside the sample
+boundary.
+
+Every command in `.factory/claims.json` passed from a detached clean checkout:
+**30/30**. The full Node, Rust, browser, build, lint, and desktop-package gates
+also passed. Live checks covered routes, links, titles, legal pages, the designed
+404, keyboard and focus behavior, Axe, reduced motion, offline reload and cache
+update, request privacy, health identity, tenant isolation, restart persistence,
+and read/write `429` responses with `Retry-After`.
+
+The live frontend bytes, API, GitHub release, and downloaded AppImage match the
+implementation candidate. The AppImage checksum matched and the application
+stayed running in a new Linux consumer profile. Mobile Lighthouse scored 100 in
+all four categories.
+
+No product code changed. The only repository changes are this handoff and the
+review report. M3 and M4 remain future plan items.
+
+## External dependencies checked
+
+- Product SQLite and signing secret: the PORT-only restart claim passed.
+- Sociobot sign-in: the live redirect used the documented client, callback, and PKCE flow. No account was created.
+- Sociobot/Dodo billing: the live endpoint redirected to hosted checkout. No payment was started.
+- GitHub Releases: tag, manifest, checksums, and platform files identify the candidate.
+- Desktop trust: macOS and Windows remain clearly labelled unsigned previews.
+
+## Review 6 evidence
+
+- Repository report: `.factory/review-6.md`
+- Required copy: `/work/.evidence/qa-report.md`
+- Machine result: `/work/.evidence/qa-result.json`
+- Claim logs: `/work/.evidence/review-6-claims/`
+- Live evidence: `/work/.evidence/review-6-live/`
+- Lighthouse: `/work/.evidence/review-6-lighthouse.json`
+
+There are no known current-milestone defects and no operator action is required
+for this unsigned preview. The next product work is the separately planned M3
+milestone.
+
+---
+
 # Verification 26 handoff
 
 **Verdict:** PASS — 0 findings and 0 untested claims
